@@ -1,0 +1,423 @@
+import React, { Fragment, useCallback, useMemo, useState } from 'react';
+
+import { applyExclusions, clearHiddenFieldValues, getInitialStepId, getNextStepId, getPreviousStepId } from './engine';
+import type {
+  Field,
+  FieldMapping,
+  FieldState,
+  FieldValue,
+  FlowStep,
+  FormData,
+  RequirementsObject,
+  ResolvedFieldOption,
+} from './types';
+import { useRequirements } from './use-requirements';
+
+const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
+
+/**
+ * Props for individual field input components
+ */
+export interface FieldInputProps<TFieldId extends string = string> {
+  field: Field<TFieldId>;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+  errors: string[];
+  isRequired: boolean;
+  isVisible: boolean;
+  isReadOnly: boolean;
+  options?: ResolvedFieldOption[];
+  /** Resolved label string (after localization) */
+  label?: string;
+}
+
+/**
+ * Props for computed field display components
+ */
+export interface FieldComputedProps<TFieldId extends string = string> {
+  field: Field<TFieldId>;
+  value: FieldValue;
+  isVisible: boolean;
+}
+
+/**
+ * Props for custom field rendering
+ */
+export interface FieldRenderProps<TFieldId extends string = string> {
+  field: Field<TFieldId>;
+  fieldState: FieldState<TFieldId>;
+  onChange: (value: FieldValue) => void;
+  components?: DynamicFormProps<TFieldId>['components'];
+}
+
+/**
+ * Step navigation props (used when requirements.flow is defined)
+ */
+export interface StepNavigationProps {
+  canGoPrevious: boolean;
+  /** True when there is a next step and current step fields pass validation */
+  canGoNext: boolean;
+  /** True when all visible fields in the current step pass validation (use to disable Next when false) */
+  isStepValid: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+  stepTitle?: string;
+  currentStepIndex: number;
+  totalSteps: number;
+}
+
+/**
+ * Props for DynamicForm component
+ */
+export interface DynamicFormProps<TFieldId extends string = string> {
+  /** Requirements object defining fields and their behavior (optionally with flow for step-based forms) */
+  requirements: RequirementsObject<TFieldId>;
+
+  /**
+   * Initial form data for uncontrolled mode.
+   * Use this when you want DynamicForm to manage its own state internally.
+   * Values are used to initialize the form and native form submission handles the rest.
+   */
+  defaultValue?: FormData;
+
+  /**
+   * Current form data for controlled mode.
+   * When provided, DynamicForm becomes a controlled component and you must
+   * also provide `onChange` to update the value.
+   */
+  value?: FormData;
+
+  /**
+   * Callback when form data changes.
+   * - In controlled mode (with `value`): Required to update parent state
+   * - In uncontrolled mode (with `defaultValue`): Optional, for notification only
+   */
+  onChange?: (data: FormData) => void;
+
+  /** Optional field ID mapping */
+  mapping?: FieldMapping;
+
+  /** Component map for different field types */
+  components?: {
+    text?: React.ComponentType<FieldInputProps<TFieldId>>;
+    number?: React.ComponentType<FieldInputProps<TFieldId>>;
+    email?: React.ComponentType<FieldInputProps<TFieldId>>;
+    select?: React.ComponentType<FieldInputProps<TFieldId>>;
+    checkbox?: React.ComponentType<FieldInputProps<TFieldId>>;
+    radio?: React.ComponentType<FieldInputProps<TFieldId>>;
+    computed?: React.ComponentType<FieldComputedProps<TFieldId>>;
+    [key: string]:
+      | React.ComponentType<FieldInputProps<TFieldId>>
+      | React.ComponentType<FieldComputedProps<TFieldId>>
+      | undefined;
+  };
+
+  /** Custom render function for complete control over field rendering */
+  renderField?: (props: FieldRenderProps<TFieldId>) => React.ReactNode;
+
+  /**
+   * When requirements.flow is defined, optional render prop for step navigation (Previous / Next).
+   * If omitted, default Previous/Next buttons are shown.
+   */
+  renderStepNavigation?: (props: StepNavigationProps) => React.ReactNode;
+
+  /** Optional className for the form container */
+  className?: string;
+
+  /** Optional className for the form group container */
+  groupClassName?: string;
+
+  /** When true, field values are cleared when their visibleWhen evaluates to false. Default: false. */
+  clearHiddenValues?: boolean;
+
+  /**
+   * When true and requirements.flow is defined: render all steps at once (each step as a section with title),
+   * with fields conditionally visible per step. No Previous/Next navigation. Use for single-page forms
+   * that still group fields by step. Default: false.
+   */
+  showAllSteps?: boolean;
+
+  /** Optional children to render after fields */
+  children?: React.ReactNode;
+}
+
+/**
+ * DynamicForm - Renders form fields based on a requirements object
+ *
+ * Supports two modes:
+ * - **Uncontrolled** (recommended): Use `defaultValue` and let DynamicForm manage state internally.
+ *   Native form submission handles data via `name` attributes on inputs.
+ * - **Controlled**: Use `value` + `onChange` for full parent control over form state.
+ *
+ * Features:
+ * - Conditional field visibility (showWhen)
+ * - Dynamic validation (required, requireWhen, min, max, pattern)
+ * - Computed fields with formulas
+ * - Dataset-based options
+ * - Pluggable component system
+ * - When requirements.flow is defined: step-based UI with optional Previous/Next (or renderStepNavigation)
+ *
+ * @example
+ * ```tsx
+ * // Uncontrolled mode (simple, recommended for most cases)
+ * <DynamicForm
+ *   requirements={requirements}
+ *   defaultValue={{ firstName: 'John' }}
+ *   components={{ text: TextInput, number: NumberInput }}
+ * />
+ *
+ * // With flow (step-based): requirements.flow is used automatically
+ * <DynamicForm
+ *   requirements={requirementsWithFlow}
+ *   defaultValue={{}}
+ *   renderStepNavigation={({ canGoPrevious, canGoNext, onPrevious, onNext }) => (...)}
+ *   components={{ text: TextInput }}
+ * />
+ * ```
+ */
+export function DynamicForm<TFieldId extends string = string>({
+  requirements,
+  defaultValue = {},
+  value: controlledValue,
+  onChange,
+  mapping,
+  components,
+  renderField,
+  renderStepNavigation,
+  groupClassName,
+  clearHiddenValues,
+  showAllSteps = false,
+  className,
+  children,
+}: DynamicFormProps<TFieldId>) {
+  const [internalValue, setInternalValue] = useState<FormData>(() => defaultValue);
+  const isControlled = controlledValue !== undefined;
+  const formData = isControlled ? controlledValue : internalValue;
+
+  const flow = requirements.flow;
+  const [currentStepId, setCurrentStepId] = useState<string>(() =>
+    flow ? getInitialStepId(flow, { requirements, formData }) : '',
+  );
+
+  const {
+    getFieldState,
+    calculateData,
+    formData: mergedFormData,
+  } = useRequirements(requirements, formData, {
+    mapping,
+  });
+
+  const currentStepIndex = flow ? flow.steps.findIndex((s) => s.id === currentStepId) : -1;
+  const currentStep = flow && currentStepIndex >= 0 ? flow.steps[currentStepIndex] : undefined;
+  const totalSteps = flow ? flow.steps.length : 0;
+
+  const idToField = useMemo(
+    () => new Map<string, Field<TFieldId>>(requirements.fields.map((f) => [f.id, f])),
+    [requirements.fields],
+  );
+
+  const currentStepFields: Field<TFieldId>[] = useMemo(() => {
+    if (!flow || !currentStep) return [];
+    return currentStep.fields.map((id) => idToField.get(id)).filter((f): f is Field<TFieldId> => f != null);
+  }, [flow, currentStep, idToField]);
+
+  const allStepsWithFields: { step: FlowStep; fields: Field<TFieldId>[] }[] = useMemo(() => {
+    if (!flow || !showAllSteps) return [];
+    return flow.steps.map((step) => ({
+      step,
+      fields: step.fields.map((id) => idToField.get(id)).filter((f): f is Field<TFieldId> => f != null),
+    }));
+  }, [flow, showAllSteps, idToField]);
+
+  const currentStepIsValid = useMemo(() => {
+    if (!flow || currentStepFields.length === 0) return true;
+    return currentStepFields.every((field) => {
+      const state = getFieldState(field.id);
+      return !state.isVisible || state.errors.length === 0;
+    });
+  }, [flow, currentStepFields, getFieldState]);
+
+  const nextStepId = flow ? getNextStepId(flow, currentStepId, mergedFormData, { requirements }) : undefined;
+  const previousStepId = flow ? getPreviousStepId(flow, currentStepId) : undefined;
+  const canGoNext = nextStepId !== undefined && currentStepIsValid;
+  const canGoPrevious = previousStepId !== undefined;
+
+  const handleNext = useCallback(() => {
+    if (nextStepId) setCurrentStepId(nextStepId);
+  }, [nextStepId]);
+
+  const handlePrevious = useCallback(() => {
+    if (previousStepId) setCurrentStepId(previousStepId);
+  }, [previousStepId]);
+
+  const handleFieldChange = useCallback(
+    (fieldId: string, newValue: FieldValue) => {
+      const updatedValue: FormData = { ...formData, [fieldId]: newValue };
+      const calculated = calculateData(updatedValue);
+      let mergedValue: FormData = { ...updatedValue, ...calculated };
+
+      // Apply exclusions (nulls out fields where excludeWhen evaluates to true)
+      mergedValue = applyExclusions(requirements, mergedValue);
+
+      if (clearHiddenValues) {
+        mergedValue = clearHiddenFieldValues(requirements, mergedValue);
+      }
+
+      if (!isControlled) {
+        setInternalValue(mergedValue);
+      }
+      onChange?.(mergedValue);
+    },
+    [formData, calculateData, isControlled, onChange, clearHiddenValues, requirements],
+  );
+
+  const renderFieldContent = useCallback(
+    (field: Field<TFieldId>) => {
+      const fieldState = getFieldState(field.id);
+
+      if (renderField) {
+        return renderField({
+          field,
+          fieldState,
+          onChange: (newValue: FieldValue) => handleFieldChange(field.id, newValue),
+          components,
+        });
+      }
+
+      const fieldType = field.type;
+      const Component = components?.[fieldType];
+
+      if (!Component) {
+        if (isDev) {
+          console.warn(
+            `[DynamicForm] No component found for field type: "${fieldType}". ` +
+              `Provide a component via the "components" prop or use "renderField" for custom rendering.`,
+          );
+        }
+        return null;
+      }
+
+      if (fieldType === 'computed') {
+        const ComputedComponent = Component as React.ComponentType<FieldComputedProps<TFieldId>>;
+        return <ComputedComponent field={field} value={fieldState.value} isVisible={fieldState.isVisible} />;
+      }
+
+      const InputComponent = Component as React.ComponentType<FieldInputProps<TFieldId>>;
+      return (
+        <InputComponent
+          field={field}
+          value={fieldState.value}
+          onChange={(newValue: FieldValue) => handleFieldChange(field.id, newValue)}
+          errors={fieldState.errors}
+          isRequired={fieldState.isRequired}
+          isVisible={fieldState.isVisible}
+          isReadOnly={fieldState.isReadOnly}
+          options={fieldState.options}
+          label={fieldState.label}
+        />
+      );
+    },
+    [getFieldState, renderField, components, handleFieldChange],
+  );
+
+  // Flow mode: show current step only, or all steps when showAllSteps is true
+  if (flow) {
+    if (showAllSteps) {
+      return (
+        <div className={className} role='group' aria-label='Dynamic form with steps'>
+          {allStepsWithFields.map(({ step, fields }) => {
+            const stepTitle =
+              step.title !== undefined ? (typeof step.title === 'string' ? step.title : step.title.default) : undefined;
+            return (
+              <Fragment key={step.id}>
+                {stepTitle != null && (
+                  <h2 className='text-foreground-header mb-4 text-lg font-semibold' id={`step-${step.id}-title`}>
+                    {stepTitle}
+                  </h2>
+                )}
+                <div
+                  className={groupClassName}
+                  aria-labelledby={stepTitle != null ? `step-${step.id}-title` : undefined}
+                >
+                  {fields.map((field) => (
+                    <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
+                  ))}
+                </div>
+              </Fragment>
+            );
+          })}
+          {children}
+        </div>
+      );
+    }
+
+    const stepTitle =
+      currentStep?.title !== undefined
+        ? typeof currentStep.title === 'string'
+          ? currentStep.title
+          : currentStep.title.default
+        : undefined;
+
+    return (
+      <div className={className} role='group' aria-label='Dynamic form with steps'>
+        {stepTitle != null && (
+          <h2 className='text-foreground-header mb-4 text-lg font-semibold' id={`step-${currentStepId}-title`}>
+            {stepTitle}
+          </h2>
+        )}
+        <div className={groupClassName} aria-labelledby={stepTitle != null ? `step-${currentStepId}-title` : undefined}>
+          {currentStepFields.map((field) => (
+            <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
+          ))}
+        </div>
+        {renderStepNavigation ? (
+          renderStepNavigation({
+            canGoPrevious,
+            canGoNext,
+            isStepValid: currentStepIsValid,
+            onPrevious: handlePrevious,
+            onNext: handleNext,
+            stepTitle,
+            currentStepIndex: currentStepIndex >= 0 ? currentStepIndex : 0,
+            totalSteps,
+          })
+        ) : (
+          <div className='mt-6 flex gap-3'>
+            {canGoPrevious && (
+              <button
+                type='button'
+                onClick={handlePrevious}
+                className='rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent'
+              >
+                Previous
+              </button>
+            )}
+            {nextStepId !== undefined && (
+              <button
+                type='button'
+                onClick={handleNext}
+                disabled={!currentStepIsValid}
+                aria-disabled={!currentStepIsValid}
+                title={!currentStepIsValid ? 'Fix validation errors to continue' : undefined}
+                className='rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50'
+              >
+                Next
+              </button>
+            )}
+          </div>
+        )}
+        {children}
+      </div>
+    );
+  }
+
+  // Flat mode: all fields
+  return (
+    <div className={className} role='group' aria-label='Dynamic form fields'>
+      {requirements.fields.map((field) => (
+        <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
+      ))}
+      {children}
+    </div>
+  );
+}

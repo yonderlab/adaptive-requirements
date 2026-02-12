@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "outDir": "./dist",
+    "target": "ES2022",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "erasableSyntaxOnly": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "alwaysStrict": true,
+    "useUnknownInCatchVariables": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "removeComments": false,
+    "emitDecoratorMetadata": false
+  },
+  "include": ["src/**/*", "vitest.config.ts", "tsdown.config.ts", "**/*.test.ts", "**/*.spec.ts"],
+  "exclude": ["node_modules", "build", "dist"]
+}

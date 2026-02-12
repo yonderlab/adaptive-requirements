@@ -1,0 +1,57 @@
+{
+  "name": "@kota/dynamic-form",
+  "version": "0.1.0",
+  "description": "A lightweight, type-safe dynamic form system for React with runtime validation using Zod and JSON-Logic for conditional fields, dynamic validation, and computed values",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "clean": "git clean -xdf node_modules dist .turbo",
+    "dev": "tsdown --watch",
+    "format": "prettier . --check --cache --cache-location='node_modules/.cache/.prettiercache'",
+    "format:fix": "prettier . --write --cache --cache-location='node_modules/.cache/.prettiercache' --log-level=warn",
+    "lint": "eslint . --cache --cache-location 'node_modules/.cache/.eslintcache' --max-warnings 0",
+    "lint:fix": "eslint . --fix --cache --cache-location 'node_modules/.cache/.eslintcache' --max-warnings 0",
+    "test": "vitest --run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "json-logic-js": "2.0.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/eslint": "9.6.1",
+    "@types/json-logic-js": "^2.0.7",
+    "@types/react": "18.3.24",
+    "@types/react-dom": "18.3.5",
+    "@typescript-eslint/eslint-plugin": "7.18.0",
+    "@typescript-eslint/parser": "7.18.0",
+    "@vitest/coverage-v8": "3.2.4",
+    "eslint": "8.57.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-react": "7.37.2",
+    "eslint-plugin-react-hooks": "5.1.0",
+    "tsdown": "^0.20.0",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  }
+}
