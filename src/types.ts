@@ -383,7 +383,7 @@ export type BenefitType = z.infer<typeof benefitTypeEnum>;
 /**
  * The operational context in which this requirement is used
  */
-export const requirementContextEnum = z.enum(['dependant_management_intent', 'setup_intent']);
+export const requirementContextEnum = z.enum(['dependant_management_intent', 'enrolment_intent', 'setup_intent']);
 export type RequirementContext = z.infer<typeof requirementContextEnum>;
 
 /**
