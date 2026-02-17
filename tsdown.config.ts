@@ -1,11 +1,15 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig({
-  entry: ['./src/index.ts'],
+  entry: {
+    'react/index': './src/react/index.ts',
+    'react/adapters/react-hook-form': './src/react/adapters/react-hook-form.ts',
+    'react/adapters/formik': './src/react/adapters/formik.ts',
+  },
   format: ['esm'],
   dts: true,
   sourcemap: true,
   clean: process.env['NODE_ENV'] !== 'development',
   outExtensions: () => ({ js: '.js', dts: '.d.ts' }),
-  external: ['zod', 'react', 'react/jsx-runtime', 'json-logic-js'],
+  external: ['react', 'react/jsx-runtime', 'react-dom', 'json-logic-js'],
 });

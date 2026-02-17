@@ -1,19 +1,29 @@
 {
   "name": "@kota/dynamic-form",
   "version": "0.1.0",
-  "description": "A lightweight, type-safe dynamic form system for React with runtime validation using Zod and JSON-Logic for conditional fields, dynamic validation, and computed values",
+  "description": "A lightweight, type-safe dynamic form system for React with JSON-Logic for conditional fields, dynamic validation, and computed values",
   "license": "MIT",
   "sideEffects": false,
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "development": "./src/index.ts",
-      "default": "./dist/index.js"
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "development": "./src/react/index.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./react/adapters/react-hook-form": {
+      "types": "./dist/react/adapters/react-hook-form.d.ts",
+      "development": "./src/react/adapters/react-hook-form.ts",
+      "default": "./dist/react/adapters/react-hook-form.js"
+    },
+    "./react/adapters/formik": {
+      "types": "./dist/react/adapters/formik.d.ts",
+      "development": "./src/react/adapters/formik.ts",
+      "default": "./dist/react/adapters/formik.js"
     }
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/react/index.js",
+  "types": "./dist/react/index.d.ts",
   "files": [
     "dist",
     "src"
@@ -30,8 +40,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "json-logic-js": "2.0.5",
-    "zod": "^3.25.76"
+    "json-logic-js": "2.0.5"
   },
   "devDependencies": {
     "@testing-library/react": "16.3.2",

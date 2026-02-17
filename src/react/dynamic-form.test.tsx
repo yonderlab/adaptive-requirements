@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { FormData, RequirementsObject } from '../core/types';
 import { DynamicForm } from './dynamic-form';
 import type { FieldInputProps, FieldRenderProps } from './dynamic-form';
-import type { FormData, RequirementsObject } from './types';
 
 afterEach(cleanup);
 

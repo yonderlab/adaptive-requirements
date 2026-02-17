@@ -1,6 +1,12 @@
 import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { applyExclusions, clearHiddenFieldValues, getInitialStepId, getNextStepId, getPreviousStepId } from './engine';
+import {
+  applyExclusions,
+  clearHiddenFieldValues,
+  getInitialStepId,
+  getNextStepId,
+  getPreviousStepId,
+} from '../core/engine';
 import type {
   Field,
   FieldMapping,
@@ -10,7 +16,7 @@ import type {
   FormData,
   RequirementsObject,
   ResolvedFieldOption,
-} from './types';
+} from '../core/types';
 import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';

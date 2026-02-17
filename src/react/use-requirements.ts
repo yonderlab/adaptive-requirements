@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react';
 
-import type { EngineOptions } from './engine';
-import { createAdapter } from './engine';
-import type { FieldMapping, FieldState, FormData, RequirementsObject } from './types';
+import type { EngineOptions } from '../core/engine';
+import { createAdapter } from '../core/engine';
+import type { FieldMapping, FieldState, FormData, RequirementsObject } from '../core/types';
 
 export interface UseRequirementsOptions {
   mapping?: FieldMapping;

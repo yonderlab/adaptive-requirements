@@ -494,7 +494,7 @@ export function runCustomValidators(
 
 /**
  * Dataset item can be a string or an object with optional id/value/label/name and additional properties for filtering
- * This is a wider type than the Zod schema to allow for filtering on custom properties.
+ * This is a wider type to allow for filtering on custom properties.
  */
 type DatasetItemExtended = string | Record<string, FieldValue>;
 

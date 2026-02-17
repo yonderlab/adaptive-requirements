@@ -1,17 +1,17 @@
 # Dynamic Forms
 
-A lightweight, type-safe dynamic form system for React with runtime validation using Zod. Inspired by requirements-adapter, this system allows you to define forms declaratively with conditional visibility, dynamic validation, and computed fields.
+A lightweight, type-safe dynamic form system for React. Inspired by requirements-adapter, this system allows you to define forms declaratively with conditional visibility, dynamic validation, and computed fields.
 
 ## Features
 
 - ✅ **Conditional Visibility** - Show/hide fields based on runtime conditions
 - ✅ **Dynamic Validation** - Required, min, max, pattern validation with conditional logic
 - ✅ **Computed Fields** - Auto-calculate values using formulas
-- ✅ **Type-Safe** - Full TypeScript support with Zod runtime validation
+- ✅ **Type-Safe** - Full TypeScript support
 - ✅ **Pluggable Components** - Bring your own UI components
 - ✅ **JSON-Logic Engine** - Powerful rule engine for conditionals and calculations
 - ✅ **Uncontrolled & Controlled Modes** - Use internal state or manage your own
-- ✅ **Zero Dependencies** - Only React and Zod as peer dependencies
+- ✅ **Minimal Dependencies** - Only `json-logic-js` as runtime dependency, React as peer
 
 ## Installation
 
@@ -645,19 +645,18 @@ const state: FieldState<MyFieldIds> = getFieldState('firstName'); // ✅
 const invalidState = getFieldState('invalid'); // ❌ Type error
 ```
 
-## Zod Validation
+## Validation
 
-All schemas are validated at runtime using Zod:
+Validate requirements objects at runtime using the built-in validation utilities:
 
 ```typescript
-import { fieldSchema, requirementsObjectSchema } from '@kota/ui';
+import { validateRequirementsObject } from '@kota/dynamic-form';
 
-// Validate a requirements object
-const result = requirementsObjectSchema.safeParse(myRequirements);
+const result = validateRequirementsObject(myRequirements);
 if (result.success) {
   console.log('Valid requirements:', result.data);
 } else {
-  console.error('Invalid requirements:', result.error);
+  console.error('Validation errors:', result.errors);
 }
 ```
 
