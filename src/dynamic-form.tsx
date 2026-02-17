@@ -1,4 +1,4 @@
-import React, { Fragment, useCallback, useMemo, useState } from 'react';
+import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { applyExclusions, clearHiddenFieldValues, getInitialStepId, getNextStepId, getPreviousStepId } from './engine';
 import type {
@@ -22,6 +22,8 @@ export interface FieldInputProps<TFieldId extends string = string> {
   field: Field<TFieldId>;
   value: FieldValue;
   onChange: (value: FieldValue) => void;
+  /** Called when the field loses focus. Wire to your input's onBlur for blur-based touched tracking. */
+  onBlur?: () => void;
   errors: string[];
   isRequired: boolean;
   isVisible: boolean;
@@ -45,8 +47,14 @@ export interface FieldComputedProps<TFieldId extends string = string> {
  */
 export interface FieldRenderProps<TFieldId extends string = string> {
   field: Field<TFieldId>;
+  /** Raw engine field state with unfiltered errors (always includes all validation errors) */
   fieldState: FieldState<TFieldId>;
+  /** Errors filtered by touched state (empty until user interacts, unless showAllErrors is true) */
+  displayErrors: string[];
+  /** Whether the user has interacted with this field */
+  isTouched: boolean;
   onChange: (value: FieldValue) => void;
+  onBlur: () => void;
   components?: DynamicFormProps<TFieldId>['components'];
 }
 
@@ -137,6 +145,13 @@ export interface DynamicFormProps<TFieldId extends string = string> {
    */
   showAllSteps?: boolean;
 
+  /**
+   * When true, bypass touched-field filtering and show all validation errors immediately.
+   * By default, errors are only shown after the user interacts with a field (onChange or onBlur).
+   * Default: false.
+   */
+  showAllErrors?: boolean;
+
   /** Optional children to render after fields */
   children?: React.ReactNode;
 }
@@ -187,6 +202,7 @@ export function DynamicForm<TFieldId extends string = string>({
   groupClassName,
   clearHiddenValues,
   showAllSteps = false,
+  showAllErrors = false,
   className,
   children,
 }: DynamicFormProps<TFieldId>) {
@@ -197,6 +213,46 @@ export function DynamicForm<TFieldId extends string = string>({
   const flow = requirements.flow;
   const [currentStepId, setCurrentStepId] = useState<string>(() =>
     flow ? getInitialStepId(flow, { requirements, formData }) : '',
+  );
+
+  // Touched field tracking — errors are only shown for fields the user has interacted with
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(() => new Set());
+
+  // Reset touched state when the field schema changes (stable key derived from field IDs)
+  const fieldIdKey = useMemo(() => requirements.fields.map((f) => f.id).join(','), [requirements.fields]);
+  useEffect(() => {
+    setTouchedFields(new Set());
+  }, [fieldIdKey]);
+
+  const markFieldTouched = useCallback((fieldId: string) => {
+    setTouchedFields((prev) => {
+      if (prev.has(fieldId)) return prev;
+      const next = new Set(prev);
+      next.add(fieldId);
+      return next;
+    });
+  }, []);
+
+  const markFieldsTouched = useCallback((fieldIds: string[]) => {
+    setTouchedFields((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const id of fieldIds) {
+        if (!next.has(id)) {
+          next.add(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const getDisplayErrors = useCallback(
+    (fieldId: string, errors: string[]): string[] => {
+      if (showAllErrors || touchedFields.has(fieldId)) return errors;
+      return [];
+    },
+    [showAllErrors, touchedFields],
   );
 
   const {
@@ -243,8 +299,14 @@ export function DynamicForm<TFieldId extends string = string>({
   const canGoPrevious = previousStepId !== undefined;
 
   const handleNext = useCallback(() => {
+    if (!currentStepIsValid) {
+      // Reveal errors for all visible fields in current step
+      const visibleFieldIds = currentStepFields.filter((f) => getFieldState(f.id).isVisible).map((f) => f.id);
+      markFieldsTouched(visibleFieldIds);
+      return;
+    }
     if (nextStepId) setCurrentStepId(nextStepId);
-  }, [nextStepId]);
+  }, [nextStepId, currentStepIsValid, currentStepFields, getFieldState, markFieldsTouched]);
 
   const handlePrevious = useCallback(() => {
     if (previousStepId) setCurrentStepId(previousStepId);
@@ -252,6 +314,8 @@ export function DynamicForm<TFieldId extends string = string>({
 
   const handleFieldChange = useCallback(
     (fieldId: string, newValue: FieldValue) => {
+      markFieldTouched(fieldId);
+
       const updatedValue: FormData = { ...formData, [fieldId]: newValue };
       const calculated = calculateData(updatedValue);
       let mergedValue: FormData = { ...updatedValue, ...calculated };
@@ -268,7 +332,14 @@ export function DynamicForm<TFieldId extends string = string>({
       }
       onChange?.(mergedValue);
     },
-    [formData, calculateData, isControlled, onChange, clearHiddenValues, requirements],
+    [formData, calculateData, isControlled, onChange, clearHiddenValues, requirements, markFieldTouched],
+  );
+
+  const handleFieldBlur = useCallback(
+    (fieldId: string) => {
+      markFieldTouched(fieldId);
+    },
+    [markFieldTouched],
   );
 
   const renderFieldContent = useCallback(
@@ -279,7 +350,10 @@ export function DynamicForm<TFieldId extends string = string>({
         return renderField({
           field,
           fieldState,
+          displayErrors: getDisplayErrors(field.id, fieldState.errors),
+          isTouched: touchedFields.has(field.id),
           onChange: (newValue: FieldValue) => handleFieldChange(field.id, newValue),
+          onBlur: () => handleFieldBlur(field.id),
           components,
         });
       }
@@ -308,7 +382,8 @@ export function DynamicForm<TFieldId extends string = string>({
           field={field}
           value={fieldState.value}
           onChange={(newValue: FieldValue) => handleFieldChange(field.id, newValue)}
-          errors={fieldState.errors}
+          onBlur={() => handleFieldBlur(field.id)}
+          errors={getDisplayErrors(field.id, fieldState.errors)}
           isRequired={fieldState.isRequired}
           isVisible={fieldState.isVisible}
           isReadOnly={fieldState.isReadOnly}
@@ -317,7 +392,7 @@ export function DynamicForm<TFieldId extends string = string>({
         />
       );
     },
-    [getFieldState, renderField, components, handleFieldChange],
+    [getFieldState, renderField, components, handleFieldChange, handleFieldBlur, getDisplayErrors, touchedFields],
   );
 
   // Flow mode: show current step only, or all steps when showAllSteps is true
@@ -396,10 +471,9 @@ export function DynamicForm<TFieldId extends string = string>({
               <button
                 type='button'
                 onClick={handleNext}
-                disabled={!currentStepIsValid}
-                aria-disabled={!currentStepIsValid}
+                aria-disabled={!currentStepIsValid || undefined}
                 title={!currentStepIsValid ? 'Fix validation errors to continue' : undefined}
-                className='rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50'
+                className={`rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90${!currentStepIsValid ? ' opacity-50 cursor-not-allowed' : ''}`}
               >
                 Next
               </button>
