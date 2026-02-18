@@ -16,8 +16,7 @@ A lightweight, type-safe dynamic form system for React. Inspired by requirements
 ## Installation
 
 ```bash
-# Already included in @kota/ui package
-import { DynamicForm, useRequirements } from '@kota/ui';
+pnpm add @kota/dynamic-form
 ```
 
 ## Quick Start
@@ -27,7 +26,7 @@ import { DynamicForm, useRequirements } from '@kota/ui';
 The simplest way to use DynamicForm — it manages its own state internally:
 
 ```tsx
-import { DynamicForm } from '@kota/ui';
+import { DynamicForm } from '@kota/dynamic-form/react';
 
 const requirements = {
   fields: [
@@ -173,20 +172,6 @@ const requirements = {
 };
 ```
 
-Use a custom label resolver for i18n integration:
-
-```tsx
-const { getFieldState } = useRequirements(requirements, data, {
-  engine: {
-    locale: 'es',
-    labelResolver: (label, locale) => {
-      if (typeof label === 'string') return label;
-      return i18n.t(label.key, { lng: locale }) || label.default;
-    },
-  },
-});
-```
-
 ### Computed Fields
 
 Automatically calculate values based on other fields:
@@ -304,27 +289,9 @@ const requirements = {
 | `spanish_tax_id`    | -            | Validates Spanish NIF/NIE format        |
 | `irish_pps`         | -            | Validates Irish PPS number format       |
 | `german_tax_id`     | -            | Validates German tax ID (11 digits)     |
-
-#### Custom Validators
-
-Add your own validators via engine options:
-
-```tsx
-const { getFieldState } = useRequirements(requirements, data, {
-  engine: {
-    customValidators: {
-      email_domain: (value, params) => {
-        if (typeof value !== 'string') return null;
-        const domain = params?.domain as string;
-        if (domain && !value.endsWith(`@${domain}`)) {
-          return `Email must be from ${domain}`;
-        }
-        return null;
-      },
-    },
-  },
-});
-```
+| `file_type`         | `accept`     | File extension/MIME type matching       |
+| `file_size`         | `maxSize`    | File size in bytes                      |
+| `file_count`        | `maxFiles`   | Number of files                         |
 
 ## Rule Engine
 
@@ -395,91 +362,12 @@ The rule engine supports JSON-Logic style expressions:
 { substr: [str, start, length?] }  // Substring
 ```
 
-## Hook Usage
-
-### useRequirements
-
-The main hook for working with dynamic forms:
-
-```tsx
-import { useRequirements } from '@kota/ui';
-
-function MyComponent() {
-  const [inputData, setInputData] = useState({});
-
-  const {
-    formData, // Complete data (input + computed values)
-    getFieldState, // Get state for a specific field
-    getAllFieldStates, // Get state for all fields
-    isValid, // Whether all visible fields pass validation
-    getErrors, // Get all validation errors
-    calculatedData, // Only computed field values
-  } = useRequirements(requirements, inputData);
-
-  // Access complete form data including computed values
-  console.log(formData.subtotal); // computed value
-  console.log(formData.firstName); // input value
-
-  // Get individual field state
-  const firstNameState = getFieldState('firstName');
-  console.log(firstNameState.isVisible); // boolean
-  console.log(firstNameState.isRequired); // boolean
-  console.log(firstNameState.errors); // string[]
-  console.log(firstNameState.value); // any
-
-  return (
-    <div>
-      <button disabled={!isValid}>Submit</button>
-      {!isValid && <div>Errors: {JSON.stringify(getErrors())}</div>}
-    </div>
-  );
-}
-```
-
-### useFieldState
-
-Optimize re-renders by subscribing to individual field state:
-
-```tsx
-import { useFieldState } from '@kota/ui';
-
-function MyFieldComponent() {
-  const fieldState = useFieldState(requirements, 'firstName', formData);
-
-  return (
-    <div>
-      <input value={fieldState.value} disabled={!fieldState.isVisible} required={fieldState.isRequired} />
-      {fieldState.errors.map((error) => (
-        <div key={error}>{error}</div>
-      ))}
-    </div>
-  );
-}
-```
-
-### useCalculatedData
-
-Get only computed field values:
-
-```tsx
-import { useCalculatedData } from '@kota/ui';
-
-function MyComponent() {
-  const formData = { price: 100, quantity: 2 };
-  const calculated = useCalculatedData(requirements, formData);
-
-  console.log(calculated.subtotal); // 200
-  console.log(calculated.tax); // 20
-  console.log(calculated.total); // 220
-}
-```
-
 ## Custom Components
 
 Create custom field components that implement the `FieldInputProps` interface:
 
 ```tsx
-import type { FieldInputProps } from '@kota/ui';
+import type { FieldInputProps } from '@kota/dynamic-form/react';
 
 const CustomTextInput: React.FC<FieldInputProps> = ({ field, value, onChange, errors, isRequired, isVisible }) => {
   if (!isVisible) return null;
@@ -529,22 +417,24 @@ For complete control over rendering:
 
 ## Field Mapping
 
-Remap field IDs to support different naming conventions:
+Remap field IDs to support different naming conventions. Pass a `mapping` prop to `DynamicForm`:
 
 ```tsx
-import { createAdapter } from '@kota/ui';
-
-const adapter = createAdapter(requirements, {
-  fieldIdMap: {
-    // Consumer field name -> Schema field ID
-    firstName: 'first_name',
-    lastName: 'last_name',
-  },
-});
-
-// Now you can use 'firstName' instead of 'first_name'
-const state = adapter.checkField('firstName', formData);
+<DynamicForm
+  requirements={requirements}
+  defaultValue={{}}
+  mapping={{
+    fieldIdMap: {
+      // Consumer field name -> Schema field ID
+      firstName: 'first_name',
+      lastName: 'last_name',
+    },
+  }}
+  components={myComponents}
+/>
 ```
+
+Now your form data uses `firstName` instead of `first_name`.
 
 ## Datasets
 
@@ -623,12 +513,60 @@ The filter rule has access to:
 
 `FieldOption.value` can be `string` or `boolean` (e.g. Yes/No datasets). Form state and submission use this raw value so JSON Logic rules and API payloads receive real booleans, not `"true"`/`"false"` strings. Select/radio components that use a string-only DOM or Radix API (e.g. `value` on options) should serialize for the control (e.g. `String(option.value)`) but pass the raw `option.value` into `onChange` and form submission.
 
+## Form Library Adapters
+
+Adapter hooks bridge DynamicForm with popular form libraries. They return `{ value, onChange }` props to pass directly to `<DynamicForm>` in controlled mode.
+
+### React Hook Form
+
+```tsx
+import { DynamicForm } from '@kota/dynamic-form/react';
+import { useReactHookFormAdapter } from '@kota/dynamic-form/react/adapters/react-hook-form';
+
+function MyForm({ requirements }) {
+  const form = useFormContext();
+  const { value, onChange } = useReactHookFormAdapter({ form });
+
+  return (
+    <DynamicForm
+      requirements={requirements}
+      value={value}
+      onChange={onChange}
+      components={myComponents}
+    />
+  );
+}
+```
+
+The adapter handles `Date` → `YYYY-MM-DD` serialization by default. Pass custom `serialize`/`deserialize` functions for other transforms.
+
+### Formik
+
+```tsx
+import { DynamicForm } from '@kota/dynamic-form/react';
+import { useFormikAdapter } from '@kota/dynamic-form/react/adapters/formik';
+
+function MyForm({ requirements }) {
+  const formik = useFormikContext();
+  const { value, onChange } = useFormikAdapter({ formik });
+
+  return (
+    <DynamicForm
+      requirements={requirements}
+      value={value}
+      onChange={onChange}
+      components={myComponents}
+    />
+  );
+}
+```
+
 ## TypeScript Support
 
 All types are fully typed with generics support:
 
 ```typescript
-import type { Field, FieldState, RequirementsObject } from '@kota/ui';
+import type { Field, FieldState, RequirementsObject } from '@kota/dynamic-form/react';
 
 type MyFieldIds = 'firstName' | 'lastName' | 'email';
 
@@ -645,66 +583,92 @@ const state: FieldState<MyFieldIds> = getFieldState('firstName'); // ✅
 const invalidState = getFieldState('invalid'); // ❌ Type error
 ```
 
-## Validation
+## Advanced Examples
 
-Validate requirements objects at runtime using the built-in validation utilities:
+### Multi-Step Form (Flow API)
 
-```typescript
-import { validateRequirementsObject } from '@kota/dynamic-form';
+Use the built-in `flow` property for multi-step forms with automatic step navigation:
 
-const result = validateRequirementsObject(myRequirements);
-if (result.success) {
-  console.log('Valid requirements:', result.data);
-} else {
-  console.error('Validation errors:', result.errors);
+```tsx
+import { DynamicForm } from '@kota/dynamic-form/react';
+
+const requirements = {
+  fields: [
+    { id: 'firstName', type: 'text', label: 'First Name', validation: { required: true } },
+    { id: 'lastName', type: 'text', label: 'Last Name', validation: { required: true } },
+    { id: 'email', type: 'email', label: 'Email', validation: { required: true } },
+    { id: 'phone', type: 'text', label: 'Phone' },
+  ],
+  flow: {
+    steps: [
+      { id: 'personal', title: 'Personal Info', fields: ['firstName', 'lastName'] },
+      { id: 'contact', title: 'Contact Info', fields: ['email', 'phone'] },
+    ],
+  },
+};
+
+function MultiStepForm() {
+  return (
+    <DynamicForm
+      requirements={requirements}
+      defaultValue={{}}
+      components={myComponents}
+    />
+  );
 }
 ```
 
-## Advanced Examples
-
-### Multi-Step Form with Progress
+DynamicForm automatically renders Previous/Next buttons. Customize navigation with `renderStepNavigation`:
 
 ```tsx
-function MultiStepForm() {
-  const [formData, setFormData] = useState({ step: 1 });
-  const { getFieldState, isValid } = useRequirements(requirements, formData);
-
-  const requirements = {
-    fields: [
-      // Step 1
-      {
-        id: 'firstName',
-        type: 'text',
-        label: 'First Name',
-        showWhen: { '==': [{ var: 'step' }, 1] },
-        validation: { required: true },
-      },
-      // Step 2
-      {
-        id: 'email',
-        type: 'email',
-        label: 'Email',
-        showWhen: { '==': [{ var: 'step' }, 2] },
-        validation: { required: true },
-      },
-    ],
-  };
-
-  const nextStep = () => {
-    if (isValid) {
-      setFormData({ ...formData, step: formData.step + 1 });
-    }
-  };
-
-  return (
+<DynamicForm
+  requirements={requirements}
+  defaultValue={{}}
+  components={myComponents}
+  renderStepNavigation={({ canGoPrevious, canGoNext, onPrevious, onNext, stepTitle, currentStepIndex, totalSteps }) => (
     <div>
-      <DynamicForm requirements={requirements} value={formData} onChange={setFormData} components={myComponents} />
-      <button onClick={nextStep} disabled={!isValid}>
-        Next
-      </button>
+      <span>{stepTitle} ({currentStepIndex + 1} of {totalSteps})</span>
+      {canGoPrevious && <button onClick={onPrevious}>Back</button>}
+      {canGoNext && <button onClick={onNext}>Next</button>}
     </div>
-  );
-}
+  )}
+/>
+```
+
+Use `showAllSteps` to render all steps as sections on a single page (no navigation):
+
+```tsx
+<DynamicForm requirements={requirements} defaultValue={{}} showAllSteps components={myComponents} />
+```
+
+#### Conditional Step Navigation
+
+Use `flow.navigation` rules to skip steps based on form data:
+
+```tsx
+const requirements = {
+  fields: [
+    { id: 'hasAddress', type: 'checkbox', label: 'I have a mailing address' },
+    { id: 'street', type: 'text', label: 'Street' },
+    { id: 'confirm', type: 'checkbox', label: 'I confirm the above' },
+  ],
+  flow: {
+    steps: [
+      { id: 'preferences', fields: ['hasAddress'] },
+      { id: 'address', fields: ['street'] },
+      { id: 'confirm', fields: ['confirm'] },
+    ],
+    navigation: {
+      start: 'preferences',
+      rules: [
+        {
+          when: { '!': { var: 'hasAddress' } },
+          action: { type: 'goto', stepId: 'confirm' }, // Skip address step
+        },
+      ],
+    },
+  },
+};
 ```
 
 ### Dynamic Dependent Fields
@@ -726,21 +690,21 @@ const requirements = {
       id: 'employerName',
       type: 'text',
       label: 'Employer Name',
-      showWhen: { '==': [{ var: 'employmentType' }, 'employed'] },
+      visibleWhen: { '==': [{ var: 'employmentType' }, 'employed'] },
       validation: { required: true },
     },
     {
       id: 'businessName',
       type: 'text',
       label: 'Business Name',
-      showWhen: { '==': [{ var: 'employmentType' }, 'self-employed'] },
+      visibleWhen: { '==': [{ var: 'employmentType' }, 'self-employed'] },
       validation: { required: true },
     },
     {
       id: 'annualIncome',
       type: 'number',
       label: 'Annual Income',
-      showWhen: {
+      visibleWhen: {
         in: [{ var: 'employmentType' }, ['employed', 'self-employed']],
       },
       validation: { min: 0 },
@@ -777,7 +741,7 @@ You can combine DynamicForm with react-hook-form to get the best of both worlds:
 The cleanest approach — field components use react-hook-form's `FormField` internally, so DynamicForm only handles rendering and visibility while react-hook-form manages all state:
 
 ```tsx
-import { DynamicForm, Input, type FieldInputProps, type RequirementsObject } from '@kota/ui';
+import { DynamicForm, type FieldInputProps, type RequirementsObject } from '@kota/dynamic-form/react';
 
 import { FormControl, FormField, FormItem, FormLabel, FormMessage, useFormContext } from '~/ui/components/form';
 
@@ -988,7 +952,7 @@ export default function AddressForm() {
 | -------------------------- | ------------------------------------------------------------------------------------- |
 | **FormField Components**   | You want react-hook-form to manage all state, validation, and errors                  |
 | **Native Form Submission** | Simple forms with server-side validation only                                         |
-| **Controlled Mode**        | You need DynamicForm's computed fields or complex showWhen logic with react-hook-form |
+| **Controlled Mode**        | You need DynamicForm's computed fields or complex visibleWhen logic with react-hook-form |
 
 ## API Reference
 
@@ -999,9 +963,8 @@ See TypeScript types for complete API documentation:
 - `FieldState` - Runtime field state
 - `Rule` - Conditional/formula expression
 - `DynamicForm` - Main form component
-- `useRequirements` - Main hook
-- `useFieldState` - Individual field hook
-- `useCalculatedData` - Computed values hook
+- `useReactHookFormAdapter` - React Hook Form adapter
+- `useFormikAdapter` - Formik adapter
 
 ## License
 
