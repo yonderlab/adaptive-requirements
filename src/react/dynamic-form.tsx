@@ -19,9 +19,8 @@ import type {
 } from '../core/types';
 import { useRequirements } from './use-requirements';
 
-const isDev =
-  typeof process !== 'undefined' &&
-  (process as { env?: Record<string, string | undefined> }).env?.NODE_ENV !== 'production';
+// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/dot-notation
+const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
 /**
  * Props for individual field input components

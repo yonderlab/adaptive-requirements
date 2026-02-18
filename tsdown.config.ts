@@ -9,7 +9,8 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   sourcemap: true,
-  clean: (process as { env?: Record<string, string | undefined> }).env?.NODE_ENV !== 'development',
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/dot-notation
+  clean: process.env['NODE_ENV'] !== 'development',
   outExtensions: () => ({ js: '.js', dts: '.d.ts' }),
   external: ['react', 'react/jsx-runtime', 'react-dom', 'json-logic-js'],
 });
