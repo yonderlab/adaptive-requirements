@@ -23,7 +23,7 @@ function TestTextInput({ field, value, onChange, onBlur, errors, isVisible, labe
         data-testid={`input-${field.id}`}
       />
       {errors.length > 0 && (
-        <span data-testid={`error-${field.id}`} role='alert'>
+        <span data-testid={`error-${field.id}`} role="alert">
           {errors.join(', ')}
         </span>
       )}
@@ -102,7 +102,7 @@ describe('DynamicForm touched-field error filtering', () => {
       const [reqs, setReqs] = useState(requirements1);
       return (
         <>
-          <button data-testid='switch' onClick={() => setReqs(requirements2)}>
+          <button data-testid="switch" onClick={() => setReqs(requirements2)}>
             Switch
           </button>
           <DynamicForm requirements={reqs} defaultValue={{}} components={testComponents} />
@@ -132,14 +132,14 @@ describe('DynamicForm touched-field error filtering', () => {
       return (
         <div>
           <input
-            data-testid='input-name'
+            data-testid="input-name"
             value={props.fieldState.value == null ? '' : String(props.fieldState.value)}
             onChange={(e) => props.onChange(e.target.value)}
             onBlur={props.onBlur}
           />
-          <span data-testid='raw-errors'>{props.fieldState.errors.join(',')}</span>
-          <span data-testid='display-errors'>{props.displayErrors.join(',')}</span>
-          <span data-testid='is-touched'>{String(props.isTouched)}</span>
+          <span data-testid="raw-errors">{props.fieldState.errors.join(',')}</span>
+          <span data-testid="display-errors">{props.displayErrors.join(',')}</span>
+          <span data-testid="is-touched">{String(props.isTouched)}</span>
         </div>
       );
     });

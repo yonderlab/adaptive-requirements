@@ -405,14 +405,14 @@ export function DynamicForm<TFieldId extends string = string>({
   if (flow) {
     if (showAllSteps) {
       return (
-        <div className={className} role='group' aria-label='Dynamic form with steps'>
+        <div className={className} role="group" aria-label="Dynamic form with steps">
           {allStepsWithFields.map(({ step, fields }) => {
             const stepTitle =
               step.title !== undefined ? (typeof step.title === 'string' ? step.title : step.title.default) : undefined;
             return (
               <Fragment key={step.id}>
                 {stepTitle != null && (
-                  <h2 className='text-foreground-header mb-4 text-lg font-semibold' id={`step-${step.id}-title`}>
+                  <h2 className="text-foreground-header mb-4 text-lg font-semibold" id={`step-${step.id}-title`}>
                     {stepTitle}
                   </h2>
                 )}
@@ -440,9 +440,9 @@ export function DynamicForm<TFieldId extends string = string>({
         : undefined;
 
     return (
-      <div className={className} role='group' aria-label='Dynamic form with steps'>
+      <div className={className} role="group" aria-label="Dynamic form with steps">
         {stepTitle != null && (
-          <h2 className='text-foreground-header mb-4 text-lg font-semibold' id={`step-${currentStepId}-title`}>
+          <h2 className="text-foreground-header mb-4 text-lg font-semibold" id={`step-${currentStepId}-title`}>
             {stepTitle}
           </h2>
         )}
@@ -463,19 +463,19 @@ export function DynamicForm<TFieldId extends string = string>({
             totalSteps,
           })
         ) : (
-          <div className='mt-6 flex gap-3'>
+          <div className="mt-6 flex gap-3">
             {canGoPrevious && (
               <button
-                type='button'
+                type="button"
                 onClick={handlePrevious}
-                className='rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent'
+                className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
               >
                 Previous
               </button>
             )}
             {nextStepId !== undefined && (
               <button
-                type='button'
+                type="button"
                 onClick={handleNext}
                 aria-disabled={!currentStepIsValid || undefined}
                 title={!currentStepIsValid ? 'Fix validation errors to continue' : undefined}
@@ -493,7 +493,7 @@ export function DynamicForm<TFieldId extends string = string>({
 
   // Flat mode: all fields
   return (
-    <div className={className} role='group' aria-label='Dynamic form fields'>
+    <div className={className} role="group" aria-label="Dynamic form fields">
       {requirements.fields.map((field) => (
         <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
       ))}

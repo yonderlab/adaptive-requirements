@@ -35,15 +35,7 @@ const config = {
     '@typescript-eslint/no-misused-promises': [2, { checksVoidReturn: { attributes: false } }],
     'import/consistent-type-specifier-style': ['error', 'prefer-top-level'],
   },
-  ignorePatterns: [
-    '**/.eslintrc.cjs',
-    '**/*.config.js',
-    '**/*.config.cjs',
-    '.cache',
-    'coverage',
-    'dist',
-    'build',
-  ],
+  ignorePatterns: ['**/.eslintrc.cjs', '**/*.config.js', '**/*.config.cjs', '.cache', 'coverage', 'dist', 'build'],
   reportUnusedDisableDirectives: true,
   root: true,
 };

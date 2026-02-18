@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "A lightweight, type-safe dynamic form system for React with JSON-Logic for conditional fields, dynamic validation, and computed values",
   "license": "MIT",
+  "packageManager": "pnpm@9.9.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/yonderlab/dynamic-form.git"
@@ -58,6 +59,7 @@
     "@tsconfig/strictest": "^2.0.5",
     "@types/eslint": "9.6.1",
     "@types/json-logic-js": "^2.0.8",
+    "@types/node": "^25.2.3",
     "@types/react": "18.3.28",
     "@types/react-dom": "18.3.7",
     "@typescript-eslint/eslint-plugin": "7.18.0",
