@@ -47,7 +47,7 @@ const requirements = {
 
 function MyForm() {
   return (
-    <form method='POST'>
+    <form method="POST">
       <DynamicForm
         requirements={requirements}
         defaultValue={{ firstName: '', age: undefined }}
@@ -56,7 +56,7 @@ function MyForm() {
           number: CustomNumberInput,
         }}
       />
-      <button type='submit'>Submit</button>
+      <button type="submit">Submit</button>
     </form>
   );
 }
@@ -376,20 +376,20 @@ const CustomTextInput: React.FC<FieldInputProps> = ({ field, value, onChange, er
     <div>
       <label>
         {field.label}
-        {isRequired && <span className='required'>*</span>}
+        {isRequired && <span className="required">*</span>}
       </label>
       <input
-        type='text'
+        type="text"
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder}
       />
       {errors.map((error, i) => (
-        <div key={i} className='error'>
+        <div key={i} className="error">
           {error}
         </div>
       ))}
-      {field.description && <div className='hint'>{field.description}</div>}
+      {field.description && <div className="hint">{field.description}</div>}
     </div>
   );
 };
@@ -527,14 +527,7 @@ function MyForm({ requirements }) {
   const form = useFormContext();
   const { value, onChange } = useReactHookFormAdapter({ form });
 
-  return (
-    <DynamicForm
-      requirements={requirements}
-      value={value}
-      onChange={onChange}
-      components={myComponents}
-    />
-  );
+  return <DynamicForm requirements={requirements} value={value} onChange={onChange} components={myComponents} />;
 }
 ```
 
@@ -550,14 +543,7 @@ function MyForm({ requirements }) {
   const formik = useFormikContext();
   const { value, onChange } = useFormikAdapter({ formik });
 
-  return (
-    <DynamicForm
-      requirements={requirements}
-      value={value}
-      onChange={onChange}
-      components={myComponents}
-    />
-  );
+  return <DynamicForm requirements={requirements} value={value} onChange={onChange} components={myComponents} />;
 }
 ```
 
@@ -610,13 +596,7 @@ const requirements = {
 };
 
 function MultiStepForm() {
-  return (
-    <DynamicForm
-      requirements={requirements}
-      defaultValue={{}}
-      components={myComponents}
-    />
-  );
+  return <DynamicForm requirements={requirements} defaultValue={{}} components={myComponents} />;
 }
 ```
 
@@ -629,7 +609,9 @@ DynamicForm automatically renders Previous/Next buttons. Customize navigation wi
   components={myComponents}
   renderStepNavigation={({ canGoPrevious, canGoNext, onPrevious, onNext, stepTitle, currentStepIndex, totalSteps }) => (
     <div>
-      <span>{stepTitle} ({currentStepIndex + 1} of {totalSteps})</span>
+      <span>
+        {stepTitle} ({currentStepIndex + 1} of {totalSteps})
+      </span>
       {canGoPrevious && <button onClick={onPrevious}>Back</button>}
       {canGoNext && <button onClick={onNext}>Next</button>}
     </div>
@@ -790,7 +772,7 @@ const SelectField: React.FC<FieldInputProps<AddressFieldIds>> = ({ field, isRequ
               value={formField.value}
               onSelect={formField.onChange}
               placeholder={field.placeholder ?? 'Select...'}
-              emptyMessage='No option found.'
+              emptyMessage="No option found."
             />
           </FormControl>
           <FormMessage />
@@ -870,20 +852,20 @@ const TextFieldComponent: React.FC<FieldInputProps<AddressFieldIds>> = ({
   if (!isVisible) return null;
 
   return (
-    <div className='space-y-2'>
+    <div className="space-y-2">
       <Label>
         {field.label}
-        {isRequired && <span className='text-destructive ml-1'>*</span>}
+        {isRequired && <span className="text-destructive ml-1">*</span>}
       </Label>
       <Input
         name={field.id} // Essential for native form submission
-        type='text'
+        type="text"
         value={(value as string) || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder}
       />
       {errors.map((error, i) => (
-        <p key={i} className='text-destructive text-sm'>
+        <p key={i} className="text-destructive text-sm">
           {error}
         </p>
       ))}
@@ -893,13 +875,13 @@ const TextFieldComponent: React.FC<FieldInputProps<AddressFieldIds>> = ({
 
 export default function AddressForm() {
   return (
-    <form method='POST'>
+    <form method="POST">
       <DynamicForm<AddressFieldIds>
         requirements={addressRequirements}
         defaultValue={{ line1: '', city: '' }}
         components={{ text: TextFieldComponent }}
       />
-      <button type='submit'>Submit</button>
+      <button type="submit">Submit</button>
     </form>
   );
 }
@@ -927,7 +909,7 @@ export default function AddressForm() {
 
   return (
     <Form {...form}>
-      <form method='POST' onSubmit={form.handleSubmit}>
+      <form method="POST" onSubmit={form.handleSubmit}>
         <DynamicForm<AddressFieldIds>
           requirements={addressRequirements}
           value={formValues}
@@ -939,7 +921,7 @@ export default function AddressForm() {
           }}
           components={{ text: TextFieldComponent, select: SelectFieldComponent }}
         />
-        <Button type='submit' loading={form.formState.isSubmitting}>
+        <Button type="submit" loading={form.formState.isSubmitting}>
           Submit
         </Button>
       </form>
@@ -950,10 +932,10 @@ export default function AddressForm() {
 
 ### Choosing a Pattern
 
-| Pattern                    | Use When                                                                              |
-| -------------------------- | ------------------------------------------------------------------------------------- |
-| **FormField Components**   | You want react-hook-form to manage all state, validation, and errors                  |
-| **Native Form Submission** | Simple forms with server-side validation only                                         |
+| Pattern                    | Use When                                                                                 |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| **FormField Components**   | You want react-hook-form to manage all state, validation, and errors                     |
+| **Native Form Submission** | Simple forms with server-side validation only                                            |
 | **Controlled Mode**        | You need DynamicForm's computed fields or complex visibleWhen logic with react-hook-form |
 
 ## API Reference

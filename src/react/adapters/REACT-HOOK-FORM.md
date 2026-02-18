@@ -18,24 +18,17 @@ function MyForm({ requirements }) {
   const form = useFormContext();
   const { value, onChange } = useReactHookFormAdapter({ form });
 
-  return (
-    <DynamicForm
-      requirements={requirements}
-      value={value}
-      onChange={onChange}
-      components={myComponents}
-    />
-  );
+  return <DynamicForm requirements={requirements} value={value} onChange={onChange} components={myComponents} />;
 }
 ```
 
 ## Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `form` | `UseFormReturn` | required | The return value of `useForm()` or `useFormContext()` |
-| `serialize` | `(values) => FormData` | Date → `YYYY-MM-DD` | Transform form library values to engine `FormData` |
-| `deserialize` | `(key, value) => unknown` | identity | Transform engine values back to form library values |
+| Option        | Type                      | Default             | Description                                           |
+| ------------- | ------------------------- | ------------------- | ----------------------------------------------------- |
+| `form`        | `UseFormReturn`           | required            | The return value of `useForm()` or `useFormContext()` |
+| `serialize`   | `(values) => FormData`    | Date → `YYYY-MM-DD` | Transform form library values to engine `FormData`    |
+| `deserialize` | `(key, value) => unknown` | identity            | Transform engine values back to form library values   |
 
 ## Serialization
 
