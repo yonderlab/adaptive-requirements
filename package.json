@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "A lightweight, type-safe dynamic form system for React with JSON-Logic for conditional fields, dynamic validation, and computed values",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yonderlab/dynamic-form.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "sideEffects": false,
   "type": "module",
   "exports": {
@@ -30,20 +38,24 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "clean": "git clean -xdf node_modules dist .turbo",
+    "clean": "git clean -xdf node_modules dist",
     "dev": "tsdown --watch",
     "format": "prettier . --check --cache --cache-location='node_modules/.cache/.prettiercache'",
     "format:fix": "prettier . --write --cache --cache-location='node_modules/.cache/.prettiercache' --log-level=warn",
     "lint": "eslint . --cache --cache-location 'node_modules/.cache/.eslintcache' --max-warnings 0",
     "lint:fix": "eslint . --fix --cache --cache-location 'node_modules/.cache/.eslintcache' --max-warnings 0",
     "test": "vitest --run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "checks": "npm run format && npm run lint && npm run typecheck",
+    "checks:fix": "npm run format:fix && npm run lint:fix && npm run typecheck"
   },
   "dependencies": {
     "json-logic-js": "2.0.5"
   },
   "devDependencies": {
     "@testing-library/react": "16.3.2",
+    "@tsconfig/recommended": "^1.0.8",
+    "@tsconfig/strictest": "^2.0.5",
     "@types/eslint": "9.6.1",
     "@types/json-logic-js": "^2.0.8",
     "@types/react": "18.3.28",
@@ -57,6 +69,7 @@
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "5.2.0",
     "jsdom": "^28.1.0",
+    "prettier": "^3.8.1",
     "tsdown": "^0.20.3",
     "typescript": "5.9.3",
     "vitest": "3.2.4"
@@ -64,5 +77,12 @@
   "peerDependencies": {
     "react": ">=18.3.1",
     "react-dom": ">=18.3.1"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all",
+    "printWidth": 120,
+    "tabWidth": 2,
+    "semi": true
   }
 }
