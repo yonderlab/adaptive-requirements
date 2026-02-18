@@ -538,7 +538,7 @@ function MyForm({ requirements }) {
 }
 ```
 
-The adapter handles `Date` → `YYYY-MM-DD` serialization by default. Pass custom `serialize`/`deserialize` functions for other transforms.
+See [React Hook Form Adapter docs](./src/react/adapters/REACT-HOOK-FORM.md) for serialization options and advanced usage.
 
 ### Formik
 
@@ -560,6 +560,8 @@ function MyForm({ requirements }) {
   );
 }
 ```
+
+See [Formik Adapter docs](./src/react/adapters/FORMIK.md) for serialization options and advanced usage.
 
 ## TypeScript Support
 
