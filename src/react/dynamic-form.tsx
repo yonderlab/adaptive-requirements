@@ -19,7 +19,6 @@ import type {
 } from '../core/types';
 import { useRequirements } from './use-requirements';
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/dot-notation
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
 /**
