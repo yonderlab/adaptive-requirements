@@ -1,5 +1,27 @@
 node_modules
 dist
+build
 .turbo
 coverage
 .eslintcache
+*.tsbuildinfo
+
+# Cache
+.cache
+node_modules/.cache
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
