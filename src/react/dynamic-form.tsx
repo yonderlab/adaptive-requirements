@@ -19,7 +19,9 @@ import type {
 } from '../core/types';
 import { useRequirements } from './use-requirements';
 
-const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
+const isDev =
+  typeof process !== 'undefined' &&
+  (process as { env?: Record<string, string | undefined> }).env?.NODE_ENV !== 'production';
 
 /**
  * Props for individual field input components

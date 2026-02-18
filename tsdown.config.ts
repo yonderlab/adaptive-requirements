@@ -9,7 +9,7 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   sourcemap: true,
-  clean: process.env['NODE_ENV'] !== 'development',
+  clean: (process as { env?: Record<string, string | undefined> }).env?.NODE_ENV !== 'development',
   outExtensions: () => ({ js: '.js', dts: '.d.ts' }),
   external: ['react', 'react/jsx-runtime', 'react-dom', 'json-logic-js'],
 });
