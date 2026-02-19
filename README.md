@@ -364,12 +364,10 @@ The rule engine supports JSON-Logic style expressions:
 
 ## Custom Components
 
-Create custom field components that implement the `FieldInputProps` interface:
+Create custom field components that receive field props:
 
 ```tsx
-import type { FieldInputProps } from '@kota/dynamic-form/react';
-
-const CustomTextInput: React.FC<FieldInputProps> = ({ field, value, onChange, errors, isRequired, isVisible }) => {
+const CustomTextInput = ({ field, value, onChange, errors, isRequired, isVisible }) => {
   if (!isVisible) return null;
 
   return (
@@ -551,24 +549,14 @@ See [Formik Adapter docs](./src/react/adapters/FORMIK.md) for serialization opti
 
 ## TypeScript Support
 
-All types are fully typed with generics support:
+The package is fully typed with generics support. The `DynamicForm` component accepts a `TFieldId` generic parameter for type-safe field IDs:
 
-```typescript
-import type { Field, FieldState, RequirementsObject } from '@kota/dynamic-form/react';
-
-type MyFieldIds = 'firstName' | 'lastName' | 'email';
-
-const requirements: RequirementsObject<MyFieldIds> = {
-  fields: [
-    { id: 'firstName', type: 'text', label: 'First Name' },
-    { id: 'lastName', type: 'text', label: 'Last Name' },
-    { id: 'email', type: 'email', label: 'Email' },
-  ],
-};
-
-// Type-safe field access
-const state: FieldState<MyFieldIds> = getFieldState('firstName'); // ✅
-const invalidState = getFieldState('invalid'); // ❌ Type error
+```tsx
+<DynamicForm<'firstName' | 'lastName' | 'email'>
+  requirements={requirements}
+  defaultValue={{}}
+  components={myComponents}
+/>
 ```
 
 ## Advanced Examples
@@ -725,14 +713,13 @@ You can combine DynamicForm with react-hook-form to get the best of both worlds:
 The cleanest approach — field components use react-hook-form's `FormField` internally, so DynamicForm only handles rendering and visibility while react-hook-form manages all state:
 
 ```tsx
-import { DynamicForm, type FieldInputProps, type RequirementsObject } from '@kota/dynamic-form/react';
-
+import { DynamicForm } from '@kota/dynamic-form/react';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage, useFormContext } from '~/ui/components/form';
 
 type AddressFieldIds = 'line1' | 'line2' | 'line3' | 'city' | 'state' | 'postal_code';
 
 // Field component uses FormField internally - ignores DynamicForm's value/onChange
-const TextField: React.FC<FieldInputProps<AddressFieldIds>> = ({ field, isRequired, isVisible }) => {
+const TextField = ({ field, isRequired, isVisible }) => {
   const { control } = useFormContext<AddressFormType>();
 
   if (!isVisible) return null;
@@ -754,7 +741,7 @@ const TextField: React.FC<FieldInputProps<AddressFieldIds>> = ({ field, isRequir
   );
 };
 
-const SelectField: React.FC<FieldInputProps<AddressFieldIds>> = ({ field, isRequired, isVisible }) => {
+const SelectField = ({ field, isRequired, isVisible }) => {
   const { control } = useFormContext<AddressFormType>();
 
   if (!isVisible) return null;
@@ -783,7 +770,7 @@ const SelectField: React.FC<FieldInputProps<AddressFieldIds>> = ({ field, isRequ
 };
 
 // Define requirements - DynamicForm uses these for rendering and visibility
-const addressRequirements: RequirementsObject<AddressFieldIds> = {
+const addressRequirements = {
   fields: [
     {
       id: 'line1',
@@ -841,7 +828,7 @@ const AddressForm = () => {
 When you want DynamicForm to manage UI state and use native form submission:
 
 ```tsx
-const TextFieldComponent: React.FC<FieldInputProps<AddressFieldIds>> = ({
+const TextFieldComponent = ({
   field,
   value,
   onChange,
@@ -940,15 +927,9 @@ export default function AddressForm() {
 
 ## API Reference
 
-See TypeScript types for complete API documentation:
-
-- `RequirementsObject` - Form schema
-- `Field` - Field definition
-- `FieldState` - Runtime field state
-- `Rule` - Conditional/formula expression
-- `DynamicForm` - Main form component
-- `useReactHookFormAdapter` - React Hook Form adapter
-- `useFormikAdapter` - Formik adapter
+- `DynamicForm` - Main form component (`@kota/dynamic-form/react`)
+- `useReactHookFormAdapter` - React Hook Form adapter (`@kota/dynamic-form/react/adapters/react-hook-form`)
+- `useFormikAdapter` - Formik adapter (`@kota/dynamic-form/react/adapters/formik`)
 
 ## License
 

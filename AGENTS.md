@@ -34,7 +34,6 @@ The engine is framework-agnostic (pure functions, no React dependency). The hook
 | `src/react/dynamic-form.tsx`            | `DynamicForm` component with pluggable field rendering              |
 | `src/react/adapters/react-hook-form.ts` | React Hook Form state bridge adapter                                |
 | `src/react/adapters/formik.ts`          | Formik state bridge adapter                                         |
-| `src/README.md`                         | Usage documentation and examples                                    |
 
 ## Commands
 
@@ -86,6 +85,5 @@ Things to be aware of when preparing for open source:
 
 1. **Domain-specific validators** — Built-in validators include `spanish_tax_id`, `irish_pps`, `german_tax_id`. Consider whether these should be built-in or moved to a separate package/plugin.
 2. **Kota-specific types** — `RequirementsObject` includes `object_type` (employee/employer/associated_person), `benefit_type` (health), and `context` (dependant_management_intent/enrolment_intent/setup_intent) which are Kota domain enums.
-3. **README references** — `src/README.md` references `@kota/ui` import paths in examples.
-4. **Package scope** — Currently `@kota/dynamic-form`; namespace would need changing for open source.
-5. **json-logic-js global state** — Custom operations are registered globally on the `json-logic-js` module. This is a singleton side effect.
+3. **Package scope** — Currently `@kota/dynamic-form`; namespace would need changing for open source.
+4. **json-logic-js global state** — Custom operations are registered globally on the `json-logic-js` module. This is a singleton side effect.
