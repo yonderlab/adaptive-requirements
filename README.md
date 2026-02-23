@@ -828,14 +828,7 @@ const AddressForm = () => {
 When you want DynamicForm to manage UI state and use native form submission:
 
 ```tsx
-const TextFieldComponent = ({
-  field,
-  value,
-  onChange,
-  errors,
-  isRequired,
-  isVisible,
-}) => {
+const TextFieldComponent = ({ field, value, onChange, errors, isRequired, isVisible }) => {
   if (!isVisible) return null;
 
   return (
