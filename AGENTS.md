@@ -1,56 +1,73 @@
-# AGENTS.md — @kota/dynamic-form
+# AGENTS.md — @kota/dynamic-form monorepo
 
-Agent instructions for working with the `@kota/dynamic-form` package.
+Agent instructions for working with the dynamic-form monorepo (pnpm workspaces).
 
-## Package Purpose
+## Packages
 
-Schema-driven dynamic form system for React. Takes a declarative JSON configuration (`RequirementsObject`) and renders forms with conditional visibility, dynamic validation, computed fields, and multi-step flows. Uses JSON Logic for rule evaluation.
+This monorepo contains two independently versioned/published packages:
+
+- **`@kota/adaptive-requirements-engine`** (`packages/engine/`) — Framework-agnostic core: types, rule engine, validation. Zero React/browser dependencies. Used for both client-side and server-side validation.
+- **`@kota/dynamic-form`** (`packages/dynamic-form/`) — React integration layer: `DynamicForm` component, hooks, form library adapters. Depends on the engine package.
 
 ## Architecture
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture with diagrams.
 
-**Four layers:** Types (`core/types.ts`) → Engine (`core/engine.ts`) → React Hooks (`react/use-requirements.ts`) → Component (`react/dynamic-form.tsx`).
+**Four layers:** Types (`engine/src/types.ts`) → Engine (`engine/src/engine.ts`) → React Hooks (`dynamic-form/src/react/use-requirements.ts`) → Component (`dynamic-form/src/react/dynamic-form.tsx`).
 
-The engine is framework-agnostic (pure functions, no React dependency). The hooks and component are the React integration layer. The `core/` directory is internal and never exported publicly.
+The engine is framework-agnostic (pure functions, no React dependency). The hooks and component are the React integration layer.
 
 **Entry points:**
 
+- `@kota/adaptive-requirements-engine` → All engine types, functions, and validators
 - `@kota/dynamic-form/react` → `DynamicForm` component
 - `@kota/dynamic-form/react/adapters/react-hook-form` → `useReactHookFormAdapter` hook
 - `@kota/dynamic-form/react/adapters/formik` → `useFormikAdapter` hook
 
 ## Key Files
 
-| File                                    | Purpose                                                             |
-| --------------------------------------- | ------------------------------------------------------------------- |
-| `src/core/types.ts`                     | All type definitions (plain TypeScript interfaces)                  |
-| `src/core/validate.ts`                  | Native JS validation utilities (`validateRequirementsObject`, etc.) |
-| `src/core/engine.ts`                    | Rule engine, field evaluation, flow navigation, validators          |
-| `src/core/engine.test.ts`               | Engine unit tests (Vitest)                                          |
-| `src/core/validate.test.ts`             | Validation utility tests (Vitest)                                   |
-| `src/react/index.ts`                    | Public API: exports `DynamicForm` only                              |
-| `src/react/use-requirements.ts`         | React hooks (internal): `useRequirements`, `useFieldState`          |
-| `src/react/dynamic-form.tsx`            | `DynamicForm` component with pluggable field rendering              |
-| `src/react/adapters/react-hook-form.ts` | React Hook Form state bridge adapter                                |
-| `src/react/adapters/formik.ts`          | Formik state bridge adapter                                         |
-| `src/README.md`                         | Usage documentation and examples                                    |
+| File                                                        | Purpose                                                             |
+| ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| `packages/engine/src/types.ts`                              | All type definitions (plain TypeScript interfaces)                  |
+| `packages/engine/src/validate.ts`                           | Native JS validation utilities (`validateRequirementsObject`, etc.) |
+| `packages/engine/src/engine.ts`                             | Rule engine, field evaluation, flow navigation, validators          |
+| `packages/engine/src/index.ts`                              | Public API barrel export for engine package                         |
+| `packages/engine/src/engine.test.ts`                        | Engine unit tests (Vitest)                                          |
+| `packages/engine/src/validate.test.ts`                      | Validation utility tests (Vitest)                                   |
+| `packages/dynamic-form/src/react/index.ts`                  | Public API: exports `DynamicForm` only                              |
+| `packages/dynamic-form/src/react/use-requirements.ts`       | React hooks (internal): `useRequirements`, `useFieldState`          |
+| `packages/dynamic-form/src/react/dynamic-form.tsx`          | `DynamicForm` component with pluggable field rendering              |
+| `packages/dynamic-form/src/react/adapters/react-hook-form.ts` | React Hook Form state bridge adapter                             |
+| `packages/dynamic-form/src/react/adapters/formik.ts`        | Formik state bridge adapter                                         |
 
 ## Commands
 
 ```bash
+# From repo root (runs across all packages):
 pnpm test              # Run tests (Vitest)
 pnpm build             # Build with tsdown
 pnpm typecheck         # TypeScript type checking
 pnpm lint              # ESLint
 pnpm format            # Prettier check
+
+# Target a specific package:
+pnpm --filter @kota/adaptive-requirements-engine test
+pnpm --filter @kota/dynamic-form build
 ```
 
 ## Dependencies
 
-- **Runtime:** `json-logic-js` (rule evaluation)
-- **Peer:** `react`, `react-dom` (>=18.3.1)
-- Zero other runtime dependencies — validation is native JS (`validate.ts`)
+- **Engine runtime:** `json-logic-js` (rule evaluation) — zero other runtime deps
+- **Dynamic-form runtime:** `@kota/adaptive-requirements-engine`
+- **Dynamic-form peer:** `react`, `react-dom` (>=18.3.1)
+
+## Release
+
+Packages are published independently via git tags:
+- `engine@<version>` → publishes `@kota/adaptive-requirements-engine`
+- `dynamic-form@<version>` → publishes `@kota/dynamic-form`
+
+Publish engine first if both need new versions (dynamic-form depends on engine).
 
 ## Conventions
 

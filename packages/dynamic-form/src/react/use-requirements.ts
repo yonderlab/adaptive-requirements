@@ -1,8 +1,13 @@
 import { useCallback, useMemo } from 'react';
 
-import type { EngineOptions } from '../core/engine';
-import { createAdapter } from '../core/engine';
-import type { FieldMapping, FieldState, FormData, RequirementsObject } from '../core/types';
+import type {
+  EngineOptions,
+  FieldMapping,
+  FieldState,
+  FormData,
+  RequirementsObject,
+} from '@kota/adaptive-requirements-engine';
+import { createAdapter } from '@kota/adaptive-requirements-engine';
 
 export interface UseRequirementsOptions {
   mapping?: FieldMapping;

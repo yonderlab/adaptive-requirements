@@ -11,5 +11,5 @@ export default defineConfig({
   sourcemap: true,
   clean: process.env['NODE_ENV'] !== 'development',
   outExtensions: () => ({ js: '.js', dts: '.d.ts' }),
-  external: ['react', 'react/jsx-runtime', 'react-dom', 'json-logic-js'],
+  external: ['react', 'react/jsx-runtime', 'react-dom', '@kota/adaptive-requirements-engine'],
 });
