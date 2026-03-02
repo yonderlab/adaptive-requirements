@@ -2,8 +2,7 @@ import type { FieldInputProps, FieldRenderProps } from './dynamic-form';
 import type { FormData, RequirementsObject } from '@kota/adaptive-requirements-engine';
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-// @ts-expect-error React is required in scope for JSX (eslint react/react-in-jsx-scope) but unused with react-jsx transform
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DynamicForm } from './dynamic-form';
