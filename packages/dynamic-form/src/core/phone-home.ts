@@ -29,9 +29,7 @@ export function isCheckVersionResponse(data: unknown): data is CheckVersionRespo
 
 function isBrowserEnvironment(): boolean {
   return (
-    typeof window !== 'undefined' &&
-    typeof window.sessionStorage !== 'undefined' &&
-    typeof window.fetch !== 'undefined'
+    typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined' && typeof window.fetch !== 'undefined'
   );
 }
 
