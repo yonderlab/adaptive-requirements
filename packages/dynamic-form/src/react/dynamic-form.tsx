@@ -6,7 +6,7 @@ import {
   getInitialStepId,
   getNextStepId,
   getPreviousStepId,
-} from '../core/engine';
+} from '@kota/adaptive-requirements-engine';
 import type {
   Field,
   FieldMapping,
@@ -16,7 +16,7 @@ import type {
   FormData,
   RequirementsObject,
   ResolvedFieldOption,
-} from '../core/types';
+} from '@kota/adaptive-requirements-engine';
 import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';

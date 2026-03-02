@@ -1,0 +1,60 @@
+{
+  "name": "@kota/adaptive-requirements-engine",
+  "version": "0.1.0",
+  "description": "Schema-driven requirements engine with JSON Logic rules for conditional evaluation, validation, and computed fields",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yonderlab/dynamic-form.git",
+    "directory": "packages/engine"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "clean": "git clean -xdf node_modules dist",
+    "dev": "tsdown --watch",
+    "format": "prettier . --check --cache --cache-location='node_modules/.cache/.prettiercache'",
+    "format:fix": "prettier . --write --cache --cache-location='node_modules/.cache/.prettiercache' --log-level=warn",
+    "lint": "eslint . --cache --cache-location 'node_modules/.cache/.eslintcache' --max-warnings 0",
+    "lint:fix": "eslint . --fix --cache --cache-location 'node_modules/.cache/.eslintcache' --max-warnings 0",
+    "test": "vitest --run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "json-logic-js": "2.0.5"
+  },
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.8",
+    "@tsconfig/strictest": "^2.0.5",
+    "@types/json-logic-js": "^2.0.8",
+    "@types/node": "^25.2.3",
+    "@typescript-eslint/eslint-plugin": "7.18.0",
+    "@typescript-eslint/parser": "7.18.0",
+    "@vitest/coverage-v8": "3.2.4",
+    "eslint": "8.57.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-import": "2.32.0",
+    "prettier": "^3.8.1",
+    "tsdown": "^0.20.3",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

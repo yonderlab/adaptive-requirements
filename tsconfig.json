@@ -3,10 +3,8 @@
   "extends": ["@tsconfig/recommended", "@tsconfig/strictest"],
   "compilerOptions": {
     "moduleResolution": "bundler",
-    "outDir": "./dist",
     "target": "ES2022",
     "module": "ESNext",
-    "jsx": "react-jsx",
     "erasableSyntaxOnly": true,
     "exactOptionalPropertyTypes": false,
     "noImplicitReturns": true,
@@ -21,7 +19,6 @@
     "strictBindCallApply": true,
     "alwaysStrict": true,
     "useUnknownInCatchVariables": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "allowSyntheticDefaultImports": true,
@@ -34,7 +31,5 @@
     "declaration": true,
     "removeComments": false,
     "emitDecoratorMetadata": false
-  },
-  "include": ["src/**/*", "vitest.config.ts", "tsdown.config.ts", "**/*.test.ts", "**/*.spec.ts"],
-  "exclude": ["node_modules", "build", "dist"]
+  }
 }
