@@ -51,6 +51,8 @@ pnpm build             # Build with tsdown
 pnpm typecheck         # TypeScript type checking
 pnpm lint              # Oxlint (via Ultracite presets)
 pnpm format            # Oxfmt check
+pnpm changeset         # Create a changeset for version bump
+pnpm changeset --empty # Mark PR as having no user-facing changes
 
 # Fix commands:
 pnpm lint:fix          # Auto-fix lint issues
@@ -69,14 +71,28 @@ pnpm --filter @kota/dynamic-form build
 - **Dynamic-form runtime:** `@kota/adaptive-requirements-engine`
 - **Dynamic-form peer:** `react`, `react-dom` (>=18.3.1)
 
+## Commit Messages
+
+Conventional Commits are enforced via commitlint + husky. Format: `type(scope): description`
+
+- **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- **Scopes:** `engine`, `dynamic-form`, `ci`, `deps`, `repo` (or empty for cross-cutting changes)
+
+## Changesets
+
+When making user-facing changes, run `pnpm changeset` to create a changeset file describing the change and bump type. This is required for CI to pass on PRs.
+
+For non-user-facing changes (CI, docs, tests), use `pnpm changeset --empty`.
+
 ## Release
 
-Packages are published independently via git tags:
+Releases use [Changesets](https://github.com/changesets/changesets) with the following workflow:
 
-- `engine@<version>` → publishes `@kota/adaptive-requirements-engine`
-- `dynamic-form@<version>` → publishes `@kota/dynamic-form`
+1. PRs with changeset files are merged to `main`
+2. The `changesets/action` GitHub Action creates/updates a "Version Packages" PR with version bumps and changelog entries
+3. When the "Version Packages" PR is merged, packages are automatically published to npm in dependency order (engine first, then dynamic-form)
 
-Publish engine first if both need new versions (dynamic-form depends on engine).
+Packages are versioned independently. When engine is bumped, dynamic-form automatically gets a patch bump (via `updateInternalDependencies: "patch"`).
 
 ## Linting & Formatting
 

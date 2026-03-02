@@ -2,18 +2,21 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'engine@*'
-      - 'dynamic-form@*'
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
+  pull-requests: write
   id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -37,28 +40,14 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Determine package to publish
-        id: pkg
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          if [[ "$TAG" == engine@* ]]; then
-            echo "dir=packages/engine" >> "$GITHUB_OUTPUT"
-            echo "name=engine" >> "$GITHUB_OUTPUT"
-          elif [[ "$TAG" == dynamic-form@* ]]; then
-            echo "dir=packages/dynamic-form" >> "$GITHUB_OUTPUT"
-            echo "name=dynamic-form" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::Unrecognized tag format: $TAG"
-            exit 1
-          fi
-
-      - name: Publish to npm
-        working-directory: ${{ steps.pkg.outputs.dir }}
-        run: pnpm publish --provenance --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Create Release PR or Publish
+        uses: changesets/action@v1
         with:
-          generate_release_notes: true
+          version: pnpm run version-packages
+          publish: pnpm run release
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
