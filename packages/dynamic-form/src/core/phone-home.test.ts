@@ -107,8 +107,9 @@ describe('checkVersion', () => {
     );
   });
 
-  it('logs debug when response indicates up to date', async () => {
+  it('silently returns when response indicates up to date', async () => {
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(vi.fn());
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
     vi.stubGlobal(
       'fetch',
       vi.fn(() =>
@@ -120,7 +121,8 @@ describe('checkVersion', () => {
     );
 
     await checkVersion();
-    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('up to date'));
+    expect(debugSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('logs warn with message when outdated and message is provided', async () => {
@@ -232,6 +234,28 @@ describe('checkVersion', () => {
 
     await expect(checkVersion()).resolves.toBeUndefined();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('silently returns when sessionStorage getter throws in environment check', async () => {
+    const throwingWindow = {} as Record<string, unknown>;
+    Object.defineProperty(throwingWindow, 'sessionStorage', {
+      get() {
+        throw new Error('SecurityError');
+      },
+    });
+    throwingWindow['fetch'] = globalThis.fetch;
+    throwingWindow['location'] = { origin: 'https://example.com' };
+    vi.stubGlobal('window', throwingWindow);
+
+    await expect(checkVersion()).resolves.toBeUndefined();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('includes package version in request body', async () => {
+    await checkVersion();
+    const [, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as Record<string, unknown>;
+    expect(body['package_version']).toBe(PACKAGE_VERSION);
   });
 });
 

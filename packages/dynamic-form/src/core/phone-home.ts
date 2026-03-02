@@ -28,13 +28,26 @@ export function isCheckVersionResponse(data: unknown): data is CheckVersionRespo
 }
 
 function isBrowserEnvironment(): boolean {
-  return (
-    typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined' && typeof window.fetch !== 'undefined'
-  );
+  if (typeof window === 'undefined') return false;
+
+  try {
+    if (typeof window.sessionStorage === 'undefined') return false;
+  } catch {
+    return false;
+  }
+
+  return typeof window.fetch !== 'undefined';
+}
+
+function getPackageVersion(): string | undefined {
+  return typeof PACKAGE_VERSION !== 'undefined' ? PACKAGE_VERSION : undefined;
 }
 
 export async function checkVersion(): Promise<void> {
   if (!isBrowserEnvironment()) return;
+
+  const version = getPackageVersion();
+  if (!version) return;
 
   try {
     const alreadyChecked = sessionStorage.getItem(SESSION_STORAGE_KEY);
@@ -48,7 +61,7 @@ export async function checkVersion(): Promise<void> {
   try {
     const body: CheckVersionRequest = {
       package_name: PACKAGE_NAME,
-      package_version: PACKAGE_VERSION,
+      package_version: version,
       origin: window.location.origin,
     };
 
@@ -71,10 +84,7 @@ export async function checkVersion(): Promise<void> {
       return;
     }
 
-    if (data.up_to_date) {
-      console.debug(`${LOG_PREFIX} Package is up to date`);
-      return;
-    }
+    if (data.up_to_date) return;
 
     if (data.message) {
       console.warn(`${LOG_PREFIX} ${data.message}`);
