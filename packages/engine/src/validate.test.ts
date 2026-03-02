@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { validateDatasetItems, validateRequirementsObject } from './validate';
 
-describe('validateRequirementsObject', () => {
+describe(validateRequirementsObject, () => {
   it('accepts a valid requirements object', () => {
     const result = validateRequirementsObject({
       fields: [
@@ -14,7 +14,7 @@ describe('validateRequirementsObject', () => {
       ],
     });
 
-    expect(result.success).toBe(true);
+    expect(result.success).toBeTruthy();
     if (result.success) {
       expect(result.data.fields).toHaveLength(1);
       expect(result.data.fields[0]?.id).toBe('first_name');
@@ -30,17 +30,17 @@ describe('validateRequirementsObject', () => {
       ],
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('rejects a non-object input', () => {
     const result = validateRequirementsObject('not an object');
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('rejects when fields is missing', () => {
     const result = validateRequirementsObject({});
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('accepts a requirements object with datasets and flow', () => {
@@ -52,11 +52,11 @@ describe('validateRequirementsObject', () => {
       },
     });
 
-    expect(result.success).toBe(true);
+    expect(result.success).toBeTruthy();
   });
 });
 
-describe('validateDatasetItems', () => {
+describe(validateDatasetItems, () => {
   it('accepts valid dataset items', () => {
     const result = validateDatasetItems([
       'plain_option',
@@ -64,7 +64,7 @@ describe('validateDatasetItems', () => {
       { value: true, label: { default: 'Yes' } },
     ]);
 
-    expect(result.success).toBe(true);
+    expect(result.success).toBeTruthy();
     if (result.success) {
       expect(result.data).toHaveLength(3);
     }
@@ -72,11 +72,11 @@ describe('validateDatasetItems', () => {
 
   it('rejects invalid dataset items', () => {
     const result = validateDatasetItems([123]);
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('rejects non-array input', () => {
     const result = validateDatasetItems('not an array');
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 });

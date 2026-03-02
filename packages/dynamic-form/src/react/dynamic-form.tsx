@@ -1,12 +1,3 @@
-import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-
-import {
-  applyExclusions,
-  clearHiddenFieldValues,
-  getInitialStepId,
-  getNextStepId,
-  getPreviousStepId,
-} from '@kota/adaptive-requirements-engine';
 import type {
   Field,
   FieldMapping,
@@ -17,6 +8,16 @@ import type {
   RequirementsObject,
   ResolvedFieldOption,
 } from '@kota/adaptive-requirements-engine';
+
+import {
+  applyExclusions,
+  clearHiddenFieldValues,
+  getInitialStepId,
+  getNextStepId,
+  getPreviousStepId,
+} from '@kota/adaptive-requirements-engine';
+import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+
 import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
@@ -216,7 +217,7 @@ export function DynamicForm<TFieldId extends string = string>({
   const isControlled = controlledValue !== undefined;
   const formData = isControlled ? controlledValue : internalValue;
 
-  const flow = requirements.flow;
+  const { flow } = requirements;
   const [currentStepId, setCurrentStepId] = useState<string>(() =>
     flow ? getInitialStepId(flow, { requirements, formData }) : '',
   );
@@ -232,7 +233,9 @@ export function DynamicForm<TFieldId extends string = string>({
 
   const markFieldTouched = useCallback((fieldId: string) => {
     setTouchedFields((prev) => {
-      if (prev.has(fieldId)) return prev;
+      if (prev.has(fieldId)) {
+        return prev;
+      }
       const next = new Set(prev);
       next.add(fieldId);
       return next;
@@ -255,7 +258,9 @@ export function DynamicForm<TFieldId extends string = string>({
 
   const getDisplayErrors = useCallback(
     (fieldId: string, errors: string[]): string[] => {
-      if (showAllErrors || touchedFields.has(fieldId)) return errors;
+      if (showAllErrors || touchedFields.has(fieldId)) {
+        return errors;
+      }
       return [];
     },
     [showAllErrors, touchedFields],
@@ -279,12 +284,16 @@ export function DynamicForm<TFieldId extends string = string>({
   );
 
   const currentStepFields: Field<TFieldId>[] = useMemo(() => {
-    if (!flow || !currentStep) return [];
+    if (!flow || !currentStep) {
+      return [];
+    }
     return currentStep.fields.map((id) => idToField.get(id)).filter((f): f is Field<TFieldId> => f != null);
   }, [flow, currentStep, idToField]);
 
   const allStepsWithFields: { step: FlowStep; fields: Field<TFieldId>[] }[] = useMemo(() => {
-    if (!flow || !showAllSteps) return [];
+    if (!flow || !showAllSteps) {
+      return [];
+    }
     return flow.steps.map((step) => ({
       step,
       fields: step.fields.map((id) => idToField.get(id)).filter((f): f is Field<TFieldId> => f != null),
@@ -292,7 +301,9 @@ export function DynamicForm<TFieldId extends string = string>({
   }, [flow, showAllSteps, idToField]);
 
   const currentStepIsValid = useMemo(() => {
-    if (!flow || currentStepFields.length === 0) return true;
+    if (!flow || currentStepFields.length === 0) {
+      return true;
+    }
     return currentStepFields.every((field) => {
       const state = getFieldState(field.id);
       return !state.isVisible || state.errors.length === 0;
@@ -311,11 +322,15 @@ export function DynamicForm<TFieldId extends string = string>({
       markFieldsTouched(visibleFieldIds);
       return;
     }
-    if (nextStepId) setCurrentStepId(nextStepId);
+    if (nextStepId) {
+      setCurrentStepId(nextStepId);
+    }
   }, [nextStepId, currentStepIsValid, currentStepFields, getFieldState, markFieldsTouched]);
 
   const handlePrevious = useCallback(() => {
-    if (previousStepId) setCurrentStepId(previousStepId);
+    if (previousStepId) {
+      setCurrentStepId(previousStepId);
+    }
   }, [previousStepId]);
 
   const handleFieldChange = useCallback(
@@ -459,7 +474,7 @@ export function DynamicForm<TFieldId extends string = string>({
             onPrevious: handlePrevious,
             onNext: handleNext,
             stepTitle,
-            currentStepIndex: currentStepIndex >= 0 ? currentStepIndex : 0,
+            currentStepIndex: Math.max(currentStepIndex, 0),
             totalSteps,
           })
         ) : (
@@ -468,7 +483,7 @@ export function DynamicForm<TFieldId extends string = string>({
               <button
                 type="button"
                 onClick={handlePrevious}
-                className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+                className="border-input bg-background hover:bg-accent rounded-lg border px-4 py-2 text-sm font-medium"
               >
                 Previous
               </button>
@@ -479,7 +494,7 @@ export function DynamicForm<TFieldId extends string = string>({
                 onClick={handleNext}
                 aria-disabled={!currentStepIsValid || undefined}
                 title={!currentStepIsValid ? 'Fix validation errors to continue' : undefined}
-                className={`rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90${!currentStepIsValid ? ' opacity-50 cursor-not-allowed' : ''}`}
+                className={`bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90${!currentStepIsValid ? ' cursor-not-allowed opacity-50' : ''}`}
               >
                 Next
               </button>

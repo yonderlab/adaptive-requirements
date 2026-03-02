@@ -1,17 +1,20 @@
+import type { FieldInputProps, FieldRenderProps } from './dynamic-form';
+import type { FormData, RequirementsObject } from '@kota/adaptive-requirements-engine';
+
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 // @ts-expect-error React is required in scope for JSX (eslint react/react-in-jsx-scope) but unused with react-jsx transform
 import React, { useState } from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { FormData, RequirementsObject } from '@kota/adaptive-requirements-engine';
 import { DynamicForm } from './dynamic-form';
-import type { FieldInputProps, FieldRenderProps } from './dynamic-form';
 
 afterEach(cleanup);
 
 /** Minimal text input that displays errors */
 function TestTextInput({ field, value, onChange, onBlur, errors, isVisible, label }: FieldInputProps) {
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
   return (
     <div>
       <label htmlFor={field.id}>{label ?? field.id}</label>
@@ -37,7 +40,7 @@ function makeRequirements(fields: RequirementsObject['fields']): RequirementsObj
   return { fields };
 }
 
-describe('DynamicForm touched-field error filtering', () => {
+describe('dynamicForm touched-field error filtering', () => {
   it('does not show errors for required fields on initial render', () => {
     const requirements = makeRequirements([
       { id: 'name', type: 'text', validation: { required: true } },
@@ -128,21 +131,19 @@ describe('DynamicForm touched-field error filtering', () => {
   it('passes displayErrors and isTouched to renderField', () => {
     const requirements = makeRequirements([{ id: 'name', type: 'text', validation: { required: true } }]);
 
-    const renderField = vi.fn((props: FieldRenderProps) => {
-      return (
-        <div>
-          <input
-            data-testid="input-name"
-            value={props.fieldState.value == null ? '' : String(props.fieldState.value)}
-            onChange={(e) => props.onChange(e.target.value)}
-            onBlur={props.onBlur}
-          />
-          <span data-testid="raw-errors">{props.fieldState.errors.join(',')}</span>
-          <span data-testid="display-errors">{props.displayErrors.join(',')}</span>
-          <span data-testid="is-touched">{String(props.isTouched)}</span>
-        </div>
-      );
-    });
+    const renderField = vi.fn((props: FieldRenderProps) => (
+      <div>
+        <input
+          data-testid="input-name"
+          value={props.fieldState.value == null ? '' : String(props.fieldState.value)}
+          onChange={(e) => props.onChange(e.target.value)}
+          onBlur={props.onBlur}
+        />
+        <span data-testid="raw-errors">{props.fieldState.errors.join(',')}</span>
+        <span data-testid="display-errors">{props.displayErrors.join(',')}</span>
+        <span data-testid="is-touched">{String(props.isTouched)}</span>
+      </div>
+    ));
 
     render(<DynamicForm requirements={requirements} defaultValue={{}} renderField={renderField} />);
 

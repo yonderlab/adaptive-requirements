@@ -37,9 +37,9 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
     return { success: false, errors: [{ path: '', message: 'Expected an object' }] };
   }
 
-  const fields = input['fields'];
-  const datasets = input['datasets'];
-  const flow = input['flow'];
+  const { fields } = input;
+  const { datasets } = input;
+  const { flow } = input;
 
   // fields (required)
   if (!Array.isArray(fields)) {
@@ -86,7 +86,7 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
     if (!isObject(flow)) {
       errors.push({ path: 'flow', message: 'Expected flow to be an object' });
     } else {
-      const steps = flow['steps'];
+      const { steps } = flow;
       if (!Array.isArray(steps)) {
         errors.push({ path: 'flow.steps', message: 'Expected flow steps to be an array' });
       } else {
