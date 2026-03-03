@@ -11,7 +11,7 @@ export interface CheckVersionRequest {
 }
 
 export interface CheckVersionResponse {
-  up_to_date: boolean;
+  is_up_to_date: boolean;
   latest_version?: string;
   message?: string;
 }
@@ -20,7 +20,7 @@ export function isCheckVersionResponse(data: unknown): data is CheckVersionRespo
   if (data === null || typeof data !== 'object') return false;
   const obj = data as Record<string, unknown>;
 
-  if (typeof obj['up_to_date'] !== 'boolean') return false;
+  if (typeof obj['is_up_to_date'] !== 'boolean') return false;
   if (obj['latest_version'] !== undefined && typeof obj['latest_version'] !== 'string') return false;
   if (obj['message'] !== undefined && typeof obj['message'] !== 'string') return false;
 
@@ -84,7 +84,7 @@ export async function checkVersion(): Promise<void> {
       return;
     }
 
-    if (data.up_to_date) return;
+    if (data.is_up_to_date) return;
 
     if (data.message) {
       console.warn(`${LOG_PREFIX} ${data.message}`);

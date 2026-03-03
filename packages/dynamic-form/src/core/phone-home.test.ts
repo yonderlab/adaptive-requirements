@@ -3,13 +3,13 @@ import { checkVersion, isCheckVersionResponse } from './phone-home';
 
 describe('isCheckVersionResponse', () => {
   it('accepts a valid minimal response', () => {
-    expect(isCheckVersionResponse({ up_to_date: true })).toBe(true);
+    expect(isCheckVersionResponse({ is_up_to_date: true })).toBe(true);
   });
 
   it('accepts a valid full response', () => {
     expect(
       isCheckVersionResponse({
-        up_to_date: false,
+        is_up_to_date: false,
         latest_version: '2.0.0',
         message: 'Please update',
       }),
@@ -24,20 +24,20 @@ describe('isCheckVersionResponse', () => {
     expect(isCheckVersionResponse('not an object')).toBe(false);
   });
 
-  it('rejects an object missing up_to_date', () => {
+  it('rejects an object missing is_up_to_date', () => {
     expect(isCheckVersionResponse({ latest_version: '1.0.0' })).toBe(false);
   });
 
-  it('rejects an object with wrong up_to_date type', () => {
-    expect(isCheckVersionResponse({ up_to_date: 'yes' })).toBe(false);
+  it('rejects an object with wrong is_up_to_date type', () => {
+    expect(isCheckVersionResponse({ is_up_to_date: 'yes' })).toBe(false);
   });
 
   it('rejects an object with wrong latest_version type', () => {
-    expect(isCheckVersionResponse({ up_to_date: true, latest_version: 123 })).toBe(false);
+    expect(isCheckVersionResponse({ is_up_to_date: true, latest_version: 123 })).toBe(false);
   });
 
   it('rejects an object with wrong message type', () => {
-    expect(isCheckVersionResponse({ up_to_date: true, message: 42 })).toBe(false);
+    expect(isCheckVersionResponse({ is_up_to_date: true, message: 42 })).toBe(false);
   });
 });
 
@@ -57,7 +57,7 @@ describe('checkVersion', () => {
       vi.fn(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ up_to_date: true }),
+          json: () => Promise.resolve({ is_up_to_date: true }),
         }),
       ),
     );
@@ -115,7 +115,7 @@ describe('checkVersion', () => {
       vi.fn(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ up_to_date: true }),
+          json: () => Promise.resolve({ is_up_to_date: true }),
         }),
       ),
     );
@@ -134,7 +134,7 @@ describe('checkVersion', () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              up_to_date: false,
+              is_up_to_date: false,
               message: 'Please upgrade to 2.0.0',
             }),
         }),
@@ -154,7 +154,7 @@ describe('checkVersion', () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              up_to_date: false,
+              is_up_to_date: false,
               latest_version: '2.0.0',
             }),
         }),
