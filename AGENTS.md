@@ -7,15 +7,15 @@ Agent instructions for working with the dynamic-form monorepo (pnpm workspaces).
 This monorepo contains two independently versioned/published packages:
 
 - **`@kota/adaptive-requirements-engine`** (`packages/engine/`) — Framework-agnostic core: types, rule engine, validation. Zero React/browser dependencies. Used for both client-side and server-side validation.
-- **`@kota/dynamic-form`** (`packages/dynamic-form/`) — React integration layer: `DynamicForm` component, hooks, form library adapters. Depends on the engine package.
+- **`@kota/dynamic-form`** (`packages/dynamic-form/`) — React integration layer and browser utilities: `DynamicForm` component, hooks, form library adapters, version checking. Depends on the engine package.
 
 ## Architecture
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture with diagrams.
 
-**Four layers:** Types (`engine/src/types.ts`) → Engine (`engine/src/engine.ts`) → React Hooks (`dynamic-form/src/react/use-requirements.ts`) → Component (`dynamic-form/src/react/dynamic-form.tsx`).
+**Five layers:** Types (`engine/src/types.ts`) → Engine (`engine/src/engine.ts`) → Browser Utilities (`dynamic-form/src/core/`) → React Hooks (`dynamic-form/src/react/use-requirements.ts`) → Component (`dynamic-form/src/react/dynamic-form.tsx`).
 
-The engine is framework-agnostic (pure functions, no React dependency). The hooks and component are the React integration layer.
+The engine is framework-agnostic (pure functions, no React dependency). The `src/core/` layer contains browser-capable but framework-agnostic utilities (e.g., version checking) that depend on browser APIs but not React. The hooks and component are the React integration layer.
 
 **Entry points:**
 
@@ -34,8 +34,10 @@ The engine is framework-agnostic (pure functions, no React dependency). The hook
 | `packages/engine/src/index.ts`                                | Public API barrel export for engine package                         |
 | `packages/engine/src/engine.test.ts`                          | Engine unit tests (Vitest)                                          |
 | `packages/engine/src/validate.test.ts`                        | Validation utility tests (Vitest)                                   |
+| `packages/dynamic-form/src/core/phone-home.ts`                | Version check ("phone home") utility — browser-only, no React dep   |
 | `packages/dynamic-form/src/react/index.ts`                    | Public API: exports `DynamicForm` only                              |
 | `packages/dynamic-form/src/react/use-requirements.ts`         | React hooks (internal): `useRequirements`, `useFieldState`          |
+| `packages/dynamic-form/src/react/use-phone-home.ts`           | React hook (internal): triggers version check on mount              |
 | `packages/dynamic-form/src/react/dynamic-form.tsx`            | `DynamicForm` component with pluggable field rendering              |
 | `packages/dynamic-form/src/react/adapters/react-hook-form.ts` | React Hook Form state bridge adapter                                |
 | `packages/dynamic-form/src/react/adapters/formik.ts`          | Formik state bridge adapter                                         |

@@ -18,6 +18,7 @@ import {
 } from '@kota/adaptive-requirements-engine';
 import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { usePhoneHome } from './use-phone-home';
 import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
@@ -213,6 +214,7 @@ export function DynamicForm<TFieldId extends string = string>({
   className,
   children,
 }: DynamicFormProps<TFieldId>) {
+  usePhoneHome();
   const [internalValue, setInternalValue] = useState<FormData>(() => defaultValue);
   const isControlled = controlledValue !== undefined;
   const formData = isControlled ? controlledValue : internalValue;
