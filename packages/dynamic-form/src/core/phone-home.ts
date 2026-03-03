@@ -17,26 +17,38 @@ export interface CheckVersionResponse {
 }
 
 export function isCheckVersionResponse(data: unknown): data is CheckVersionResponse {
-  if (data === null || typeof data !== 'object') return false;
+  if (data === null || typeof data !== 'object') {
+    return false;
+  }
   const obj = data as Record<string, unknown>;
 
-  if (typeof obj['is_up_to_date'] !== 'boolean') return false;
-  if (obj['latest_version'] !== undefined && typeof obj['latest_version'] !== 'string') return false;
-  if (obj['message'] !== undefined && typeof obj['message'] !== 'string') return false;
+  if (typeof obj['is_up_to_date'] !== 'boolean') {
+    return false;
+  }
+  if (obj['latest_version'] !== undefined && typeof obj['latest_version'] !== 'string') {
+    return false;
+  }
+  if (obj['message'] !== undefined && typeof obj['message'] !== 'string') {
+    return false;
+  }
 
   return true;
 }
 
 function isBrowserEnvironment(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') {
+    return false;
+  }
 
   try {
-    if (typeof window.sessionStorage === 'undefined') return false;
+    if (window.sessionStorage === undefined) {
+      return false;
+    }
   } catch {
     return false;
   }
 
-  return typeof window.fetch !== 'undefined';
+  return window.fetch !== undefined;
 }
 
 function getPackageVersion(): string | undefined {
@@ -44,14 +56,20 @@ function getPackageVersion(): string | undefined {
 }
 
 export async function checkVersion(): Promise<void> {
-  if (!isBrowserEnvironment()) return;
+  if (!isBrowserEnvironment()) {
+    return;
+  }
 
   const version = getPackageVersion();
-  if (!version) return;
+  if (!version) {
+    return;
+  }
 
   try {
     const alreadyChecked = sessionStorage.getItem(SESSION_STORAGE_KEY);
-    if (alreadyChecked) return;
+    if (alreadyChecked) {
+      return;
+    }
     sessionStorage.setItem(SESSION_STORAGE_KEY, '1');
   } catch {
     // Safari private browsing can throw on sessionStorage access
@@ -84,15 +102,15 @@ export async function checkVersion(): Promise<void> {
       return;
     }
 
-    if (data.is_up_to_date) return;
+    if (data.is_up_to_date) {
+      return;
+    }
 
     if (data.message) {
       console.warn(`${LOG_PREFIX} ${data.message}`);
     } else {
       console.warn(
-        `${LOG_PREFIX} A new version is available.` +
-          (data.latest_version ? ` Latest: ${data.latest_version}.` : '') +
-          ` Please update ${PACKAGE_NAME} to the latest version.`,
+        `${LOG_PREFIX} A new version is available.${data.latest_version ? ` Latest: ${data.latest_version}.` : ''} Please update ${PACKAGE_NAME} to the latest version.`,
       );
     }
   } catch (error: unknown) {

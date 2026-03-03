@@ -1,9 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { checkVersion, isCheckVersionResponse } from './phone-home';
+
+function mockFetch(response: { ok: boolean; status?: number; json: unknown }) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ...response,
+      json: vi.fn().mockResolvedValue(response.json),
+    }),
+  );
+}
 
 describe('isCheckVersionResponse', () => {
   it('accepts a valid minimal response', () => {
-    expect(isCheckVersionResponse({ is_up_to_date: true })).toBe(true);
+    expect(isCheckVersionResponse({ is_up_to_date: true })).toBeTruthy();
   });
 
   it('accepts a valid full response', () => {
@@ -13,31 +24,31 @@ describe('isCheckVersionResponse', () => {
         latest_version: '2.0.0',
         message: 'Please update',
       }),
-    ).toBe(true);
+    ).toBeTruthy();
   });
 
   it('rejects null', () => {
-    expect(isCheckVersionResponse(null)).toBe(false);
+    expect(isCheckVersionResponse(null)).toBeFalsy();
   });
 
   it('rejects a string', () => {
-    expect(isCheckVersionResponse('not an object')).toBe(false);
+    expect(isCheckVersionResponse('not an object')).toBeFalsy();
   });
 
   it('rejects an object missing is_up_to_date', () => {
-    expect(isCheckVersionResponse({ latest_version: '1.0.0' })).toBe(false);
+    expect(isCheckVersionResponse({ latest_version: '1.0.0' })).toBeFalsy();
   });
 
   it('rejects an object with wrong is_up_to_date type', () => {
-    expect(isCheckVersionResponse({ is_up_to_date: 'yes' })).toBe(false);
+    expect(isCheckVersionResponse({ is_up_to_date: 'yes' })).toBeFalsy();
   });
 
   it('rejects an object with wrong latest_version type', () => {
-    expect(isCheckVersionResponse({ is_up_to_date: true, latest_version: 123 })).toBe(false);
+    expect(isCheckVersionResponse({ is_up_to_date: true, latest_version: 123 })).toBeFalsy();
   });
 
   it('rejects an object with wrong message type', () => {
-    expect(isCheckVersionResponse({ is_up_to_date: true, message: 42 })).toBe(false);
+    expect(isCheckVersionResponse({ is_up_to_date: true, message: 42 })).toBeFalsy();
   });
 });
 
@@ -52,15 +63,7 @@ describe('checkVersion', () => {
         mockStorage[key] = value;
       }),
     });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ is_up_to_date: true }),
-        }),
-      ),
-    );
+    mockFetch({ ok: true, json: { is_up_to_date: true } });
     vi.stubGlobal('window', {
       sessionStorage: {
         getItem: vi.fn((key: string) => mockStorage[key] ?? null),
@@ -88,7 +91,7 @@ describe('checkVersion', () => {
     await checkVersion();
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(sessionStorage.setItem).toHaveBeenCalledWith('@kota/dynamic-form:phone-home-checked', '1');
-    expect(fetch).toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledWith('https://api.kota.io/v1/packages/check-version', expect.any(Object));
   });
 
   it('sends correct request body', async () => {
@@ -110,15 +113,7 @@ describe('checkVersion', () => {
   it('silently returns when response indicates up to date', async () => {
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(vi.fn());
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ is_up_to_date: true }),
-        }),
-      ),
-    );
+    mockFetch({ ok: true, json: { is_up_to_date: true } });
 
     await checkVersion();
     expect(debugSpy).not.toHaveBeenCalled();
@@ -127,19 +122,10 @@ describe('checkVersion', () => {
 
   it('logs warn with message when outdated and message is provided', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              is_up_to_date: false,
-              message: 'Please upgrade to 2.0.0',
-            }),
-        }),
-      ),
-    );
+    mockFetch({
+      ok: true,
+      json: { is_up_to_date: false, message: 'Please upgrade to 2.0.0' },
+    });
 
     await checkVersion();
     expect(warnSpy).toHaveBeenCalledWith('[@kota/dynamic-form] Please upgrade to 2.0.0');
@@ -147,19 +133,10 @@ describe('checkVersion', () => {
 
   it('logs warn with default message when outdated and no message', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              is_up_to_date: false,
-              latest_version: '2.0.0',
-            }),
-        }),
-      ),
-    );
+    mockFetch({
+      ok: true,
+      json: { is_up_to_date: false, latest_version: '2.0.0' },
+    });
 
     await checkVersion();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('new version is available'));
@@ -168,16 +145,7 @@ describe('checkVersion', () => {
 
   it('logs debug on HTTP error', async () => {
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(vi.fn());
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: false,
-          status: 500,
-          json: () => Promise.resolve({}),
-        }),
-      ),
-    );
+    mockFetch({ ok: false, status: 500, json: {} });
 
     await checkVersion();
     expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('failed with status 500'));
@@ -185,10 +153,7 @@ describe('checkVersion', () => {
 
   it('logs debug on network error', async () => {
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(vi.fn());
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.reject(new Error('Network error'))),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
     await checkVersion();
     expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('Version check error'), expect.any(Error));
@@ -196,15 +161,7 @@ describe('checkVersion', () => {
 
   it('logs debug on invalid response shape', async () => {
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(vi.fn());
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ invalid: 'response' }),
-        }),
-      ),
-    );
+    mockFetch({ ok: true, json: { invalid: 'response' } });
 
     await checkVersion();
     expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid version check response'));
@@ -259,7 +216,7 @@ describe('checkVersion', () => {
   });
 });
 
-describe('SSR guard', () => {
+describe('ssr guard', () => {
   it('does nothing when window is undefined', async () => {
     const originalWindow = globalThis.window;
     // @ts-expect-error - simulating SSR
