@@ -1,6 +1,6 @@
-import { useCallback } from 'react';
-
 import type { FieldValue, FormData } from '@kota/adaptive-requirements-engine';
+
+import { useCallback } from 'react';
 
 interface UseFormReturn<T> {
   watch: () => T;
@@ -66,7 +66,9 @@ export function useReactHookFormAdapter<T extends Record<string, unknown>>({
   const onChange = useCallback(
     (data: FormData) => {
       for (const [key, rawValue] of Object.entries(data)) {
-        if (rawValue === undefined) continue;
+        if (rawValue === undefined) {
+          continue;
+        }
         const finalValue = deserialize ? deserialize(key, rawValue) : rawValue;
         setValue(key, finalValue);
       }

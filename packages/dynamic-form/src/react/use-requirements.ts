@@ -1,5 +1,3 @@
-import { useCallback, useMemo } from 'react';
-
 import type {
   EngineOptions,
   FieldMapping,
@@ -7,7 +5,9 @@ import type {
   FormData,
   RequirementsObject,
 } from '@kota/adaptive-requirements-engine';
+
 import { createAdapter } from '@kota/adaptive-requirements-engine';
+import { useCallback, useMemo } from 'react';
 
 export interface UseRequirementsOptions {
   mapping?: FieldMapping;
@@ -25,23 +25,20 @@ export function useRequirements<TFieldId extends string = string>(
   options?: UseRequirementsOptions,
 ) {
   // Create adapter with memoization
-  const adapter = useMemo(() => {
-    return createAdapter(requirements, options?.mapping, options?.engine);
-  }, [requirements, options?.mapping, options?.engine]);
+  const adapter = useMemo(
+    () => createAdapter(requirements, options?.mapping, options?.engine),
+    [requirements, options?.mapping, options?.engine],
+  );
 
   // Calculate computed field values
-  const calculatedData = useMemo(() => {
-    return adapter.calculateData(data);
-  }, [adapter, data]);
+  const calculatedData = useMemo(() => adapter.calculateData(data), [adapter, data]);
 
   // Complete form data (input values + computed values)
   const formData = useMemo(() => ({ ...data, ...calculatedData }), [data, calculatedData]);
 
   // Get field state for a specific field
   const getFieldState = useCallback(
-    (fieldId: string): FieldState<TFieldId> => {
-      return adapter.checkField(fieldId, { ...data, ...calculatedData });
-    },
+    (fieldId: string): FieldState<TFieldId> => adapter.checkField(fieldId, { ...data, ...calculatedData }),
     [adapter, data, calculatedData],
   );
 
@@ -55,12 +52,14 @@ export function useRequirements<TFieldId extends string = string>(
   }, [requirements.fields, getFieldState]);
 
   // Check if form is valid (no visible fields with errors)
-  const isValid = useMemo(() => {
-    return requirements.fields.every((field) => {
-      const state = getFieldState(field.id);
-      return !state.isVisible || state.errors.length === 0;
-    });
-  }, [requirements.fields, getFieldState]);
+  const isValid = useMemo(
+    () =>
+      requirements.fields.every((field) => {
+        const state = getFieldState(field.id);
+        return !state.isVisible || state.errors.length === 0;
+      }),
+    [requirements.fields, getFieldState],
+  );
 
   // Get all visible field errors
   const getErrors = useCallback(() => {
@@ -108,17 +107,17 @@ export function useFieldState<TFieldId extends string = string>(
   data: FormData,
   options?: UseRequirementsOptions,
 ): FieldState<TFieldId> {
-  const adapter = useMemo(() => {
-    return createAdapter(requirements, options?.mapping, options?.engine);
-  }, [requirements, options?.mapping, options?.engine]);
+  const adapter = useMemo(
+    () => createAdapter(requirements, options?.mapping, options?.engine),
+    [requirements, options?.mapping, options?.engine],
+  );
 
-  const calculatedData = useMemo(() => {
-    return adapter.calculateData(data);
-  }, [adapter, data]);
+  const calculatedData = useMemo(() => adapter.calculateData(data), [adapter, data]);
 
-  const fieldState = useMemo(() => {
-    return adapter.checkField(fieldId, { ...data, ...calculatedData });
-  }, [adapter, fieldId, data, calculatedData]);
+  const fieldState = useMemo(
+    () => adapter.checkField(fieldId, { ...data, ...calculatedData }),
+    [adapter, fieldId, data, calculatedData],
+  );
 
   return fieldState;
 }

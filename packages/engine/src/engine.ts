@@ -1,5 +1,3 @@
-import jsonLogic from 'json-logic-js';
-
 import type {
   CustomValidator,
   Dataset,
@@ -16,6 +14,8 @@ import type {
   Rule,
   RuleResult,
 } from './types';
+
+import jsonLogic from 'json-logic-js';
 
 /**
  * Context object for rule evaluation
@@ -49,8 +49,12 @@ export interface EngineOptions {
  * Default label resolver - extracts string from localized label
  */
 export function resolveLabel(label: LocalizedLabel | undefined, _locale?: string): string | undefined {
-  if (label === undefined) return undefined;
-  if (typeof label === 'string') return label;
+  if (label === undefined) {
+    return undefined;
+  }
+  if (typeof label === 'string') {
+    return label;
+  }
   // For localized objects, return the default value
   // In a real implementation, this would look up the key in a translation system
   return label.default;
@@ -60,11 +64,15 @@ export function resolveLabel(label: LocalizedLabel | undefined, _locale?: string
  * Parse a date value from string or Date
  */
 function parseDate(value: FieldValue): Date | null {
-  if (value === null || value === undefined) return null;
-  if (value instanceof Date) return value;
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value;
+  }
   if (typeof value === 'string' || typeof value === 'number') {
     const date = new Date(value);
-    return isNaN(date.getTime()) ? null : date;
+    return Number.isNaN(date.getTime()) ? null : date;
   }
   return null;
 }
@@ -80,7 +88,9 @@ function isFieldValuePrimitive(value: unknown): value is FieldValuePrimitive {
 }
 
 function isFieldValue(value: unknown): value is FieldValue {
-  if (isFieldValuePrimitive(value)) return true;
+  if (isFieldValuePrimitive(value)) {
+    return true;
+  }
   return Array.isArray(value) && value.every(isFieldValuePrimitive);
 }
 
@@ -110,12 +120,15 @@ function calculateMonthsSince(date: Date, referenceDate: Date = new Date()): num
  */
 function calculateDateDiff(from: Date, to: Date, unit: 'days' | 'months' | 'years'): number {
   switch (unit) {
-    case 'days':
+    case 'days': {
       return Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
-    case 'months':
+    }
+    case 'months': {
       return calculateMonthsSince(from, to);
-    case 'years':
+    }
+    case 'years': {
       return calculateAge(from, to);
+    }
   }
 }
 
@@ -153,9 +166,13 @@ function isNormalizedPrimitive(value: unknown): value is NormalizedPrimitive {
 }
 
 function normalizeRule(value: unknown): NormalizedRule {
-  if (isNormalizedPrimitive(value)) return value;
+  if (isNormalizedPrimitive(value)) {
+    return value;
+  }
 
-  if (typeof value !== 'object') return null;
+  if (typeof value !== 'object') {
+    return null;
+  }
 
   if (Array.isArray(value)) {
     return value.map((item): NormalizedRule => normalizeRule(item));
@@ -195,7 +212,9 @@ function normalizeRule(value: unknown): NormalizedRule {
 }
 
 function ensureCustomOperationsRegistered() {
-  if (customOperationsRegistered) return;
+  if (customOperationsRegistered) {
+    return;
+  }
 
   jsonLogic.add_operation('today', () => new Date().toISOString().split('T')[0]);
   jsonLogic.add_operation('age_from_date', (value: unknown) => {
@@ -207,10 +226,14 @@ function ensureCustomOperationsRegistered() {
     return date ? calculateMonthsSince(date) : null;
   });
   jsonLogic.add_operation('date_diff', (fromValue: unknown, toValue: unknown, unit: unknown) => {
-    if (unit !== 'days' && unit !== 'months' && unit !== 'years') return null;
+    if (unit !== 'days' && unit !== 'months' && unit !== 'years') {
+      return null;
+    }
     const fromDate = parseDate(isFieldValue(fromValue) ? fromValue : null);
     const toDate = parseDate(isFieldValue(toValue) ? toValue : null);
-    if (!fromDate || !toDate) return null;
+    if (!fromDate || !toDate) {
+      return null;
+    }
     return calculateDateDiff(fromDate, toDate, unit);
   });
   jsonLogic.add_operation('abs', (value: unknown) => (typeof value === 'number' ? Math.abs(value) : null));
@@ -221,7 +244,7 @@ function ensureCustomOperationsRegistered() {
 function buildLogicData(context: RuleContext): Record<string, unknown> {
   const data = context.data ?? {};
   const answers = context.answers ?? data;
-  const item = context.item;
+  const { item } = context;
 
   return {
     ...context,
@@ -263,7 +286,6 @@ export function runRule(rule: Rule, context: RuleContext): RuleResult {
     // json-logic-js apply method signature is permissive and accepts any object/array structure
     // Our NormalizedRule (objects and arrays) matches what json-logic-js expects
     // The type mismatch is due to json-logic-js's strict typing not covering all valid inputs
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const result = jsonLogic.apply(normalizedRule as Parameters<typeof jsonLogic.apply>[0], buildLogicData(context));
 
     return result as RuleResult;
@@ -281,7 +303,9 @@ export const builtInValidators = {
    */
   age_range: ((value, params) => {
     const date = parseDate(value);
-    if (!date) return null; // Let required validation handle empty values
+    if (!date) {
+      return null;
+    } // Let required validation handle empty values
     const age = calculateAge(date);
     const minAge = typeof params?.['min'] === 'number' ? params['min'] : undefined;
     const maxAge = typeof params?.['max'] === 'number' ? params['max'] : undefined;
@@ -300,7 +324,9 @@ export const builtInValidators = {
    */
   dob_not_in_future: ((value, params) => {
     const date = parseDate(value);
-    if (!date) return null;
+    if (!date) {
+      return null;
+    }
     if (date > new Date()) {
       return (params?.['message'] as string) ?? 'Date cannot be in the future';
     }
@@ -312,7 +338,9 @@ export const builtInValidators = {
    */
   date_after: ((value, params) => {
     const date = parseDate(value);
-    if (!date) return null;
+    if (!date) {
+      return null;
+    }
     const dateParam = params?.['date'] as string | undefined;
     const afterDate = dateParam ? parseDate(dateParam) : null;
     if (afterDate && date <= afterDate) {
@@ -326,7 +354,9 @@ export const builtInValidators = {
    */
   date_before: ((value, params) => {
     const date = parseDate(value);
-    if (!date) return null;
+    if (!date) {
+      return null;
+    }
     const dateParam = params?.['date'] as string | undefined;
     const beforeDate = dateParam ? parseDate(dateParam) : null;
     if (beforeDate && date >= beforeDate) {
@@ -339,7 +369,9 @@ export const builtInValidators = {
    * Validates a Spanish tax ID (NIF/NIE)
    */
   spanish_tax_id: ((value, params) => {
-    if (typeof value !== 'string' || !value) return null;
+    if (typeof value !== 'string' || !value) {
+      return null;
+    }
     // NIF: 8 digits + letter, or letter + 7 digits + letter (NIE)
     const nifRegex = /^[0-9]{8}[A-Z]$/i;
     const nieRegex = /^[XYZ][0-9]{7}[A-Z]$/i;
@@ -353,7 +385,9 @@ export const builtInValidators = {
    * Validates an Irish PPS number
    */
   irish_pps: ((value, params) => {
-    if (typeof value !== 'string' || !value) return null;
+    if (typeof value !== 'string' || !value) {
+      return null;
+    }
     // PPS: 7 digits + 1-2 letters
     const ppsRegex = /^[0-9]{7}[A-Z]{1,2}$/i;
     if (!ppsRegex.test(value)) {
@@ -366,7 +400,9 @@ export const builtInValidators = {
    * Validates a German tax ID (Steuer-ID)
    */
   german_tax_id: ((value, params) => {
-    if (typeof value !== 'string' || !value) return null;
+    if (typeof value !== 'string' || !value) {
+      return null;
+    }
     // Steuer-ID: 11 digits
     const taxIdRegex = /^[0-9]{11}$/;
     if (!taxIdRegex.test(value)) {
@@ -381,13 +417,17 @@ export const builtInValidators = {
    * Params: accept - array of accepted types (e.g., ['.pdf', 'image/*'])
    */
   file_type: ((value, params) => {
-    if (typeof value !== 'string' || !value) return null;
+    if (typeof value !== 'string' || !value) {
+      return null;
+    }
     const accept = params?.['accept'];
-    if (!Array.isArray(accept) || accept.length === 0) return null;
+    if (!Array.isArray(accept) || accept.length === 0) {
+      return null;
+    }
 
     // Extract filename from "name|size" encoding
     const filename = value.split(';')[0]!.split('|')[0]!.toLowerCase();
-    const extension = filename.includes('.') ? '.' + filename.split('.').pop()! : '';
+    const extension = filename.includes('.') ? `.${filename.split('.').pop()!}` : '';
 
     const extCategories: Record<string, string[]> = {
       image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff', '.avif'],
@@ -397,9 +437,13 @@ export const builtInValidators = {
     };
 
     const isAccepted = accept.some((type: unknown) => {
-      if (typeof type !== 'string') return false;
+      if (typeof type !== 'string') {
+        return false;
+      }
       const t = type.toLowerCase().trim();
-      if (t.startsWith('.')) return extension === t;
+      if (t.startsWith('.')) {
+        return extension === t;
+      }
       if (t.endsWith('/*')) {
         const category = t.split('/')[0]!;
         return extCategories[category]?.includes(extension) ?? false;
@@ -418,9 +462,13 @@ export const builtInValidators = {
    * Params: maxSize - maximum file size in bytes
    */
   file_size: ((value, params) => {
-    if (typeof value !== 'string' || !value) return null;
+    if (typeof value !== 'string' || !value) {
+      return null;
+    }
     const maxSize = typeof params?.['maxSize'] === 'number' ? params['maxSize'] : undefined;
-    if (maxSize === undefined) return null;
+    if (maxSize === undefined) {
+      return null;
+    }
 
     // Check each file in semicolon-delimited list
     const files = value.split(';').filter(Boolean);
@@ -428,7 +476,7 @@ export const builtInValidators = {
       const sizeStr = file.split('|')[1];
       if (sizeStr !== undefined) {
         const size = Number(sizeStr);
-        if (!isNaN(size) && size > maxSize) {
+        if (!Number.isNaN(size) && size > maxSize) {
           const maxMB = (maxSize / (1024 * 1024)).toFixed(1);
           return (params?.['message'] as string) ?? `File exceeds maximum size of ${maxMB}MB`;
         }
@@ -443,9 +491,13 @@ export const builtInValidators = {
    * Params: maxFiles - maximum number of files allowed
    */
   file_count: ((value, params) => {
-    if (typeof value !== 'string' || !value) return null;
+    if (typeof value !== 'string' || !value) {
+      return null;
+    }
     const maxFiles = typeof params?.['maxFiles'] === 'number' ? params['maxFiles'] : undefined;
-    if (maxFiles === undefined) return null;
+    if (maxFiles === undefined) {
+      return null;
+    }
 
     const fileCount = value.split(';').filter(Boolean).length;
     if (fileCount > maxFiles) {
@@ -471,16 +523,22 @@ export function runCustomValidators(
 
   for (const validator of validators) {
     const validatorKey = validator.type ?? validator.name;
-    if (validatorKey == null) continue;
+    if (validatorKey == null) {
+      continue;
+    }
 
     const validatorFn = allValidators[validatorKey];
-    if (!validatorFn) continue;
+    if (!validatorFn) {
+      continue;
+    }
 
-    const params = validator.params;
+    const { params } = validator;
     const whenRule = params?.['when'];
     if (whenRule != null && typeof whenRule === 'object') {
       const whenResult = runRule(whenRule as Rule, context);
-      if (!whenResult) continue;
+      if (!whenResult) {
+        continue;
+      }
     }
 
     const error = validatorFn(value, validator.params, context);
@@ -632,15 +690,21 @@ export function checkField<TFieldId extends string = string>(
         const fc = field.fileConfig;
         if (fc.accept && fc.accept.length > 0) {
           const fileTypeError = builtInValidators.file_type(fieldValue, { accept: fc.accept });
-          if (fileTypeError) errors.push(fileTypeError);
+          if (fileTypeError) {
+            errors.push(fileTypeError);
+          }
         }
         if (fc.maxSize !== undefined) {
           const fileSizeError = builtInValidators.file_size(fieldValue, { maxSize: fc.maxSize });
-          if (fileSizeError) errors.push(fileSizeError);
+          if (fileSizeError) {
+            errors.push(fileSizeError);
+          }
         }
         if (fc.multiple && fc.maxFiles !== undefined) {
           const fileCountError = builtInValidators.file_count(fieldValue, { maxFiles: fc.maxFiles });
-          if (fileCountError) errors.push(fileCountError);
+          if (fileCountError) {
+            errors.push(fileCountError);
+          }
         }
       }
 
@@ -733,8 +797,12 @@ export function clearHiddenFieldValues<TFieldId extends string = string>(
   while (changed) {
     changed = false;
     for (const field of requirements.fields) {
-      if (field.type === 'computed' || field.type === 'hidden') continue;
-      if (field.visibleWhen == null) continue;
+      if (field.type === 'computed' || field.type === 'hidden') {
+        continue;
+      }
+      if (field.visibleWhen == null) {
+        continue;
+      }
 
       const context: RuleContext = { data, answers: data };
       const isVisible = !!runRule(field.visibleWhen, context);
@@ -770,8 +838,12 @@ export function applyExclusions<TFieldId extends string = string>(
   while (changed) {
     changed = false;
     for (const field of requirements.fields) {
-      if (!field.excludeWhen) continue;
-      if (field.type === 'computed' || field.type === 'hidden') continue;
+      if (!field.excludeWhen) {
+        continue;
+      }
+      if (field.type === 'computed' || field.type === 'hidden') {
+        continue;
+      }
 
       const context: RuleContext = { data, answers: data };
       const isExcluded = !!runRule(field.excludeWhen, context);
@@ -802,14 +874,22 @@ export function stepHasVisibleFields<TFieldId extends string = string>(
   options?: EngineOptions,
 ): boolean {
   const step = requirements.flow?.steps.find((s) => s.id === stepId);
-  if (!step) return false;
+  if (!step) {
+    return false;
+  }
   const idToField = new Map(requirements.fields.map((f) => [f.id, f]));
   for (const fieldId of step.fields) {
     const field = idToField.get(fieldId as TFieldId);
-    if (!field) continue;
-    if (field.type === 'hidden') continue;
+    if (!field) {
+      continue;
+    }
+    if (field.type === 'hidden') {
+      continue;
+    }
     const state = checkField(requirements, fieldId as TFieldId, formData, options);
-    if (state.isVisible) return true;
+    if (state.isVisible) {
+      return true;
+    }
   }
   return false;
 }
@@ -827,7 +907,9 @@ export function getNextStepId<TFieldId extends string = string>(
   options?: { requirements?: RequirementsObject<TFieldId>; engine?: EngineOptions },
 ): string | undefined {
   const stepIndex = flow.steps.findIndex((s) => s.id === currentStepId);
-  if (stepIndex < 0) return undefined;
+  if (stepIndex === -1) {
+    return undefined;
+  }
 
   const context: RuleContext = { data: formData, answers: formData };
 
@@ -850,7 +932,7 @@ export function getNextStepId<TFieldId extends string = string>(
     const mergedData = { ...formData, ...calculateData(requirements, formData) };
     if (!stepHasVisibleFields(requirements, candidate, mergedData, options?.engine)) {
       const candidateIndex = flow.steps.findIndex((s) => s.id === candidate);
-      if (candidateIndex >= 0 && candidateIndex + 1 < flow.steps.length) {
+      if (candidateIndex !== -1 && candidateIndex + 1 < flow.steps.length) {
         return getNextStepId(flow, candidate, formData, options);
       }
       return undefined;
@@ -865,7 +947,9 @@ export function getNextStepId<TFieldId extends string = string>(
  */
 export function getPreviousStepId(flow: Flow, currentStepId: string): string | undefined {
   const stepIndex = flow.steps.findIndex((s) => s.id === currentStepId);
-  if (stepIndex <= 0) return undefined;
+  if (stepIndex <= 0) {
+    return undefined;
+  }
   return flow.steps[stepIndex - 1]?.id;
 }
 
@@ -908,9 +992,7 @@ export function createAdapter<TFieldId extends string = string>(
       return checkField(requirements, mappedFieldId, data, options);
     },
 
-    calculateData: (inputData: FormData) => {
-      return calculateData(requirements, inputData);
-    },
+    calculateData: (inputData: FormData) => calculateData(requirements, inputData),
 
     getFieldOptions: (fieldId: string, data?: FormData) => {
       const mappedFieldId = fieldIdMap[fieldId] ?? fieldId;

@@ -3,7 +3,6 @@ dist
 build
 .turbo
 coverage
-.eslintcache
 *.tsbuildinfo
 
 # Cache

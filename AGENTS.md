@@ -26,19 +26,19 @@ The engine is framework-agnostic (pure functions, no React dependency). The hook
 
 ## Key Files
 
-| File                                                        | Purpose                                                             |
-| ----------------------------------------------------------- | ------------------------------------------------------------------- |
-| `packages/engine/src/types.ts`                              | All type definitions (plain TypeScript interfaces)                  |
-| `packages/engine/src/validate.ts`                           | Native JS validation utilities (`validateRequirementsObject`, etc.) |
-| `packages/engine/src/engine.ts`                             | Rule engine, field evaluation, flow navigation, validators          |
-| `packages/engine/src/index.ts`                              | Public API barrel export for engine package                         |
-| `packages/engine/src/engine.test.ts`                        | Engine unit tests (Vitest)                                          |
-| `packages/engine/src/validate.test.ts`                      | Validation utility tests (Vitest)                                   |
-| `packages/dynamic-form/src/react/index.ts`                  | Public API: exports `DynamicForm` only                              |
-| `packages/dynamic-form/src/react/use-requirements.ts`       | React hooks (internal): `useRequirements`, `useFieldState`          |
-| `packages/dynamic-form/src/react/dynamic-form.tsx`          | `DynamicForm` component with pluggable field rendering              |
-| `packages/dynamic-form/src/react/adapters/react-hook-form.ts` | React Hook Form state bridge adapter                             |
-| `packages/dynamic-form/src/react/adapters/formik.ts`        | Formik state bridge adapter                                         |
+| File                                                          | Purpose                                                             |
+| ------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `packages/engine/src/types.ts`                                | All type definitions (plain TypeScript interfaces)                  |
+| `packages/engine/src/validate.ts`                             | Native JS validation utilities (`validateRequirementsObject`, etc.) |
+| `packages/engine/src/engine.ts`                               | Rule engine, field evaluation, flow navigation, validators          |
+| `packages/engine/src/index.ts`                                | Public API barrel export for engine package                         |
+| `packages/engine/src/engine.test.ts`                          | Engine unit tests (Vitest)                                          |
+| `packages/engine/src/validate.test.ts`                        | Validation utility tests (Vitest)                                   |
+| `packages/dynamic-form/src/react/index.ts`                    | Public API: exports `DynamicForm` only                              |
+| `packages/dynamic-form/src/react/use-requirements.ts`         | React hooks (internal): `useRequirements`, `useFieldState`          |
+| `packages/dynamic-form/src/react/dynamic-form.tsx`            | `DynamicForm` component with pluggable field rendering              |
+| `packages/dynamic-form/src/react/adapters/react-hook-form.ts` | React Hook Form state bridge adapter                                |
+| `packages/dynamic-form/src/react/adapters/formik.ts`          | Formik state bridge adapter                                         |
 
 ## Commands
 
@@ -47,8 +47,14 @@ The engine is framework-agnostic (pure functions, no React dependency). The hook
 pnpm test              # Run tests (Vitest)
 pnpm build             # Build with tsdown
 pnpm typecheck         # TypeScript type checking
-pnpm lint              # ESLint
-pnpm format            # Prettier check
+pnpm lint              # Oxlint (via Ultracite presets)
+pnpm format            # Oxfmt check
+
+# Fix commands:
+pnpm lint:fix          # Auto-fix lint issues
+pnpm format:fix        # Auto-format all files
+pnpm checks            # Run format + lint + typecheck
+pnpm checks:fix        # Fix format + lint, then typecheck
 
 # Target a specific package:
 pnpm --filter @kota/adaptive-requirements-engine test
@@ -64,10 +70,19 @@ pnpm --filter @kota/dynamic-form build
 ## Release
 
 Packages are published independently via git tags:
+
 - `engine@<version>` → publishes `@kota/adaptive-requirements-engine`
 - `dynamic-form@<version>` → publishes `@kota/dynamic-form`
 
 Publish engine first if both need new versions (dynamic-form depends on engine).
+
+## Linting & Formatting
+
+- **Linter:** Oxlint via Ultracite presets (`.oxlintrc.json` at root, nested config in `packages/dynamic-form/` for React rules)
+- **Formatter:** Oxfmt (`.oxfmtrc.json` at root) — Prettier-compatible with import sorting and Tailwind CSS class sorting enabled
+- **Config layer:** `ultracite` package provides curated presets; custom rule overrides in root `.oxlintrc.json`
+- Lint and format scripts run from the root (not per-package)
+- `--deny-warnings` ensures zero warnings in CI
 
 ## Conventions
 

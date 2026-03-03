@@ -1,15 +1,14 @@
 {
   "private": true,
-  "packageManager": "pnpm@9.9.0",
   "type": "module",
   "scripts": {
     "build": "pnpm -r run build",
     "clean": "pnpm -r run clean",
     "dev": "pnpm -r run dev",
-    "format": "pnpm -r run format",
-    "format:fix": "pnpm -r run format:fix",
-    "lint": "pnpm -r run lint",
-    "lint:fix": "pnpm -r run lint:fix",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt --write .",
+    "lint": "oxlint --deny-warnings .",
+    "lint:fix": "oxlint --fix --deny-warnings .",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck",
     "checks": "pnpm run format && pnpm run lint && pnpm run typecheck",
@@ -18,13 +17,9 @@
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.8",
     "@tsconfig/strictest": "^2.0.5",
-    "prettier": "^3.8.1"
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0",
+    "ultracite": "^7.2.4"
   },
-  "prettier": {
-    "singleQuote": true,
-    "trailingComma": "all",
-    "printWidth": 120,
-    "tabWidth": 2,
-    "semi": true
-  }
+  "packageManager": "pnpm@9.9.0"
 }

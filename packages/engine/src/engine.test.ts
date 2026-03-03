@@ -1,3 +1,5 @@
+import type { RequirementsObject } from './types';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -12,14 +14,14 @@ import {
   runCustomValidators,
   runRule,
 } from './engine';
-import type { RequirementsObject } from './types';
 
-describe('runRule', () => {
+describe(runRule, () => {
   it('should return primitive values as-is', () => {
     expect(runRule('hello', {})).toBe('hello');
     expect(runRule(42, {})).toBe(42);
+    // oxlint-disable-next-line vitest/prefer-to-be-truthy -- exact boolean identity matters
     expect(runRule(true, {})).toBe(true);
-    expect(runRule(null, {})).toBe(null);
+    expect(runRule(null, {})).toBeNull();
   });
 
   it('should resolve variables', () => {
@@ -48,30 +50,30 @@ describe('runRule', () => {
 
   it('should handle equality operators', () => {
     const context = { data: { status: 'active' } };
-    expect(runRule({ '==': [{ var: 'status' }, 'active'] }, context)).toBe(true);
-    expect(runRule({ '==': [{ var: 'status' }, 'inactive'] }, context)).toBe(false);
-    expect(runRule({ '!=': [{ var: 'status' }, 'inactive'] }, context)).toBe(true);
+    expect(runRule({ '==': [{ var: 'status' }, 'active'] }, context)).toBeTruthy();
+    expect(runRule({ '==': [{ var: 'status' }, 'inactive'] }, context)).toBeFalsy();
+    expect(runRule({ '!=': [{ var: 'status' }, 'inactive'] }, context)).toBeTruthy();
   });
 
   it('should handle comparison operators', () => {
     const context = { data: { age: 25 } };
-    expect(runRule({ '>': [{ var: 'age' }, 18] }, context)).toBe(true);
-    expect(runRule({ '<': [{ var: 'age' }, 30] }, context)).toBe(true);
-    expect(runRule({ '>=': [{ var: 'age' }, 25] }, context)).toBe(true);
-    expect(runRule({ '<=': [{ var: 'age' }, 25] }, context)).toBe(true);
+    expect(runRule({ '>': [{ var: 'age' }, 18] }, context)).toBeTruthy();
+    expect(runRule({ '<': [{ var: 'age' }, 30] }, context)).toBeTruthy();
+    expect(runRule({ '>=': [{ var: 'age' }, 25] }, context)).toBeTruthy();
+    expect(runRule({ '<=': [{ var: 'age' }, 25] }, context)).toBeTruthy();
   });
 
   it('should handle membership operator with array data', () => {
     const context = { data: { tags: ['alpha', 'beta'] } };
-    expect(runRule({ in: ['beta', { var: 'tags' }] }, context)).toBe(true);
-    expect(runRule({ in: ['gamma', { var: 'tags' }] }, context)).toBe(false);
+    expect(runRule({ in: ['beta', { var: 'tags' }] }, context)).toBeTruthy();
+    expect(runRule({ in: ['gamma', { var: 'tags' }] }, context)).toBeFalsy();
   });
 
   it('should handle logical operators', () => {
     const context = { data: { a: true, b: false } };
-    expect(runRule({ and: [{ var: 'a' }, { var: 'b' }] }, context)).toBe(false);
-    expect(runRule({ or: [{ var: 'a' }, { var: 'b' }] }, context)).toBe(true);
-    expect(runRule({ '!': { var: 'b' } }, context)).toBe(true);
+    expect(runRule({ and: [{ var: 'a' }, { var: 'b' }] }, context)).toBeFalsy();
+    expect(runRule({ or: [{ var: 'a' }, { var: 'b' }] }, context)).toBeTruthy();
+    expect(runRule({ '!': { var: 'b' } }, context)).toBeTruthy();
   });
 
   it('should handle math operators', () => {
@@ -161,7 +163,7 @@ describe('runRule', () => {
   });
 });
 
-describe('checkField', () => {
+describe(checkField, () => {
   const requirements: RequirementsObject = {
     fields: [
       {
@@ -192,15 +194,15 @@ describe('checkField', () => {
 
   it('should check field visibility', () => {
     const state1 = checkField(requirements, 'age', {});
-    expect(state1.isVisible).toBe(false);
+    expect(state1.isVisible).toBeFalsy();
 
     const state2 = checkField(requirements, 'age', { firstName: 'John' });
-    expect(state2.isVisible).toBe(true);
+    expect(state2.isVisible).toBeTruthy();
   });
 
   it('should validate required fields', () => {
     const state = checkField(requirements, 'firstName', {});
-    expect(state.isRequired).toBe(true);
+    expect(state.isRequired).toBeTruthy();
     expect(state.errors).toContain('This field is required');
   });
 
@@ -239,10 +241,10 @@ describe('checkField', () => {
 
     it('should evaluate visibleWhen rule', () => {
       const state1 = checkField(requirementsWithVisibleWhen, 'partnerName', {});
-      expect(state1.isVisible).toBe(false);
+      expect(state1.isVisible).toBeFalsy();
 
       const state2 = checkField(requirementsWithVisibleWhen, 'partnerName', { hasPartner: true });
-      expect(state2.isVisible).toBe(true);
+      expect(state2.isVisible).toBeTruthy();
     });
   });
 
@@ -259,7 +261,7 @@ describe('checkField', () => {
 
     it('should treat hidden type as not visible', () => {
       const state = checkField(requirementsWithHidden, 'userId', { userId: '123' });
-      expect(state.isVisible).toBe(false);
+      expect(state.isVisible).toBeFalsy();
       expect(state.value).toBe('123');
     });
   });
@@ -278,7 +280,7 @@ describe('checkField', () => {
 
     it('should return isReadOnly state', () => {
       const state = checkField(requirementsWithReadOnly, 'readOnlyField', {});
-      expect(state.isReadOnly).toBe(true);
+      expect(state.isReadOnly).toBeTruthy();
     });
   });
 
@@ -302,7 +304,7 @@ describe('checkField', () => {
       tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
       const state1 = checkField(requirementsWithCustomValidators, 'dob', { dob: tenYearsAgo.toISOString() });
       expect(state1.errors.length).toBeGreaterThan(0);
-      expect(state1.errors.some((e) => e.includes('18'))).toBe(true);
+      expect(state1.errors.some((e) => e.includes('18'))).toBeTruthy();
 
       // Valid age (30 years old)
       const thirtyYearsAgo = new Date();
@@ -315,7 +317,7 @@ describe('checkField', () => {
       const futureDate = new Date();
       futureDate.setFullYear(futureDate.getFullYear() + 1);
       const state = checkField(requirementsWithCustomValidators, 'dob', { dob: futureDate.toISOString() });
-      expect(state.errors.some((e) => e.includes('future'))).toBe(true);
+      expect(state.errors.some((e) => e.includes('future'))).toBeTruthy();
     });
   });
 
@@ -347,7 +349,7 @@ describe('checkField', () => {
   });
 });
 
-describe('resolveLabel', () => {
+describe(resolveLabel, () => {
   it('should return undefined for undefined label', () => {
     expect(resolveLabel(undefined)).toBeUndefined();
   });
@@ -422,7 +424,7 @@ describe('builtInValidators', () => {
   });
 });
 
-describe('runCustomValidators', () => {
+describe(runCustomValidators, () => {
   it('should run multiple validators', () => {
     const validators = [{ type: 'dob_not_in_future' }, { type: 'age_range', params: { min: 18 } }];
 
@@ -430,7 +432,7 @@ describe('runCustomValidators', () => {
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
 
     const errors = runCustomValidators(tenYearsAgo.toISOString(), validators, { data: {} });
-    expect(errors.length).toBe(1); // Only age_range should fail
+    expect(errors).toHaveLength(1); // Only age_range should fail
   });
 
   it('should support custom validators via options', () => {
@@ -447,7 +449,7 @@ describe('runCustomValidators', () => {
   });
 });
 
-describe('calculateData', () => {
+describe(calculateData, () => {
   const requirements: RequirementsObject = {
     fields: [
       { id: 'price', type: 'number', label: 'Price' },
@@ -574,11 +576,11 @@ describe('optionsSource with filtering', () => {
   it('should filter dataset options based on form data', () => {
     const state1 = checkField(requirementsWithDatasetFilter, 'plan', { insurer: 'vitality' });
     expect(state1.options).toHaveLength(2);
-    expect(state1.options?.every((o) => o.label.includes('Vitality'))).toBe(true);
+    expect(state1.options?.every((o) => o.label.includes('Vitality'))).toBeTruthy();
 
     const state2 = checkField(requirementsWithDatasetFilter, 'plan', { insurer: 'sanitas' });
     expect(state2.options).toHaveLength(2);
-    expect(state2.options?.every((o) => o.label.includes('Sanitas'))).toBe(true);
+    expect(state2.options?.every((o) => o.label.includes('Sanitas'))).toBeTruthy();
   });
 
   it('should return empty options when filter matches nothing', () => {
@@ -612,8 +614,8 @@ describe('boolean dataset values', () => {
     const field = requirementsWithBooleanDataset.fields[0]!;
     const options = resolveFieldOptions(field, requirementsWithBooleanDataset.datasets, { data: {}, answers: {} });
     expect(options).toHaveLength(2);
-    expect(options?.[0]).toEqual({ value: true, label: 'Yes' });
-    expect(options?.[1]).toEqual({ value: false, label: 'No' });
+    expect(options?.[0]).toStrictEqual({ value: true, label: 'Yes' });
+    expect(options?.[1]).toStrictEqual({ value: false, label: 'No' });
     expect(typeof options?.[0]?.value).toBe('boolean');
     expect(typeof options?.[1]?.value).toBe('boolean');
   });
@@ -621,16 +623,20 @@ describe('boolean dataset values', () => {
   it('should return field state with boolean options from checkField', () => {
     const state = checkField(requirementsWithBooleanDataset, 'yesNo', {});
     expect(state.options).toHaveLength(2);
+    // oxlint-disable-next-line vitest/prefer-to-be-truthy -- verifying boolean primitive preservation, not just truthiness
     expect(state.options?.[0]?.value).toBe(true);
+    // oxlint-disable-next-line vitest/prefer-to-be-falsy -- verifying boolean primitive preservation, not just falsiness
     expect(state.options?.[1]?.value).toBe(false);
   });
 
   it('should support JSON Logic rules comparing against boolean form value', () => {
     const stateWhenTrue = checkField(requirementsWithBooleanDataset, 'yesNo', { yesNo: true });
+    // oxlint-disable-next-line vitest/prefer-to-be-truthy -- verifying exact boolean value, not just truthiness
     expect(stateWhenTrue.value).toBe(true);
-    expect(stateWhenTrue.isVisible).toBe(true);
+    expect(stateWhenTrue.isVisible).toBeTruthy();
 
     const stateWhenFalse = checkField(requirementsWithBooleanDataset, 'yesNo', { yesNo: false });
+    // oxlint-disable-next-line vitest/prefer-to-be-falsy -- false vs undefined distinction is critical here
     expect(stateWhenFalse.value).toBe(false);
   });
 
@@ -650,14 +656,14 @@ describe('boolean dataset values', () => {
     const field = requirementsWithStringDataset.fields[0]!;
     const options = resolveFieldOptions(field, requirementsWithStringDataset.datasets, { data: {}, answers: {} });
     expect(options).toHaveLength(2);
-    expect(options?.[0]).toEqual({ value: 'a', label: 'A' });
-    expect(options?.[1]).toEqual({ value: 'b', label: 'B' });
+    expect(options?.[0]).toStrictEqual({ value: 'a', label: 'A' });
+    expect(options?.[1]).toStrictEqual({ value: 'b', label: 'B' });
     expect(typeof options?.[0]?.value).toBe('string');
     expect(typeof options?.[1]?.value).toBe('string');
   });
 });
 
-describe('createAdapter', () => {
+describe(createAdapter, () => {
   const requirements: RequirementsObject = {
     fields: [
       { id: 'field_a', type: 'text', label: 'Field A' },
@@ -684,7 +690,7 @@ describe('createAdapter', () => {
   });
 });
 
-describe('clearHiddenFieldValues', () => {
+describe(clearHiddenFieldValues, () => {
   it('should clear values of hidden fields', () => {
     const requirements: RequirementsObject = {
       fields: [
@@ -703,6 +709,7 @@ describe('clearHiddenFieldValues', () => {
       partner_name: 'John',
     });
 
+    // oxlint-disable-next-line vitest/prefer-to-be-falsy -- must be false (retained), not undefined (cleared)
     expect(result['show_partner']).toBe(false);
     expect(result['partner_name']).toBeUndefined();
   });
@@ -732,6 +739,7 @@ describe('clearHiddenFieldValues', () => {
       c: 'some value',
     });
 
+    // oxlint-disable-next-line vitest/prefer-to-be-falsy -- must be false (retained), not undefined (cleared)
     expect(result['a']).toBe(false);
     expect(result['b']).toBeUndefined();
     expect(result['c']).toBeUndefined();
@@ -756,8 +764,10 @@ describe('clearHiddenFieldValues', () => {
       derived: false,
     });
 
+    // oxlint-disable-next-line vitest/prefer-to-be-falsy -- must be false (retained), not undefined (cleared)
     expect(result['a']).toBe(false);
     // Computed field is recomputed, not cleared
+    // oxlint-disable-next-line vitest/prefer-to-be-falsy -- computed field recomputes to false, not undefined
     expect(result['derived']).toBe(false);
   });
 
@@ -789,6 +799,7 @@ describe('clearHiddenFieldValues', () => {
     const data = { a: true, b: 'visible' };
     const result = clearHiddenFieldValues(requirements, data);
 
+    // oxlint-disable-next-line vitest/prefer-to-be-truthy -- exact boolean identity matters
     expect(result['a']).toBe(true);
     expect(result['b']).toBe('visible');
   });
@@ -820,6 +831,7 @@ describe('clearHiddenFieldValues', () => {
       status: 'active',
     });
 
+    // oxlint-disable-next-line vitest/prefer-to-be-falsy -- must be false (retained), not undefined (cleared)
     expect(result['toggle']).toBe(false);
     expect(result['child']).toBeUndefined();
     // After child is cleared, status recomputes: child is undefined, so status = 'inactive'
@@ -827,7 +839,7 @@ describe('clearHiddenFieldValues', () => {
   });
 });
 
-describe('applyExclusions', () => {
+describe(applyExclusions, () => {
   it('should set value to undefined when excludeWhen evaluates to true', () => {
     const requirements: RequirementsObject = {
       fields: [
@@ -843,6 +855,7 @@ describe('applyExclusions', () => {
 
     const result = applyExclusions(requirements, { toggle: false, detail: 'some value' });
     expect(result['detail']).toBeUndefined();
+    // oxlint-disable-next-line vitest/prefer-to-be-falsy -- must be false (retained), not undefined (excluded)
     expect(result['toggle']).toBe(false);
   });
 
@@ -969,7 +982,7 @@ describe('checkField with excludeWhen', () => {
     };
 
     const state = checkField(requirements, 'detail', { toggle: false, detail: 'value' });
-    expect(state.isExcluded).toBe(true);
+    expect(state.isExcluded).toBeTruthy();
     expect(state.value).toBeUndefined();
     expect(state.errors).toHaveLength(0);
   });
@@ -988,7 +1001,7 @@ describe('checkField with excludeWhen', () => {
     };
 
     const state = checkField(requirements, 'detail', { toggle: true, detail: 'value' });
-    expect(state.isExcluded).toBe(false);
+    expect(state.isExcluded).toBeFalsy();
     expect(state.value).toBe('value');
   });
 
@@ -1006,7 +1019,7 @@ describe('checkField with excludeWhen', () => {
     };
 
     const state = checkField(requirements, 'required_field', {});
-    expect(state.isExcluded).toBe(true);
+    expect(state.isExcluded).toBeTruthy();
     expect(state.errors).toHaveLength(0);
   });
 
@@ -1016,7 +1029,7 @@ describe('checkField with excludeWhen', () => {
     };
 
     const state = checkField(requirements, 'normal', { normal: 'value' });
-    expect(state.isExcluded).toBe(false);
+    expect(state.isExcluded).toBeFalsy();
   });
 });
 
@@ -1060,27 +1073,27 @@ describe('file field type', () => {
 
   describe('file_size validator', () => {
     it('should pass when size is under limit', () => {
-      const result = builtInValidators.file_size('doc.pdf|500000', { maxSize: 1048576 });
+      const result = builtInValidators.file_size('doc.pdf|500000', { maxSize: 1_048_576 });
       expect(result).toBeNull();
     });
 
     it('should fail when size exceeds limit', () => {
-      const result = builtInValidators.file_size('doc.pdf|2000000', { maxSize: 1048576 });
+      const result = builtInValidators.file_size('doc.pdf|2000000', { maxSize: 1_048_576 });
       expect(result).not.toBeNull();
     });
 
     it('should pass when no size metadata in value', () => {
-      const result = builtInValidators.file_size('doc.pdf', { maxSize: 1048576 });
+      const result = builtInValidators.file_size('doc.pdf', { maxSize: 1_048_576 });
       expect(result).toBeNull();
     });
 
     it('should check each file in multi-file value', () => {
-      const result = builtInValidators.file_size('a.pdf|500;b.pdf|2000000', { maxSize: 1048576 });
+      const result = builtInValidators.file_size('a.pdf|500;b.pdf|2000000', { maxSize: 1_048_576 });
       expect(result).not.toBeNull();
     });
 
     it('should pass when all files are under limit', () => {
-      const result = builtInValidators.file_size('a.pdf|500;b.pdf|600', { maxSize: 1048576 });
+      const result = builtInValidators.file_size('a.pdf|500;b.pdf|600', { maxSize: 1_048_576 });
       expect(result).toBeNull();
     });
   });
@@ -1118,7 +1131,7 @@ describe('file field type', () => {
 
       const state = checkField(requirements, 'upload', { upload: 'photo.jpg|1024' });
       expect(state.errors.length).toBeGreaterThan(0);
-      expect(state.errors.some((e) => e.includes('not accepted'))).toBe(true);
+      expect(state.errors.some((e) => e.includes('not accepted'))).toBeTruthy();
     });
 
     it('should pass for accepted file type', () => {
@@ -1152,7 +1165,7 @@ describe('file field type', () => {
 
       const state = checkField(requirements, 'upload', { upload: 'doc.pdf|2048' });
       expect(state.errors.length).toBeGreaterThan(0);
-      expect(state.errors.some((e) => e.includes('exceeds'))).toBe(true);
+      expect(state.errors.some((e) => e.includes('exceeds'))).toBeTruthy();
     });
 
     it('should auto-validate file count from fileConfig', () => {
@@ -1187,11 +1200,11 @@ describe('file field type', () => {
       };
 
       const hidden = checkField(requirements, 'upload', { needsDoc: false });
-      expect(hidden.isVisible).toBe(false);
+      expect(hidden.isVisible).toBeFalsy();
 
       const visible = checkField(requirements, 'upload', { needsDoc: true });
-      expect(visible.isVisible).toBe(true);
-      expect(visible.isRequired).toBe(true);
+      expect(visible.isVisible).toBeTruthy();
+      expect(visible.isRequired).toBeTruthy();
     });
 
     it('should work with excludeWhen', () => {
@@ -1208,7 +1221,7 @@ describe('file field type', () => {
       };
 
       const state = checkField(requirements, 'upload', { upload: 'doc.pdf' });
-      expect(state.isExcluded).toBe(true);
+      expect(state.isExcluded).toBeTruthy();
       expect(state.value).toBeUndefined();
     });
 
