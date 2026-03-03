@@ -15,7 +15,7 @@
     "checks:fix": "pnpm run format:fix && pnpm run lint:fix && pnpm run typecheck",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm run build && changeset publish",
+    "release": "changeset publish",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -43,19 +43,21 @@ Examples:
 
 ## Changesets
 
-When your PR includes user-facing changes (new features, bug fixes, breaking changes), add a changeset:
+When your PR includes user-facing changes to published packages (new features, bug fixes, breaking changes), add a changeset:
 
 ```bash
 pnpm changeset
 ```
 
-Follow the prompts to select affected packages and bump type (patch/minor/major). This creates a markdown file in `.changeset/` that describes the change.
+Follow the prompts to select affected packages and bump type (patch/minor/major). This creates a markdown file in `.changeset/` that describes the change. CI enforces this on PRs that include releasable package changes.
 
-If your PR has no user-facing changes (CI config, docs, tests), create an empty changeset:
+If your PR modifies published packages but has no user-facing changes (refactors, test changes), create an empty changeset:
 
 ```bash
 pnpm changeset --empty
 ```
+
+For PRs that only touch repo infra, docs, or CI config and do not modify published packages, a changeset is not required.
 
 ## Before Submitting a PR
 
@@ -68,7 +70,7 @@ pnpm changeset --empty
 ## Code Style
 
 - TypeScript strict mode
-- ESLint + Prettier for formatting
+- Oxlint + Oxfmt for linting and formatting
 - Consistent type imports (`import type { ... }`)
 
 ## Architecture

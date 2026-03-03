@@ -80,9 +80,9 @@ Conventional Commits are enforced via commitlint + husky. Format: `type(scope): 
 
 ## Changesets
 
-When making user-facing changes, run `pnpm changeset` to create a changeset file describing the change and bump type. This is required for CI to pass on PRs.
+When making user-facing changes to published packages, run `pnpm changeset` to create a changeset file describing the change and bump type. CI enforces this on PRs that include releasable package changes.
 
-For non-user-facing changes (CI, docs, tests), use `pnpm changeset --empty`.
+For non-user-facing changes to packages (CI, docs, tests), use `pnpm changeset --empty`. For PRs that only touch repo infra/docs and do not modify published packages, a changeset is not required.
 
 ## Release
 
