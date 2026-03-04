@@ -1,4 +1,4 @@
-# Contributing to @kota/dynamic-form
+# Contributing to @kotaio/adaptive-form
 
 Thank you for your interest in contributing!
 
@@ -14,8 +14,8 @@ The canonical source for this package is maintained in a private monorepo. Chang
 
 ```bash
 # Clone the repository
-git clone https://github.com/yonderlab/dynamic-form.git
-cd dynamic-form
+git clone https://github.com/yonderlab/adaptive-requirements.git
+cd adaptive-requirements
 
 # Install dependencies (also sets up git hooks via husky)
 pnpm install
@@ -32,12 +32,12 @@ Format: `type(scope): description`
 
 **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
 
-**Scopes** (optional but encouraged): `engine`, `dynamic-form`, `ci`, `deps`, `repo`
+**Scopes** (optional but encouraged): `engine`, `adaptive-form`, `ci`, `deps`, `repo`
 
 Examples:
 
 - `feat(engine): add date_before validator`
-- `fix(dynamic-form): correct controlled mode re-render`
+- `fix(adaptive-form): correct controlled mode re-render`
 - `chore(deps): update vitest to v3.3`
 - `docs: update architecture diagram`
 
@@ -75,15 +75,15 @@ For PRs that only touch repo infra, docs, or CI config and do not modify publish
 
 ## Architecture
 
-See `packages/engine/AGENTS.md` and `packages/dynamic-form/AGENTS.md` for package-level architecture before making structural changes.
+See `packages/adaptive-requirements-engine/AGENTS.md` and `packages/adaptive-form/AGENTS.md` for package-level architecture before making structural changes.
 
 ## Intent Layer Maintenance
 
 When modifying code, check if the `AGENTS.md` in that directory needs updating. Each `AGENTS.md` captures contracts, patterns, and anti-patterns for its area. The hierarchy is:
 
 - `AGENTS.md` (root) — Cross-cutting: commands, commits, releases
-- `packages/engine/AGENTS.md` — Engine types, functions, JSON Logic, validators
-- `packages/dynamic-form/AGENTS.md` — Package overview, entry points, dependencies
+- `packages/adaptive-requirements-engine/AGENTS.md` — Engine types, functions, JSON Logic, validators
+- `packages/adaptive-form/AGENTS.md` — Package overview, entry points, dependencies
   - `src/core/AGENTS.md` — Browser utilities contracts
   - `src/react/AGENTS.md` — Hooks and component details
   - `src/react/adapters/AGENTS.md` — Adapter pattern and available adapters

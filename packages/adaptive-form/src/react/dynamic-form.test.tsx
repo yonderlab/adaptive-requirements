@@ -1,5 +1,5 @@
 import type { FieldInputProps, FieldRenderProps } from './dynamic-form';
-import type { FormData, RequirementsObject } from '@kota/adaptive-requirements-engine';
+import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';

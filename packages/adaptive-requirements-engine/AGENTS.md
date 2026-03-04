@@ -1,4 +1,4 @@
-# Engine — @kota/adaptive-requirements-engine
+# Engine — @kotaio/adaptive-requirements-engine
 
 ## Purpose & Scope
 
@@ -6,7 +6,7 @@ Framework-agnostic core: types, rule engine, validation. Zero React/browser depe
 
 ## Entry Point
 
-`@kota/adaptive-requirements-engine` → All engine types, functions, and validators (barrel export from `src/index.ts`)
+`@kotaio/adaptive-requirements-engine` → All engine types, functions, and validators (barrel export from `src/index.ts`)
 
 ## Key Files
 

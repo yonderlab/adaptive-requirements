@@ -1,14 +1,14 @@
-# Dynamic Form — @kota/dynamic-form
+# Dynamic Form — @kotaio/adaptive-form
 
 ## Purpose & Scope
 
-React integration layer and browser utilities: `DynamicForm` component, hooks, form library adapters, version checking. Depends on `@kota/adaptive-requirements-engine`.
+React integration layer and browser utilities: `DynamicForm` component, hooks, form library adapters, version checking. Depends on `@kotaio/adaptive-requirements-engine`.
 
 ## Entry Points
 
-- `@kota/dynamic-form/react` → `DynamicForm` component
-- `@kota/dynamic-form/react/adapters/react-hook-form` → `useReactHookFormAdapter` hook
-- `@kota/dynamic-form/react/adapters/formik` → `useFormikAdapter` hook
+- `@kotaio/adaptive-form/react` → `DynamicForm` component
+- `@kotaio/adaptive-form/react/adapters/react-hook-form` → `useReactHookFormAdapter` hook
+- `@kotaio/adaptive-form/react/adapters/formik` → `useFormikAdapter` hook
 
 ## Key Files
 
@@ -32,7 +32,7 @@ Three layers within this package:
 
 ## Dependencies
 
-- **Runtime:** `@kota/adaptive-requirements-engine`
+- **Runtime:** `@kotaio/adaptive-requirements-engine`
 - **Peer:** `react`, `react-dom` (>=18.3.1)
 
 ## Downlinks

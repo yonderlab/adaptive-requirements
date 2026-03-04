@@ -1,6 +1,6 @@
-const PACKAGE_NAME = '@kota/dynamic-form';
-const CHECK_VERSION_URL = 'https://api.kota.io/v1/packages/check-version';
-const SESSION_STORAGE_KEY = '@kota/dynamic-form:phone-home-checked';
+const PACKAGE_NAME = '@kotaio/adaptive-form';
+const CHECK_VERSION_URL = 'https://api.kota.io/requirements/packages/adaptive-form/check-version';
+const SESSION_STORAGE_KEY = '@kotaio/adaptive-form:phone-home-checked';
 const TIMEOUT_MS = 5000;
 const LOG_PREFIX = `[${PACKAGE_NAME}]`;
 

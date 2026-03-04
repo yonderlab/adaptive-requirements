@@ -82,7 +82,7 @@ describe('checkVersion', () => {
   });
 
   it('skips fetch when sessionStorage key is already set', async () => {
-    mockStorage['@kota/dynamic-form:phone-home-checked'] = '1';
+    mockStorage['@kotaio/adaptive-form:phone-home-checked'] = '1';
     await checkVersion();
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -90,19 +90,22 @@ describe('checkVersion', () => {
   it('sets sessionStorage key before making fetch call', async () => {
     await checkVersion();
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(sessionStorage.setItem).toHaveBeenCalledWith('@kota/dynamic-form:phone-home-checked', '1');
-    expect(fetch).toHaveBeenCalledWith('https://api.kota.io/v1/packages/check-version', expect.any(Object));
+    expect(sessionStorage.setItem).toHaveBeenCalledWith('@kotaio/adaptive-form:phone-home-checked', '1');
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.kota.io/requirements/packages/adaptive-form/check-version',
+      expect.any(Object),
+    );
   });
 
   it('sends correct request body', async () => {
     await checkVersion();
     expect(fetch).toHaveBeenCalledWith(
-      'https://api.kota.io/v1/packages/check-version',
+      'https://api.kota.io/requirements/packages/adaptive-form/check-version',
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          package_name: '@kota/dynamic-form',
+          package_name: '@kotaio/adaptive-form',
           package_version: PACKAGE_VERSION,
           origin: 'https://example.com',
         }),
@@ -128,7 +131,7 @@ describe('checkVersion', () => {
     });
 
     await checkVersion();
-    expect(warnSpy).toHaveBeenCalledWith('[@kota/dynamic-form] Please upgrade to 2.0.0');
+    expect(warnSpy).toHaveBeenCalledWith('[@kotaio/adaptive-form] Please upgrade to 2.0.0');
   });
 
   it('logs warn with default message when outdated and no message', async () => {

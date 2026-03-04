@@ -1,12 +1,12 @@
 {
-  "name": "@kota/dynamic-form",
+  "name": "@kotaio/adaptive-form",
   "version": "0.1.0",
   "description": "A lightweight, type-safe dynamic form system for React with JSON-Logic for conditional fields, dynamic validation, and computed values",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yonderlab/dynamic-form.git",
-    "directory": "packages/dynamic-form"
+    "url": "https://github.com/yonderlab/adaptive-requirements.git",
+    "directory": "packages/adaptive-form"
   },
   "files": [
     "dist",
@@ -45,7 +45,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@kota/adaptive-requirements-engine": "workspace:*"
+    "@kotaio/adaptive-requirements-engine": "workspace:*"
   },
   "devDependencies": {
     "@testing-library/react": "16.3.2",

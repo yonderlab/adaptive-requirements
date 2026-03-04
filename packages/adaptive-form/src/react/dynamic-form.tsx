@@ -7,7 +7,7 @@ import type {
   FormData,
   RequirementsObject,
   ResolvedFieldOption,
-} from '@kota/adaptive-requirements-engine';
+} from '@kotaio/adaptive-requirements-engine';
 
 import {
   applyExclusions,
@@ -15,7 +15,7 @@ import {
   getInitialStepId,
   getNextStepId,
   getPreviousStepId,
-} from '@kota/adaptive-requirements-engine';
+} from '@kotaio/adaptive-requirements-engine';
 import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { usePhoneHome } from './use-phone-home';
