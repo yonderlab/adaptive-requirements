@@ -75,4 +75,15 @@ For PRs that only touch repo infra, docs, or CI config and do not modify publish
 
 ## Architecture
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the four-layer design overview before making structural changes.
+See `packages/engine/AGENTS.md` and `packages/dynamic-form/AGENTS.md` for package-level architecture before making structural changes.
+
+## Intent Layer Maintenance
+
+When modifying code, check if the `AGENTS.md` in that directory needs updating. Each `AGENTS.md` captures contracts, patterns, and anti-patterns for its area. The hierarchy is:
+
+- `AGENTS.md` (root) — Cross-cutting: commands, commits, releases
+- `packages/engine/AGENTS.md` — Engine types, functions, JSON Logic, validators
+- `packages/dynamic-form/AGENTS.md` — Package overview, entry points, dependencies
+  - `src/core/AGENTS.md` — Browser utilities contracts
+  - `src/react/AGENTS.md` — Hooks and component details
+  - `src/react/adapters/AGENTS.md` — Adapter pattern and available adapters
