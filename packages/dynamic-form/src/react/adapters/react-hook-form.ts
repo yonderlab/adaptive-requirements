@@ -1,4 +1,4 @@
-import type { FieldValue, FormData } from '@kota/adaptive-requirements-engine';
+import type { FieldValue, FormData } from '@kotaio/adaptive-requirements-engine';
 
 import { useCallback } from 'react';
 
@@ -35,8 +35,8 @@ function defaultSerialize<T extends Record<string, unknown>>(values: Partial<T>)
  *
  * @example
  * ```tsx
- * import { DynamicForm } from '@kota/dynamic-form/react'
- * import { useReactHookFormAdapter } from '@kota/dynamic-form/react/adapters/react-hook-form'
+ * import { DynamicForm } from '@kotaio/adaptive-form/react'
+ * import { useReactHookFormAdapter } from '@kotaio/adaptive-form/react/adapters/react-hook-form'
  *
  * function MyForm({ requirements }) {
  *   const form = useFormContext();

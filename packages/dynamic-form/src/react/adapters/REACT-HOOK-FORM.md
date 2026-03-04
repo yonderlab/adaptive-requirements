@@ -3,7 +3,7 @@
 State bridge between [React Hook Form](https://react-hook-form.com) and `DynamicForm`.
 
 ```bash
-import { useReactHookFormAdapter } from '@kota/dynamic-form/react/adapters/react-hook-form';
+import { useReactHookFormAdapter } from '@kotaio/adaptive-form/react/adapters/react-hook-form';
 ```
 
 ## Usage
@@ -11,8 +11,8 @@ import { useReactHookFormAdapter } from '@kota/dynamic-form/react/adapters/react
 The adapter reads form values via `form.watch()` and writes back via `form.setValue()`. It returns `{ value, onChange }` props you pass directly to `<DynamicForm>`.
 
 ```tsx
-import { DynamicForm } from '@kota/dynamic-form/react';
-import { useReactHookFormAdapter } from '@kota/dynamic-form/react/adapters/react-hook-form';
+import { DynamicForm } from '@kotaio/adaptive-form/react';
+import { useReactHookFormAdapter } from '@kotaio/adaptive-form/react/adapters/react-hook-form';
 
 function MyForm({ requirements }) {
   const form = useFormContext();

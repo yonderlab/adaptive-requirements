@@ -16,10 +16,10 @@ All adapters follow the same shape:
 
 ## Available Adapters
 
-| Adapter                   | Import                                              | Form Library    |
-| ------------------------- | --------------------------------------------------- | --------------- |
-| `useReactHookFormAdapter` | `@kota/dynamic-form/react/adapters/react-hook-form` | React Hook Form |
-| `useFormikAdapter`        | `@kota/dynamic-form/react/adapters/formik`          | Formik          |
+| Adapter                   | Import                                                 | Form Library    |
+| ------------------------- | ------------------------------------------------------ | --------------- |
+| `useReactHookFormAdapter` | `@kotaio/adaptive-form/react/adapters/react-hook-form` | React Hook Form |
+| `useFormikAdapter`        | `@kotaio/adaptive-form/react/adapters/formik`          | Formik          |
 
 ## How to Add a New Adapter
 

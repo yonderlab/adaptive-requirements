@@ -1,13 +1,13 @@
-# AGENTS.md — @kota/dynamic-form monorepo
+# AGENTS.md — @kotaio/adaptive-form monorepo
 
-Agent instructions for working with the dynamic-form monorepo (pnpm workspaces).
+Agent instructions for working with the adaptive-requirements monorepo (pnpm workspaces).
 
 ## Packages
 
 This monorepo contains two independently versioned/published packages:
 
-- **`@kota/adaptive-requirements-engine`** (`packages/engine/`) — Framework-agnostic core: types, rule engine, validation. Zero React/browser dependencies. → See `packages/engine/AGENTS.md`
-- **`@kota/dynamic-form`** (`packages/dynamic-form/`) — React integration layer and browser utilities. → See `packages/dynamic-form/AGENTS.md`
+- **`@kotaio/adaptive-requirements-engine`** (`packages/engine/`) — Framework-agnostic core: types, rule engine, validation. Zero React/browser dependencies. → See `packages/engine/AGENTS.md`
+- **`@kotaio/adaptive-form`** (`packages/dynamic-form/`) — React integration layer and browser utilities. → See `packages/dynamic-form/AGENTS.md`
 
 ## Architecture
 
@@ -32,14 +32,14 @@ pnpm checks            # Run format + lint + typecheck
 pnpm checks:fix        # Fix format + lint, then typecheck
 
 # Target a specific package:
-pnpm --filter @kota/adaptive-requirements-engine test
-pnpm --filter @kota/dynamic-form build
+pnpm --filter @kotaio/adaptive-requirements-engine test
+pnpm --filter @kotaio/adaptive-form build
 ```
 
 ## Dependencies
 
 - **Engine runtime:** `json-logic-js` (rule evaluation) — zero other runtime deps
-- **Dynamic-form runtime:** `@kota/adaptive-requirements-engine`
+- **Dynamic-form runtime:** `@kotaio/adaptive-requirements-engine`
 - **Dynamic-form peer:** `react`, `react-dom` (>=18.3.1)
 
 ## Commit Messages
@@ -80,7 +80,7 @@ Things to be aware of when preparing for open source:
 1. **Domain-specific validators** — Built-in validators include `spanish_tax_id`, `irish_pps`, `german_tax_id`. Consider whether these should be built-in or moved to a separate package/plugin.
 2. **Kota-specific types** — `RequirementsObject` includes `object_type` (employee/employer/associated_person), `benefit_type` (health), and `context` (dependant_management_intent/enrolment_intent/setup_intent) which are Kota domain enums.
 3. **README references** — `src/README.md` references `@kota/ui` import paths in examples.
-4. **Package scope** — Currently `@kota/dynamic-form`; namespace would need changing for open source.
+4. **Package scope** — Published as `@kotaio/adaptive-form` and `@kotaio/adaptive-requirements-engine`.
 5. **json-logic-js global state** — Custom operations are registered globally on the `json-logic-js` module. This is a singleton side effect.
 
 ## Downlinks

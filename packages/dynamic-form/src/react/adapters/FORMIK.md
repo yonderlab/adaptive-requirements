@@ -3,7 +3,7 @@
 State bridge between [Formik](https://formik.org) and `DynamicForm`.
 
 ```bash
-import { useFormikAdapter } from '@kota/dynamic-form/react/adapters/formik';
+import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik';
 ```
 
 ## Usage
@@ -11,8 +11,8 @@ import { useFormikAdapter } from '@kota/dynamic-form/react/adapters/formik';
 The adapter reads form values from `formik.values` and writes back via `formik.setFieldValue()`. It returns `{ value, onChange }` props you pass directly to `<DynamicForm>`.
 
 ```tsx
-import { DynamicForm } from '@kota/dynamic-form/react';
-import { useFormikAdapter } from '@kota/dynamic-form/react/adapters/formik';
+import { DynamicForm } from '@kotaio/adaptive-form/react';
+import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik';
 
 function MyForm({ requirements }) {
   const formik = useFormikContext();

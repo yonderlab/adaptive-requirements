@@ -1,4 +1,4 @@
-# Contributing to @kota/dynamic-form
+# Contributing to @kotaio/adaptive-form
 
 Thank you for your interest in contributing!
 
@@ -14,8 +14,8 @@ The canonical source for this package is maintained in a private monorepo. Chang
 
 ```bash
 # Clone the repository
-git clone https://github.com/yonderlab/dynamic-form.git
-cd dynamic-form
+git clone https://github.com/yonderlab/adaptive-requirements.git
+cd adaptive-requirements
 
 # Install dependencies (also sets up git hooks via husky)
 pnpm install

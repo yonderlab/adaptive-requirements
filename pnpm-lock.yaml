@@ -41,7 +41,7 @@ importers:
 
   packages/dynamic-form:
     dependencies:
-      '@kota/adaptive-requirements-engine':
+      '@kotaio/adaptive-requirements-engine':
         specifier: workspace:*
         version: link:../engine
       react:

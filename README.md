@@ -16,7 +16,7 @@ A lightweight, type-safe dynamic form system for React. Inspired by requirements
 ## Installation
 
 ```bash
-pnpm add @kota/dynamic-form
+pnpm add @kotaio/adaptive-form
 ```
 
 ## Quick Start
@@ -26,7 +26,7 @@ pnpm add @kota/dynamic-form
 The simplest way to use DynamicForm — it manages its own state internally:
 
 ```tsx
-import { DynamicForm } from '@kota/dynamic-form/react';
+import { DynamicForm } from '@kotaio/adaptive-form/react';
 
 const requirements = {
   fields: [
@@ -367,7 +367,7 @@ The rule engine supports JSON-Logic style expressions:
 Create custom field components that implement the `FieldInputProps` interface:
 
 ```tsx
-import type { FieldInputProps } from '@kota/dynamic-form/react';
+import type { FieldInputProps } from '@kotaio/adaptive-form/react';
 
 const CustomTextInput: React.FC<FieldInputProps> = ({ field, value, onChange, errors, isRequired, isVisible }) => {
   if (!isVisible) return null;
@@ -520,8 +520,8 @@ Adapter hooks bridge DynamicForm with popular form libraries. They return `{ val
 ### React Hook Form
 
 ```tsx
-import { DynamicForm } from '@kota/dynamic-form/react';
-import { useReactHookFormAdapter } from '@kota/dynamic-form/react/adapters/react-hook-form';
+import { DynamicForm } from '@kotaio/adaptive-form/react';
+import { useReactHookFormAdapter } from '@kotaio/adaptive-form/react/adapters/react-hook-form';
 
 function MyForm({ requirements }) {
   const form = useFormContext();
@@ -536,8 +536,8 @@ See [React Hook Form Adapter docs](./src/react/adapters/REACT-HOOK-FORM.md) for 
 ### Formik
 
 ```tsx
-import { DynamicForm } from '@kota/dynamic-form/react';
-import { useFormikAdapter } from '@kota/dynamic-form/react/adapters/formik';
+import { DynamicForm } from '@kotaio/adaptive-form/react';
+import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik';
 
 function MyForm({ requirements }) {
   const formik = useFormikContext();
@@ -554,7 +554,7 @@ See [Formik Adapter docs](./src/react/adapters/FORMIK.md) for serialization opti
 All types are fully typed with generics support:
 
 ```typescript
-import type { Field, FieldState, RequirementsObject } from '@kota/dynamic-form/react';
+import type { Field, FieldState, RequirementsObject } from '@kotaio/adaptive-form/react';
 
 type MyFieldIds = 'firstName' | 'lastName' | 'email';
 
@@ -578,7 +578,7 @@ const invalidState = getFieldState('invalid'); // ❌ Type error
 Use the built-in `flow` property for multi-step forms with automatic step navigation:
 
 ```tsx
-import { DynamicForm } from '@kota/dynamic-form/react';
+import { DynamicForm } from '@kotaio/adaptive-form/react';
 
 const requirements = {
   fields: [
@@ -725,7 +725,7 @@ You can combine DynamicForm with react-hook-form to get the best of both worlds:
 The cleanest approach — field components use react-hook-form's `FormField` internally, so DynamicForm only handles rendering and visibility while react-hook-form manages all state:
 
 ```tsx
-import { DynamicForm, type FieldInputProps, type RequirementsObject } from '@kota/dynamic-form/react';
+import { DynamicForm, type FieldInputProps, type RequirementsObject } from '@kotaio/adaptive-form/react';
 
 import { FormControl, FormField, FormItem, FormLabel, FormMessage, useFormContext } from '~/ui/components/form';
 

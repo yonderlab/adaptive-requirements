@@ -4,9 +4,9 @@ import type {
   FieldState,
   FormData,
   RequirementsObject,
-} from '@kota/adaptive-requirements-engine';
+} from '@kotaio/adaptive-requirements-engine';
 
-import { createAdapter } from '@kota/adaptive-requirements-engine';
+import { createAdapter } from '@kotaio/adaptive-requirements-engine';
 import { useCallback, useMemo } from 'react';
 
 export interface UseRequirementsOptions {

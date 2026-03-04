@@ -1,11 +1,11 @@
 {
-  "name": "@kota/adaptive-requirements-engine",
+  "name": "@kotaio/adaptive-requirements-engine",
   "version": "0.1.0",
   "description": "Schema-driven requirements engine with JSON Logic rules for conditional evaluation, validation, and computed fields",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yonderlab/dynamic-form.git",
+    "url": "https://github.com/yonderlab/adaptive-requirements.git",
     "directory": "packages/engine"
   },
   "files": [
