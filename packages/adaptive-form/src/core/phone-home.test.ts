@@ -91,13 +91,16 @@ describe('checkVersion', () => {
     await checkVersion();
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(sessionStorage.setItem).toHaveBeenCalledWith('@kotaio/adaptive-form:phone-home-checked', '1');
-    expect(fetch).toHaveBeenCalledWith('https://api.kota.io/v1/packages/check-version', expect.any(Object));
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.kota.io/requirements/packages/adaptive-form/check-version',
+      expect.any(Object),
+    );
   });
 
   it('sends correct request body', async () => {
     await checkVersion();
     expect(fetch).toHaveBeenCalledWith(
-      'https://api.kota.io/v1/packages/check-version',
+      'https://api.kota.io/requirements/packages/adaptive-form/check-version',
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

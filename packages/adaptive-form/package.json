@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/yonderlab/adaptive-requirements.git",
-    "directory": "packages/dynamic-form"
+    "directory": "packages/adaptive-form"
   },
   "files": [
     "dist",

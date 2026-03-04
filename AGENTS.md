@@ -6,12 +6,12 @@ Agent instructions for working with the adaptive-requirements monorepo (pnpm wor
 
 This monorepo contains two independently versioned/published packages:
 
-- **`@kotaio/adaptive-requirements-engine`** (`packages/engine/`) — Framework-agnostic core: types, rule engine, validation. Zero React/browser dependencies. → See `packages/engine/AGENTS.md`
-- **`@kotaio/adaptive-form`** (`packages/dynamic-form/`) — React integration layer and browser utilities. → See `packages/dynamic-form/AGENTS.md`
+- **`@kotaio/adaptive-requirements-engine`** (`packages/adaptive-requirements-engine/`) — Framework-agnostic core: types, rule engine, validation. Zero React/browser dependencies. → See `packages/adaptive-requirements-engine/AGENTS.md`
+- **`@kotaio/adaptive-form`** (`packages/adaptive-form/`) — React integration layer and browser utilities. → See `packages/adaptive-form/AGENTS.md`
 
 ## Architecture
 
-**Five layers:** Types (`packages/engine/src/types.ts`) → Engine (`packages/engine/src/engine.ts`) → Browser Utilities (`packages/dynamic-form/src/core/`) → React Hooks (`packages/dynamic-form/src/react/use-requirements.ts`) → Component (`packages/dynamic-form/src/react/dynamic-form.tsx`). The engine is framework-agnostic (pure functions, no React dependency). The `src/core/` layer contains browser-capable but framework-agnostic utilities. The hooks and component are the React integration layer.
+**Five layers:** Types (`packages/adaptive-requirements-engine/src/types.ts`) → Engine (`packages/adaptive-requirements-engine/src/engine.ts`) → Browser Utilities (`packages/adaptive-form/src/core/`) → React Hooks (`packages/adaptive-form/src/react/use-requirements.ts`) → Component (`packages/adaptive-form/src/react/dynamic-form.tsx`). The engine is framework-agnostic (pure functions, no React dependency). The `src/core/` layer contains browser-capable but framework-agnostic utilities. The hooks and component are the React integration layer.
 
 ## Commands
 
@@ -39,15 +39,15 @@ pnpm --filter @kotaio/adaptive-form build
 ## Dependencies
 
 - **Engine runtime:** `json-logic-js` (rule evaluation) — zero other runtime deps
-- **Dynamic-form runtime:** `@kotaio/adaptive-requirements-engine`
-- **Dynamic-form peer:** `react`, `react-dom` (>=18.3.1)
+- **Adaptive-form runtime:** `@kotaio/adaptive-requirements-engine`
+- **Adaptive-form peer:** `react`, `react-dom` (>=18.3.1)
 
 ## Commit Messages
 
 Conventional Commits are enforced via commitlint + husky. Format: `type(scope): description`
 
 - **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-- **Scopes:** `engine`, `dynamic-form`, `ci`, `deps`, `repo` (or empty for cross-cutting changes)
+- **Scopes:** `engine`, `adaptive-form`, `ci`, `deps`, `repo` (or empty for cross-cutting changes)
 
 ## Changesets
 
@@ -61,13 +61,13 @@ Releases use [Changesets](https://github.com/changesets/changesets) with the fol
 
 1. PRs with changeset files are merged to `main`
 2. The `changesets/action` GitHub Action creates/updates a "Version Packages" PR with version bumps and changelog entries
-3. When the "Version Packages" PR is merged, packages are automatically published to npm in dependency order (engine first, then dynamic-form)
+3. When the "Version Packages" PR is merged, packages are automatically published to npm in dependency order (engine first, then adaptive-form)
 
-Packages are versioned independently. When engine is bumped, dynamic-form automatically gets a patch bump (via `updateInternalDependencies: "patch"`).
+Packages are versioned independently. When engine is bumped, adaptive-form automatically gets a patch bump (via `updateInternalDependencies: "patch"`).
 
 ## Linting & Formatting
 
-- **Linter:** Oxlint via Ultracite presets (`.oxlintrc.json` at root, nested config in `packages/dynamic-form/` for React rules)
+- **Linter:** Oxlint via Ultracite presets (`.oxlintrc.json` at root, nested config in `packages/adaptive-form/` for React rules)
 - **Formatter:** Oxfmt (`.oxfmtrc.json` at root) — Prettier-compatible with import sorting and Tailwind CSS class sorting enabled
 - **Config layer:** `ultracite` package provides curated presets; custom rule overrides in root `.oxlintrc.json`
 - Lint and format scripts run from the root (not per-package)
@@ -85,5 +85,5 @@ Things to be aware of when preparing for open source:
 
 ## Downlinks
 
-- `packages/engine/AGENTS.md` — Engine types, functions, JSON Logic, validators
-- `packages/dynamic-form/AGENTS.md` — React component, hooks, adapters
+- `packages/adaptive-requirements-engine/AGENTS.md` — Engine types, functions, JSON Logic, validators
+- `packages/adaptive-form/AGENTS.md` — React component, hooks, adapters
