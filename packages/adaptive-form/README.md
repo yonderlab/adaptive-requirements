@@ -60,11 +60,7 @@ function RequirementsForm({ requirementId }) {
 **Uncontrolled (recommended):** Pass `defaultValue` and let DynamicForm manage state internally. Use native form submission via `name` attributes on your inputs.
 
 ```tsx
-<DynamicForm
-  requirements={requirements}
-  defaultValue={{}}
-  components={myComponents}
-/>
+<DynamicForm requirements={requirements} defaultValue={{}} components={myComponents} />
 ```
 
 **Controlled:** Pass `value` and `onChange` when you need real-time access to form data in the parent.
@@ -73,14 +69,7 @@ function RequirementsForm({ requirementId }) {
 function MyForm({ requirements }) {
   const [formData, setFormData] = useState({});
 
-  return (
-    <DynamicForm
-      requirements={requirements}
-      value={formData}
-      onChange={setFormData}
-      components={myComponents}
-    />
-  );
+  return <DynamicForm requirements={requirements} value={formData} onChange={setFormData} components={myComponents} />;
 }
 ```
 
@@ -88,18 +77,18 @@ function MyForm({ requirements }) {
 
 The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`) to your React components. DynamicForm calls your component with these props:
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `field` | `Field` | The field definition from the schema (id, type, label, placeholder, description, etc.) |
-| `value` | `FieldValue` | The current field value |
-| `onChange` | `(value: FieldValue) => void` | Call this when the user changes the value |
-| `onBlur` | `(() => void) \| undefined` | Call this on blur for touched-state tracking |
-| `errors` | `string[]` | Validation error messages to display |
-| `isRequired` | `boolean` | Whether the field is currently required |
-| `isVisible` | `boolean` | Whether the field should be rendered |
-| `isReadOnly` | `boolean` | Whether the field should be read-only |
-| `options` | `ResolvedFieldOption[] \| undefined` | Resolved options for select/radio fields |
-| `label` | `string \| undefined` | Resolved label text (after localization) |
+| Prop         | Type                                 | Description                                                                            |
+| ------------ | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| `field`      | `Field`                              | The field definition from the schema (id, type, label, placeholder, description, etc.) |
+| `value`      | `FieldValue`                         | The current field value                                                                |
+| `onChange`   | `(value: FieldValue) => void`        | Call this when the user changes the value                                              |
+| `onBlur`     | `(() => void) \| undefined`          | Call this on blur for touched-state tracking                                           |
+| `errors`     | `string[]`                           | Validation error messages to display                                                   |
+| `isRequired` | `boolean`                            | Whether the field is currently required                                                |
+| `isVisible`  | `boolean`                            | Whether the field should be rendered                                                   |
+| `isReadOnly` | `boolean`                            | Whether the field should be read-only                                                  |
+| `options`    | `ResolvedFieldOption[] \| undefined` | Resolved options for select/radio fields                                               |
+| `label`      | `string \| undefined`                | Resolved label text (after localization)                                               |
 
 A `ResolvedFieldOption` has `{ value: string | boolean, label: string }`.
 
@@ -125,7 +114,9 @@ function TextInput({ field, value, onChange, onBlur, errors, isRequired, isVisib
         readOnly={isReadOnly}
       />
       {errors.map((error, i) => (
-        <p key={i} className="error">{error}</p>
+        <p key={i} className="error">
+          {error}
+        </p>
       ))}
       {field.description && <p className="hint">{field.description}</p>}
     </div>
@@ -137,11 +128,11 @@ function TextInput({ field, value, onChange, onBlur, errors, isRequired, isVisib
 
 When a field has `type: 'computed'`, its value is calculated automatically from other fields. The component for `computed` fields receives a simpler set of props:
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `field` | `Field` | The field definition |
-| `value` | `FieldValue` | The computed value |
-| `isVisible` | `boolean` | Whether the field should be rendered |
+| Prop        | Type         | Description                          |
+| ----------- | ------------ | ------------------------------------ |
+| `field`     | `Field`      | The field definition                 |
+| `value`     | `FieldValue` | The computed value                   |
+| `isVisible` | `boolean`    | Whether the field should be rendered |
 
 ```tsx
 function ComputedDisplay({ field, value, isVisible }) {
@@ -169,15 +160,15 @@ const components = {
 
 For complete control over how each field renders, use the `renderField` prop. It receives:
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `field` | `Field` | The field definition |
-| `fieldState` | `FieldState` | Full engine state (visibility, errors, value, options, etc.) |
-| `displayErrors` | `string[]` | Errors filtered by touched state |
-| `isTouched` | `boolean` | Whether the user has interacted with this field |
-| `onChange` | `(value: FieldValue) => void` | Value change handler |
-| `onBlur` | `() => void` | Blur handler for touched tracking |
-| `components` | `object \| undefined` | The components map (for delegation) |
+| Prop            | Type                          | Description                                                  |
+| --------------- | ----------------------------- | ------------------------------------------------------------ |
+| `field`         | `Field`                       | The field definition                                         |
+| `fieldState`    | `FieldState`                  | Full engine state (visibility, errors, value, options, etc.) |
+| `displayErrors` | `string[]`                    | Errors filtered by touched state                             |
+| `isTouched`     | `boolean`                     | Whether the user has interacted with this field              |
+| `onChange`      | `(value: FieldValue) => void` | Value change handler                                         |
+| `onBlur`        | `() => void`                  | Blur handler for touched tracking                            |
+| `components`    | `object \| undefined`         | The components map (for delegation)                          |
 
 ```tsx
 <DynamicForm
@@ -245,12 +236,7 @@ Use `renderStepNavigation` for full control over the navigation UI:
 To render all steps as sections on a single page (no navigation), set `showAllSteps`:
 
 ```tsx
-<DynamicForm
-  requirements={requirements}
-  defaultValue={{}}
-  showAllSteps
-  components={myComponents}
-/>
+<DynamicForm requirements={requirements} defaultValue={{}} showAllSteps components={myComponents} />
 ```
 
 ## Field mapping
@@ -289,7 +275,10 @@ function SelectInput({ field, value, onChange, options, isVisible, isRequired, l
 
   return (
     <div>
-      <label>{label}{isRequired && <span>*</span>}</label>
+      <label>
+        {label}
+        {isRequired && <span>*</span>}
+      </label>
       <select
         name={field.id}
         value={String(value ?? '')}
@@ -324,14 +313,7 @@ function MyForm({ requirements }) {
   const form = useFormContext();
   const { value, onChange } = useReactHookFormAdapter({ form });
 
-  return (
-    <DynamicForm
-      requirements={requirements}
-      value={value}
-      onChange={onChange}
-      components={myComponents}
-    />
-  );
+  return <DynamicForm requirements={requirements} value={value} onChange={onChange} components={myComponents} />;
 }
 ```
 
@@ -347,14 +329,7 @@ function MyForm({ requirements }) {
   const formik = useFormikContext();
   const { value, onChange } = useFormikAdapter({ formik });
 
-  return (
-    <DynamicForm
-      requirements={requirements}
-      value={value}
-      onChange={onChange}
-      components={myComponents}
-    />
-  );
+  return <DynamicForm requirements={requirements} value={value} onChange={onChange} components={myComponents} />;
 }
 ```
 
@@ -382,22 +357,22 @@ These are features expressed in the schema that DynamicForm handles automaticall
 
 ## DynamicForm props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `requirements` | `RequirementsObject` | required | The schema from the API |
-| `defaultValue` | `FormData` | `{}` | Initial data (uncontrolled mode) |
-| `value` | `FormData` | — | Current data (controlled mode) |
-| `onChange` | `(data: FormData) => void` | — | Change handler (required in controlled mode) |
-| `components` | `Record<string, ComponentType>` | — | Map of field type → React component |
-| `renderField` | `(props) => ReactNode` | — | Custom per-field render function |
-| `renderStepNavigation` | `(props) => ReactNode` | — | Custom step navigation UI |
-| `mapping` | `FieldMapping` | — | Field ID remapping |
-| `clearHiddenValues` | `boolean` | `false` | Clear values when fields become hidden |
-| `showAllSteps` | `boolean` | `false` | Render all flow steps as sections |
-| `showAllErrors` | `boolean` | `false` | Show validation errors before interaction |
-| `className` | `string` | — | Container class name |
-| `groupClassName` | `string` | — | Field group container class name |
-| `children` | `ReactNode` | — | Content rendered after fields |
+| Prop                   | Type                            | Default  | Description                                  |
+| ---------------------- | ------------------------------- | -------- | -------------------------------------------- |
+| `requirements`         | `RequirementsObject`            | required | The schema from the API                      |
+| `defaultValue`         | `FormData`                      | `{}`     | Initial data (uncontrolled mode)             |
+| `value`                | `FormData`                      | —        | Current data (controlled mode)               |
+| `onChange`             | `(data: FormData) => void`      | —        | Change handler (required in controlled mode) |
+| `components`           | `Record<string, ComponentType>` | —        | Map of field type → React component          |
+| `renderField`          | `(props) => ReactNode`          | —        | Custom per-field render function             |
+| `renderStepNavigation` | `(props) => ReactNode`          | —        | Custom step navigation UI                    |
+| `mapping`              | `FieldMapping`                  | —        | Field ID remapping                           |
+| `clearHiddenValues`    | `boolean`                       | `false`  | Clear values when fields become hidden       |
+| `showAllSteps`         | `boolean`                       | `false`  | Render all flow steps as sections            |
+| `showAllErrors`        | `boolean`                       | `false`  | Show validation errors before interaction    |
+| `className`            | `string`                        | —        | Container class name                         |
+| `groupClassName`       | `string`                        | —        | Field group container class name             |
+| `children`             | `ReactNode`                     | —        | Content rendered after fields                |
 
 ## License
 

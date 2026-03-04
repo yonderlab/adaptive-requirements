@@ -39,15 +39,15 @@ import { checkField } from '@kotaio/adaptive-requirements-engine';
 
 const state = checkField(requirements, 'date_of_birth', formData);
 
-state.isVisible;   // boolean — should this field be rendered?
-state.isRequired;  // boolean — is this field currently required?
-state.isReadOnly;  // boolean — should this field be read-only?
-state.isExcluded;  // boolean — should this field be excluded from submission?
-state.errors;      // string[] — validation error messages
-state.value;       // current field value (from data or computed)
-state.options;     // ResolvedFieldOption[] | undefined — resolved select/radio options
-state.label;       // string | undefined — resolved label text
-state.field;       // the field definition from the schema
+state.isVisible; // boolean — should this field be rendered?
+state.isRequired; // boolean — is this field currently required?
+state.isReadOnly; // boolean — should this field be read-only?
+state.isExcluded; // boolean — should this field be excluded from submission?
+state.errors; // string[] — validation error messages
+state.value; // current field value (from data or computed)
+state.options; // ResolvedFieldOption[] | undefined — resolved select/radio options
+state.label; // string | undefined — resolved label text
+state.field; // the field definition from the schema
 ```
 
 #### `calculateData(requirements, data)`
@@ -120,7 +120,7 @@ Resolves a localized label to a plain string. Labels can be simple strings or ob
 ```ts
 import { resolveLabel } from '@kotaio/adaptive-requirements-engine';
 
-resolveLabel('First Name');                          // 'First Name'
+resolveLabel('First Name'); // 'First Name'
 resolveLabel({ default: 'First Name', key: 'fields.first_name' }); // 'First Name'
 ```
 
@@ -145,18 +145,18 @@ const errors = runCustomValidators(
 
 A record of built-in validator functions:
 
-| Validator | Params | Description |
-| --- | --- | --- |
-| `age_range` | `min`, `max` | Validates age calculated from a date is within range |
-| `dob_not_in_future` | — | Date must not be in the future |
-| `date_after` | `date` | Date must be after the specified date |
-| `date_before` | `date` | Date must be before the specified date |
-| `spanish_tax_id` | — | Validates Spanish NIF/NIE format |
-| `irish_pps` | — | Validates Irish PPS number format |
-| `german_tax_id` | — | Validates German Steuer-ID (11 digits) |
-| `file_type` | `accept` | File extension/MIME type matching |
-| `file_size` | `maxSize` | File size limit in bytes |
-| `file_count` | `maxFiles` | Maximum number of files |
+| Validator           | Params       | Description                                          |
+| ------------------- | ------------ | ---------------------------------------------------- |
+| `age_range`         | `min`, `max` | Validates age calculated from a date is within range |
+| `dob_not_in_future` | —            | Date must not be in the future                       |
+| `date_after`        | `date`       | Date must be after the specified date                |
+| `date_before`       | `date`       | Date must be before the specified date               |
+| `spanish_tax_id`    | —            | Validates Spanish NIF/NIE format                     |
+| `irish_pps`         | —            | Validates Irish PPS number format                    |
+| `german_tax_id`     | —            | Validates German Steuer-ID (11 digits)               |
+| `file_type`         | `accept`     | File extension/MIME type matching                    |
+| `file_size`         | `maxSize`    | File size limit in bytes                             |
+| `file_count`        | `maxFiles`   | Maximum number of files                              |
 
 #### `validateRequirementsObject(input)`
 
@@ -244,33 +244,33 @@ Schemas use [JSON Logic](https://jsonlogic.com) expressions for conditional visi
 
 The engine registers these additional operations for date handling:
 
-| Operation | Description |
-| --- | --- |
-| `{ today: {} }` | Current date as `YYYY-MM-DD` |
-| `{ age_from_date: <date> }` | Age in whole years from a date |
-| `{ months_since: <date> }` | Months elapsed since a date |
+| Operation                           | Description                                |
+| ----------------------------------- | ------------------------------------------ |
+| `{ today: {} }`                     | Current date as `YYYY-MM-DD`               |
+| `{ age_from_date: <date> }`         | Age in whole years from a date             |
+| `{ months_since: <date> }`          | Months elapsed since a date                |
 | `{ date_diff: { from, to, unit } }` | Difference in `days`, `months`, or `years` |
-| `{ abs: <number> }` | Absolute value |
+| `{ abs: <number> }`                 | Absolute value                             |
 
 ## Key types
 
 Key types exported for use in custom integrations:
 
-| Type | Description |
-| --- | --- |
-| `RequirementsObject` | Top-level schema: fields, datasets, and optional flow |
-| `Field` | Single field definition: id, type, label, validation, visibility rules, etc. |
-| `FieldState` | Runtime state for a field: visibility, errors, value, options |
-| `FormData` | `Record<string, FieldValue>` — the current form data |
-| `FieldValue` | `string \| number \| boolean \| null \| undefined` or array thereof |
-| `Rule` | A JSON Logic expression |
-| `Dataset` | A named list of items that fields can reference |
-| `Flow` | Step definitions and optional navigation rules |
-| `FieldMapping` | Field ID remapping configuration |
-| `EngineOptions` | Options for custom validators, locale, and label resolution |
-| `ValidationResult` | `{ success: true, data } \| { success: false, errors }` |
-| `ValidationError` | `{ path: string, message: string }` |
-| `ResolvedFieldOption` | `{ value: string \| boolean, label: string }` |
+| Type                  | Description                                                                  |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `RequirementsObject`  | Top-level schema: fields, datasets, and optional flow                        |
+| `Field`               | Single field definition: id, type, label, validation, visibility rules, etc. |
+| `FieldState`          | Runtime state for a field: visibility, errors, value, options                |
+| `FormData`            | `Record<string, FieldValue>` — the current form data                         |
+| `FieldValue`          | `string \| number \| boolean \| null \| undefined` or array thereof          |
+| `Rule`                | A JSON Logic expression                                                      |
+| `Dataset`             | A named list of items that fields can reference                              |
+| `Flow`                | Step definitions and optional navigation rules                               |
+| `FieldMapping`        | Field ID remapping configuration                                             |
+| `EngineOptions`       | Options for custom validators, locale, and label resolution                  |
+| `ValidationResult`    | `{ success: true, data } \| { success: false, errors }`                      |
+| `ValidationError`     | `{ path: string, message: string }`                                          |
+| `ResolvedFieldOption` | `{ value: string \| boolean, label: string }`                                |
 
 ## License
 
