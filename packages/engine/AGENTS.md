@@ -88,8 +88,8 @@ All validators support conditional execution via `params.when` (JSON Logic rule)
 
 - No React imports — this package must remain framework-agnostic
 - No browser APIs — must work server-side
-- All functions must be pure (no side effects)
-- Don't register JSON Logic operations outside `runRule()` — they're lazy-registered on first call
+- Engine functions should be pure (no side effects) aside from one-time JSON Logic operation registration and time-based helpers (e.g. `today`)
+- Don't register JSON Logic operations outside `runRule()` — they're intentionally lazy-registered on first call as a controlled one-time side effect
 
 ## Testing
 

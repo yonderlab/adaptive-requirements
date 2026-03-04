@@ -11,7 +11,7 @@ This monorepo contains two independently versioned/published packages:
 
 ## Architecture
 
-**Five layers:** Types (`engine/src/types.ts`) → Engine (`engine/src/engine.ts`) → Browser Utilities (`dynamic-form/src/core/`) → React Hooks (`dynamic-form/src/react/use-requirements.ts`) → Component (`dynamic-form/src/react/dynamic-form.tsx`). The engine is framework-agnostic (pure functions, no React dependency). The `src/core/` layer contains browser-capable but framework-agnostic utilities. The hooks and component are the React integration layer.
+**Five layers:** Types (`packages/engine/src/types.ts`) → Engine (`packages/engine/src/engine.ts`) → Browser Utilities (`packages/dynamic-form/src/core/`) → React Hooks (`packages/dynamic-form/src/react/use-requirements.ts`) → Component (`packages/dynamic-form/src/react/dynamic-form.tsx`). The engine is framework-agnostic (pure functions, no React dependency). The `src/core/` layer contains browser-capable but framework-agnostic utilities. The hooks and component are the React integration layer.
 
 ## Commands
 
