@@ -862,7 +862,9 @@ export async function checkFieldAsync<TFieldId extends string = string>(
     return syncResult;
   }
 
-  // Short-circuit: field not visible or excluded
+  // Short-circuit: field not visible or excluded.
+  // Hidden-type fields (isVisible: false by design) intentionally skip async validation —
+  // async validators target user-facing fields (blur-triggered), not hidden submission fields.
   if (!syncResult.isVisible || syncResult.isExcluded) {
     return syncResult;
   }
@@ -889,9 +891,8 @@ export async function checkFieldAsync<TFieldId extends string = string>(
     ...Object.keys(options.customValidators ?? {}),
   ]);
 
-  // Find the field's validators
-  const field = requirements.fields.find((f) => f.id === fieldId);
-  const validators = field?.validation?.validators ?? [];
+  // Use the field from sync result (already looked up by checkField)
+  const validators = syncResult.field.validation?.validators ?? [];
 
   if (validators.length === 0) {
     return syncResult;
