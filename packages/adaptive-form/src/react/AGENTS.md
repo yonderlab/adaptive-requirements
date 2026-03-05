@@ -6,12 +6,13 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## Key Files
 
-| File                  | Purpose                                                       |
-| --------------------- | ------------------------------------------------------------- |
-| `index.ts`            | Public API: exports `DynamicForm` only                        |
-| `use-requirements.ts` | `useRequirements`, `useFieldState`, `useCalculatedData` hooks |
-| `use-phone-home.ts`   | Version check hook (triggers on mount)                        |
-| `dynamic-form.tsx`    | `DynamicForm` component                                       |
+| File                      | Purpose                                                       |
+| ------------------------- | ------------------------------------------------------------- |
+| `index.ts`                | Public API: exports `DynamicForm`, `useAsyncValidation`       |
+| `use-requirements.ts`     | `useRequirements`, `useFieldState`, `useCalculatedData` hooks |
+| `use-async-validation.ts` | `useAsyncValidation` hook — debounce, abort, per-field state  |
+| `use-phone-home.ts`       | Version check hook (triggers on mount)                        |
+| `dynamic-form.tsx`        | `DynamicForm` component                                       |
 
 ## Hooks
 
@@ -20,6 +21,7 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 | `useRequirements(requirements, data, options?)`        | Main hook: adapter, field states, validation, computed data |
 | `useFieldState(requirements, fieldId, data, options?)` | Single field state (minimizes re-renders)                   |
 | `useCalculatedData(requirements, data)`                | Computed field values only                                  |
+| `useAsyncValidation(options)`                          | Async validation: debounce, abort, per-field state          |
 
 ## DynamicForm Component
 
@@ -45,22 +47,31 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## On-Change Flow
 
-1. Update the changed field value
-2. Recalculate all computed fields via `calculateData`
-3. Apply exclusions via `applyExclusions`
-4. Optionally clear hidden field values via `clearHiddenFieldValues` (when `clearHiddenValues=true`)
-5. Update state (internal or call `onChange`)
+1. Clear async validation state for the changed field (abort in-flight, cancel debounce)
+2. Update the changed field value
+3. Recalculate all computed fields via `calculateData`
+4. Apply exclusions via `applyExclusions`
+5. Optionally clear hidden field values via `clearHiddenFieldValues` (when `clearHiddenValues=true`)
+6. Update state (internal or call `onChange`)
+
+## On-Blur Flow (Async Validation)
+
+1. Mark field as touched
+2. Check sync state: if visible, not excluded, no sync errors, value non-empty → trigger async validation
+3. Async validation is debounced (300ms default), previous in-flight requests are aborted
+4. Async errors are merged with sync errors in the display pipeline
 
 ## Extension Points
 
-| Extension               | Mechanism                                                        |
-| ----------------------- | ---------------------------------------------------------------- |
-| Custom field types      | `components` prop — map any string to a React component          |
-| Custom validators       | `EngineOptions.customValidators` — `Record<string, ValidatorFn>` |
-| Custom label resolution | `EngineOptions.labelResolver` — integrate with i18n systems      |
-| Custom field rendering  | `renderField` prop — full control over per-field rendering       |
-| Custom step navigation  | `renderStepNavigation` prop — custom Previous/Next UI            |
-| Field ID remapping      | `FieldMapping.fieldIdMap` — remap consumer IDs to schema IDs     |
+| Extension               | Mechanism                                                             |
+| ----------------------- | --------------------------------------------------------------------- |
+| Custom field types      | `components` prop — map any string to a React component               |
+| Custom validators       | `EngineOptions.customValidators` — `Record<string, ValidatorFn>`      |
+| Custom label resolution | `EngineOptions.labelResolver` — integrate with i18n systems           |
+| Custom field rendering  | `renderField` prop — full control over per-field rendering            |
+| Custom step navigation  | `renderStepNavigation` prop — custom Previous/Next UI                 |
+| Field ID remapping      | `FieldMapping.fieldIdMap` — remap consumer IDs to schema IDs          |
+| Async validators        | Built-in (`iban_unique`, `email_unique`) via `builtInAsyncValidators` |
 
 ## Downlinks
 

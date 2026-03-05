@@ -28,21 +28,23 @@ Framework-agnostic core: types, rule engine, validation. Zero React/browser depe
 
 ## Engine Functions
 
-| Function                                                             | Purpose                                                               |
-| -------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `runRule(rule, context)`                                             | Evaluates a JSON Logic expression against a data context              |
-| `checkField(requirements, fieldId, data, options?)`                  | Computes full `FieldState` for one field                              |
-| `calculateData(requirements, data)`                                  | Returns computed field values only                                    |
-| `resolveFieldOptions(field, datasets?, context?, labelResolver?)`    | Resolves static options or dataset items, applies filters             |
-| `clearHiddenFieldValues(requirements, data)`                         | Iterates until stable, clearing values where `visibleWhen` is false   |
-| `applyExclusions(requirements, data)`                                | Iterates until stable, clearing values where `excludeWhen` is true    |
-| `createAdapter(requirements, mapping?, options?)`                    | Factory bundling engine functions with optional field ID remapping    |
-| `getNextStepId(flow, currentStepId, data, options?)`                 | Resolves next step (rules first, then sequential), skips empty        |
-| `getPreviousStepId(flow, currentStepId)`                             | Returns previous step (sequential only)                               |
-| `getInitialStepId(flow, options?)`                                   | Returns start step, skipping empty steps                              |
-| `stepHasVisibleFields(requirements, stepId, data, options?)`         | Checks if a step has at least one visible field                       |
-| `resolveLabel(label, locale?)`                                       | Default label resolver (string passthrough, `{ default }` extraction) |
-| `runCustomValidators(value, validators, context, customValidators?)` | Runs built-in + custom validators, supports conditional `when` param  |
+| Function                                                                                      | Purpose                                                                   |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `runRule(rule, context)`                                                                      | Evaluates a JSON Logic expression against a data context                  |
+| `checkField(requirements, fieldId, data, options?)`                                           | Computes full `FieldState` for one field                                  |
+| `calculateData(requirements, data)`                                                           | Returns computed field values only                                        |
+| `resolveFieldOptions(field, datasets?, context?, labelResolver?)`                             | Resolves static options or dataset items, applies filters                 |
+| `clearHiddenFieldValues(requirements, data)`                                                  | Iterates until stable, clearing values where `visibleWhen` is false       |
+| `applyExclusions(requirements, data)`                                                         | Iterates until stable, clearing values where `excludeWhen` is true        |
+| `createAdapter(requirements, mapping?, options?)`                                             | Factory bundling engine functions with optional field ID remapping        |
+| `getNextStepId(flow, currentStepId, data, options?)`                                          | Resolves next step (rules first, then sequential), skips empty            |
+| `getPreviousStepId(flow, currentStepId)`                                                      | Returns previous step (sequential only)                                   |
+| `getInitialStepId(flow, options?)`                                                            | Returns start step, skipping empty steps                                  |
+| `stepHasVisibleFields(requirements, stepId, data, options?)`                                  | Checks if a step has at least one visible field                           |
+| `resolveLabel(label, locale?)`                                                                | Default label resolver (string passthrough, `{ default }` extraction)     |
+| `runCustomValidators(value, validators, context, customValidators?)`                          | Runs built-in + custom validators, supports conditional `when` param      |
+| `runAsyncValidators(value, validators, context, asyncValidators, syncValidatorKeys, signal?)` | Runs async validators in parallel with AbortSignal support                |
+| `checkFieldAsync(requirements, fieldId, data, options?, signal?)`                             | Async version of `checkField` — runs sync first, then async if applicable |
 
 ## JSON Logic
 
@@ -83,6 +85,16 @@ Both `clearHiddenFieldValues` and `applyExclusions` iterate until stable. Cleari
 | `file_count`        | `maxFiles`   | Number of files                    |
 
 All validators support conditional execution via `params.when` (JSON Logic rule).
+
+## Async Validation
+
+The engine provides async validator infrastructure for server-side validation (e.g., uniqueness checks). Async validation is a separate layer that sits alongside sync validation without modifying it.
+
+- `AsyncValidatorFn` — like `ValidatorFn` but returns `Promise<string | null>` and accepts an optional `AbortSignal`
+- `EngineOptions.asyncValidators` — registry of async validators keyed by name
+- `runAsyncValidators()` — runs async validators in parallel via `Promise.allSettled`, filters out sync-registry names, respects `params.when` guards, discards results on abort
+- `checkFieldAsync()` — runs `checkField()` first, short-circuits if field not visible/excluded/empty/has sync errors, then runs async validators and merges errors
+- `createAdapter()` returns `checkFieldAsync()` and `hasAsyncValidators` boolean when async validators are configured
 
 ## Anti-patterns
 

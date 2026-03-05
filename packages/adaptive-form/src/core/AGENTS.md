@@ -13,9 +13,10 @@ Browser-capable, framework-agnostic utilities. These depend on browser APIs (`fe
 
 ## Key Files
 
-| File            | Purpose                                                                        |
-| --------------- | ------------------------------------------------------------------------------ |
-| `phone-home.ts` | Version check utility — fetches latest version info on load, warns if outdated |
+| File              | Purpose                                                                        |
+| ----------------- | ------------------------------------------------------------------------------ |
+| `phone-home.ts`   | Version check utility — fetches latest version info on load, warns if outdated |
+| `validate-api.ts` | Async validation API client — calls POST /requirements/validate/{name}         |
 
 ## Anti-patterns
 
