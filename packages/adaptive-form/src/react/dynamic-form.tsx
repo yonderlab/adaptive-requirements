@@ -27,6 +27,9 @@ import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
+/** Sync validator keys — module-level constant since builtInValidators is static */
+const SYNC_VALIDATOR_KEYS = new Set<string>(Object.keys(builtInValidators));
+
 /**
  * Props for individual field input components
  */
@@ -287,8 +290,6 @@ export function DynamicForm<TFieldId extends string = string>({
   });
 
   // Async validation setup
-  const syncValidatorKeys = useMemo(() => new Set<string>(Object.keys(builtInValidators)), []);
-
   const {
     asyncState,
     validateField: triggerAsyncValidation,
@@ -296,7 +297,7 @@ export function DynamicForm<TFieldId extends string = string>({
     isValidating: isAsyncValidating,
   } = useAsyncValidation({
     asyncValidators: builtInAsyncValidators,
-    syncValidatorKeys,
+    syncValidatorKeys: SYNC_VALIDATOR_KEYS,
   });
 
   const currentStepIndex = flow ? flow.steps.findIndex((s) => s.id === currentStepId) : -1;
