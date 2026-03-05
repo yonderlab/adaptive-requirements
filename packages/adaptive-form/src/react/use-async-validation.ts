@@ -278,11 +278,18 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
 
       // Build result and update state
       const finalState: AsyncValidationState = {};
-      for (const result of results) {
+      for (const [i, result] of results.entries()) {
+        const entry = fieldsToValidate[i];
+        if (!entry) {
+          continue;
+        }
         if (result.status === 'fulfilled') {
-          const { fieldId, errors } = result.value;
-          errorMap[fieldId] = errors;
-          finalState[fieldId] = { isValidating: false, errors };
+          errorMap[entry.fieldId] = result.value.errors;
+          finalState[entry.fieldId] = { isValidating: false, errors: result.value.errors };
+        } else {
+          // Rejected validators: clear validating state (fail open, matches sync pattern)
+          errorMap[entry.fieldId] = [];
+          finalState[entry.fieldId] = { isValidating: false, errors: [] };
         }
       }
 
