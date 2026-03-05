@@ -17,7 +17,7 @@ import {
   getNextStepId,
   getPreviousStepId,
 } from '@kotaio/adaptive-requirements-engine';
-import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-parent-imports
 import { builtInAsyncValidators } from '../core/validate-api';
@@ -127,6 +127,9 @@ export interface DynamicFormProps<TFieldId extends string = string> {
    */
   onChange?: (data: FormData) => void;
 
+  /** Called when aggregate async validation state transitions between validating and not validating. */
+  onValidatingChange?: (isValidating: boolean) => void;
+
   /** Optional field ID mapping */
   mapping?: FieldMapping;
 
@@ -220,6 +223,7 @@ export function DynamicForm<TFieldId extends string = string>({
   defaultValue = {},
   value: controlledValue,
   onChange,
+  onValidatingChange,
   mapping,
   components,
   renderField,
@@ -303,6 +307,16 @@ export function DynamicForm<TFieldId extends string = string>({
     asyncValidators: builtInAsyncValidators,
     syncValidatorKeys: SYNC_VALIDATOR_KEYS,
   });
+
+  const previousIsAsyncValidatingRef = useRef(isAsyncValidating);
+  useEffect(() => {
+    const previous = previousIsAsyncValidatingRef.current;
+    previousIsAsyncValidatingRef.current = isAsyncValidating;
+
+    if (onValidatingChange && previous !== isAsyncValidating) {
+      onValidatingChange(isAsyncValidating);
+    }
+  }, [isAsyncValidating, onValidatingChange]);
 
   const currentStepIndex = flow ? flow.steps.findIndex((s) => s.id === currentStepId) : -1;
   const currentStep = flow && currentStepIndex >= 0 ? flow.steps[currentStepIndex] : undefined;

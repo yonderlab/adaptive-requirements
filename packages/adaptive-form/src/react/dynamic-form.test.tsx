@@ -444,6 +444,57 @@ describe('dynamicForm async validation integration', () => {
     expect(mockRunAsyncValidators).not.toHaveBeenCalled();
   });
 
+  it('does not call onValidatingChange on initial mount', () => {
+    const onValidatingChange = vi.fn();
+
+    render(
+      <DynamicForm
+        requirements={makeAsyncRequirements()}
+        defaultValue={{ email: 'test@test.com' }}
+        onValidatingChange={onValidatingChange}
+        components={testComponents}
+      />,
+    );
+
+    expect(onValidatingChange).not.toHaveBeenCalled();
+  });
+
+  it('calls onValidatingChange on async validation transitions', async () => {
+    let resolveValidation!: (errors: string[]) => void;
+    mockRunAsyncValidators.mockImplementation(
+      () =>
+        // eslint-disable-next-line promise/avoid-new
+        new Promise<string[]>((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+
+    const onValidatingChange = vi.fn();
+
+    render(
+      <DynamicForm
+        requirements={makeAsyncRequirements()}
+        defaultValue={{ email: 'test@test.com' }}
+        onValidatingChange={onValidatingChange}
+        components={testComponents}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.blur(screen.getByTestId('input-email'));
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+
+    await act(async () => {
+      resolveValidation([]);
+    });
+
+    expect(onValidatingChange.mock.calls).toStrictEqual([[true], [false]]);
+  });
+
   it('blocks step navigation while async validation is in progress', async () => {
     let resolveValidation!: (errors: string[]) => void;
     mockRunAsyncValidators.mockImplementation(

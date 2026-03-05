@@ -328,8 +328,22 @@ import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik';
 function MyForm({ requirements }) {
   const formik = useFormikContext();
   const { value, onChange } = useFormikAdapter({ formik });
+  const [isValidating, setIsValidating] = useState(false);
 
-  return <DynamicForm requirements={requirements} value={value} onChange={onChange} components={myComponents} />;
+  return (
+    <>
+      <DynamicForm
+        requirements={requirements}
+        value={value}
+        onChange={onChange}
+        onValidatingChange={setIsValidating}
+        components={myComponents}
+      />
+      <button type="submit" disabled={isValidating || !formik.isValid}>
+        {isValidating ? 'Validating...' : 'Submit'}
+      </button>
+    </>
+  );
 }
 ```
 
@@ -363,6 +377,7 @@ These are features expressed in the schema that DynamicForm handles automaticall
 | `defaultValue`         | `FormData`                      | `{}`     | Initial data (uncontrolled mode)             |
 | `value`                | `FormData`                      | —        | Current data (controlled mode)               |
 | `onChange`             | `(data: FormData) => void`      | —        | Change handler (required in controlled mode) |
+| `onValidatingChange`   | `(isValidating: boolean) => void` | —      | Called when async validation state transitions |
 | `components`           | `Record<string, ComponentType>` | —        | Map of field type → React component          |
 | `renderField`          | `(props) => ReactNode`          | —        | Custom per-field render function             |
 | `renderStepNavigation` | `(props) => ReactNode`          | —        | Custom step navigation UI                    |
