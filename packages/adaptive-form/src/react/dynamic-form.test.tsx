@@ -1,16 +1,16 @@
 import type { FieldInputProps, FieldRenderProps } from './dynamic-form';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DynamicForm } from './dynamic-form';
 
 afterEach(cleanup);
 
-/** Minimal text input that displays errors */
-function TestTextInput({ field, value, onChange, onBlur, errors, isVisible, label }: FieldInputProps) {
+/** Minimal text input that displays errors and isValidating */
+function TestTextInput({ field, value, onChange, onBlur, errors, isVisible, isValidating, label }: FieldInputProps) {
   if (!isVisible) {
     return null;
   }
@@ -29,6 +29,7 @@ function TestTextInput({ field, value, onChange, onBlur, errors, isVisible, labe
           {errors.join(', ')}
         </span>
       )}
+      {isValidating && <span data-testid={`validating-${field.id}`}>Validating...</span>}
     </div>
   );
 }
@@ -227,5 +228,319 @@ describe('dynamicForm touched-field error filtering', () => {
     fireEvent.change(toggleInput, { target: { value: 'show' } });
     // Touched state should be preserved — error should still show
     expect(screen.getByTestId('error-conditional')).toBeTruthy();
+  });
+});
+
+// --- Async validation integration tests ---
+/* eslint-disable require-await */
+
+// Mock runAsyncValidators from the engine (used by useAsyncValidation internally)
+const mockRunAsyncValidators = vi.fn<(...args: unknown[]) => Promise<string[]>>();
+vi.mock(import('@kotaio/adaptive-requirements-engine'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    runAsyncValidators: (...args: unknown[]) => mockRunAsyncValidators(...args),
+  };
+});
+
+function makeAsyncRequirements(): RequirementsObject {
+  return {
+    fields: [
+      {
+        id: 'email',
+        type: 'text',
+        validation: {
+          validators: [{ name: 'email_unique', message: 'Email already taken' }],
+        },
+      },
+    ],
+  };
+}
+
+describe('dynamicForm async validation integration', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    mockRunAsyncValidators.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('shows async errors after blur + debounce', async () => {
+    mockRunAsyncValidators.mockResolvedValue(['Email already taken']);
+
+    render(
+      <DynamicForm
+        requirements={makeAsyncRequirements()}
+        defaultValue={{ email: 'test@test.com' }}
+        components={testComponents}
+      />,
+    );
+
+    const emailInput = screen.getByTestId('input-email');
+
+    // Blur triggers async validation
+    await act(async () => {
+      fireEvent.blur(emailInput);
+    });
+
+    // No errors yet — debounce not elapsed
+    expect(screen.queryByTestId('error-email')).toBeNull();
+
+    // Advance past debounce (300ms default)
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+
+    // Allow promise to resolve
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    // Async error should now be displayed
+    expect(screen.getByTestId('error-email')).toBeTruthy();
+    expect(screen.getByTestId('error-email').textContent).toBe('Email already taken');
+  });
+
+  it('clears async errors when value changes', async () => {
+    mockRunAsyncValidators.mockResolvedValue(['Email already taken']);
+
+    render(
+      <DynamicForm
+        requirements={makeAsyncRequirements()}
+        defaultValue={{ email: 'test@test.com' }}
+        components={testComponents}
+      />,
+    );
+
+    const emailInput = screen.getByTestId('input-email');
+
+    // Trigger async validation via blur
+    await act(async () => {
+      fireEvent.blur(emailInput);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    // Error should be visible
+    expect(screen.getByTestId('error-email')).toBeTruthy();
+
+    // Change the value — should clear async errors
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: 'new@test.com' } });
+    });
+
+    // Async errors should be cleared
+    expect(screen.queryByTestId('error-email')).toBeNull();
+  });
+
+  it('shows isValidating during async validation', async () => {
+    // Create a promise that we control the resolution of
+    let resolveValidation!: (errors: string[]) => void;
+    mockRunAsyncValidators.mockImplementation(
+      () =>
+        // eslint-disable-next-line promise/avoid-new
+        new Promise<string[]>((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+
+    render(
+      <DynamicForm
+        requirements={makeAsyncRequirements()}
+        defaultValue={{ email: 'test@test.com' }}
+        components={testComponents}
+      />,
+    );
+
+    const emailInput = screen.getByTestId('input-email');
+
+    // Blur to trigger async
+    await act(async () => {
+      fireEvent.blur(emailInput);
+    });
+
+    // Advance past debounce
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+
+    // isValidating should be true
+    expect(screen.getByTestId('validating-email')).toBeTruthy();
+
+    // Resolve the validation
+    await act(async () => {
+      resolveValidation([]);
+    });
+
+    // isValidating should be false
+    expect(screen.queryByTestId('validating-email')).toBeNull();
+  });
+
+  it('does not trigger async validation for hidden fields', () => {
+    const requirements = makeRequirements([
+      { id: 'toggle', type: 'text' },
+      {
+        id: 'email',
+        type: 'text',
+        validation: {
+          validators: [{ name: 'email_unique', message: 'Email already taken' }],
+        },
+        visibleWhen: { '==': [{ var: 'toggle' }, 'show'] },
+      },
+    ]);
+
+    render(
+      <DynamicForm
+        requirements={requirements}
+        defaultValue={{ toggle: 'hide', email: 'test@test.com' }}
+        components={testComponents}
+      />,
+    );
+
+    // Email field should not be visible
+    expect(screen.queryByTestId('input-email')).toBeNull();
+
+    // runAsyncValidators should not have been called
+    expect(mockRunAsyncValidators).not.toHaveBeenCalled();
+  });
+
+  it('blocks step navigation while async validation is in progress', async () => {
+    let resolveValidation!: (errors: string[]) => void;
+    mockRunAsyncValidators.mockImplementation(
+      () =>
+        // eslint-disable-next-line promise/avoid-new
+        new Promise<string[]>((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+
+    const requirements: RequirementsObject = {
+      fields: [
+        {
+          id: 'email',
+          type: 'text',
+          validation: {
+            validators: [{ name: 'email_unique', message: 'Email already taken' }],
+          },
+        },
+        { id: 'name', type: 'text' },
+      ],
+      flow: {
+        mode: 'manual',
+        steps: [
+          { id: 'step1', fields: ['email'] },
+          { id: 'step2', fields: ['name'] },
+        ],
+      },
+    };
+
+    render(
+      <DynamicForm requirements={requirements} defaultValue={{ email: 'test@test.com' }} components={testComponents} />,
+    );
+
+    const emailInput = screen.getByTestId('input-email');
+
+    // Blur to trigger async validation
+    await act(async () => {
+      fireEvent.blur(emailInput);
+    });
+
+    // Advance past debounce
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+
+    // While validating, the Next button should be disabled (aria-disabled)
+    const nextButton = screen.getByText('Next');
+    expect(nextButton.getAttribute('aria-disabled')).toBe('true');
+
+    // Click Next — should not navigate (step1 still showing)
+    await act(async () => {
+      fireEvent.click(nextButton);
+    });
+
+    // Still on step1 — email input should still be visible
+    expect(screen.getByTestId('input-email')).toBeTruthy();
+
+    // Resolve validation with no errors
+    await act(async () => {
+      resolveValidation([]);
+    });
+
+    // Now Next should work — aria-disabled should be gone
+    expect(nextButton.getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('merges sync + async errors in displayErrors', async () => {
+    mockRunAsyncValidators.mockResolvedValue(['Email already taken']);
+
+    const requirements: RequirementsObject = {
+      fields: [
+        {
+          id: 'email',
+          type: 'text',
+          validation: {
+            required: true,
+            validators: [{ name: 'email_unique', message: 'Email already taken' }],
+          },
+        },
+      ],
+    };
+
+    const renderField = vi.fn((props: FieldRenderProps) => (
+      <div>
+        <input
+          data-testid="input-email"
+          value={props.fieldState.value == null ? '' : String(props.fieldState.value)}
+          onChange={(e) => props.onChange(e.target.value)}
+          onBlur={props.onBlur}
+        />
+        <span data-testid="display-errors">{props.displayErrors.join(', ')}</span>
+        <span data-testid="async-errors">{props.asyncErrors.join(', ')}</span>
+        <span data-testid="is-validating">{String(props.isValidating)}</span>
+      </div>
+    ));
+
+    render(
+      <DynamicForm requirements={requirements} defaultValue={{ email: 'test@test.com' }} renderField={renderField} />,
+    );
+
+    const emailInput = screen.getByTestId('input-email');
+
+    // Blur to trigger async
+    await act(async () => {
+      fireEvent.blur(emailInput);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    // displayErrors should contain async error (no sync error since value is non-empty and satisfies required)
+    expect(screen.getByTestId('display-errors').textContent).toBe('Email already taken');
+    expect(screen.getByTestId('async-errors').textContent).toBe('Email already taken');
+    expect(screen.getByTestId('is-validating').textContent).toBe('false');
+
+    // Now clear the value to get a sync required error
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: '' } });
+    });
+
+    // Only sync required error should show (async was cleared by onChange)
+    expect(screen.getByTestId('display-errors').textContent).toBe('This field is required');
+    expect(screen.getByTestId('async-errors').textContent).toBe('');
   });
 });

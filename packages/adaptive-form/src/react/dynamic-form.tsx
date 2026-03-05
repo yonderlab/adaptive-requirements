@@ -11,6 +11,7 @@ import type {
 
 import {
   applyExclusions,
+  builtInValidators,
   clearHiddenFieldValues,
   getInitialStepId,
   getNextStepId,
@@ -18,6 +19,9 @@ import {
 } from '@kotaio/adaptive-requirements-engine';
 import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 
+// eslint-disable-next-line import/no-relative-parent-imports
+import { builtInAsyncValidators } from '../core/validate-api';
+import { useAsyncValidation } from './use-async-validation';
 import { usePhoneHome } from './use-phone-home';
 import { useRequirements } from './use-requirements';
 
@@ -36,6 +40,8 @@ export interface FieldInputProps<TFieldId extends string = string> {
   isRequired: boolean;
   isVisible: boolean;
   isReadOnly: boolean;
+  /** Whether an async validator is currently running for this field */
+  isValidating?: boolean;
   options?: ResolvedFieldOption[];
   /** Resolved label string (after localization) */
   label?: string;
@@ -61,6 +67,10 @@ export interface FieldRenderProps<TFieldId extends string = string> {
   displayErrors: string[];
   /** Whether the user has interacted with this field */
   isTouched: boolean;
+  /** Whether an async validator is currently running for this field */
+  isValidating: boolean;
+  /** Async validation errors for this field */
+  asyncErrors: string[];
   onChange: (value: FieldValue) => void;
   onBlur: () => void;
   components?: DynamicFormProps<TFieldId>['components'];
@@ -276,6 +286,19 @@ export function DynamicForm<TFieldId extends string = string>({
     mapping,
   });
 
+  // Async validation setup
+  const syncValidatorKeys = useMemo(() => new Set<string>(Object.keys(builtInValidators)), []);
+
+  const {
+    asyncState,
+    validateField: triggerAsyncValidation,
+    clearField: clearAsyncField,
+    isValidating: isAsyncValidating,
+  } = useAsyncValidation({
+    asyncValidators: builtInAsyncValidators,
+    syncValidatorKeys,
+  });
+
   const currentStepIndex = flow ? flow.steps.findIndex((s) => s.id === currentStepId) : -1;
   const currentStep = flow && currentStepIndex >= 0 ? flow.steps[currentStepIndex] : undefined;
   const totalSteps = flow ? flow.steps.length : 0;
@@ -306,11 +329,19 @@ export function DynamicForm<TFieldId extends string = string>({
     if (!flow || currentStepFields.length === 0) {
       return true;
     }
+    if (isAsyncValidating) {
+      return false;
+    }
     return currentStepFields.every((field) => {
       const state = getFieldState(field.id);
-      return !state.isVisible || state.errors.length === 0;
+      if (!state.isVisible) {
+        return true;
+      }
+      const asyncFieldState = asyncState[field.id];
+      const asyncErrors = asyncFieldState?.errors ?? [];
+      return state.errors.length === 0 && asyncErrors.length === 0;
     });
-  }, [flow, currentStepFields, getFieldState]);
+  }, [flow, currentStepFields, getFieldState, isAsyncValidating, asyncState]);
 
   const nextStepId = flow ? getNextStepId(flow, currentStepId, mergedFormData, { requirements }) : undefined;
   const previousStepId = flow ? getPreviousStepId(flow, currentStepId) : undefined;
@@ -337,6 +368,7 @@ export function DynamicForm<TFieldId extends string = string>({
 
   const handleFieldChange = useCallback(
     (fieldId: string, newValue: FieldValue) => {
+      clearAsyncField(fieldId);
       markFieldTouched(fieldId);
 
       const updatedValue: FormData = { ...formData, [fieldId]: newValue };
@@ -355,26 +387,53 @@ export function DynamicForm<TFieldId extends string = string>({
       }
       onChange?.(mergedValue);
     },
-    [formData, calculateData, isControlled, onChange, clearHiddenValues, requirements, markFieldTouched],
+    [
+      formData,
+      calculateData,
+      isControlled,
+      onChange,
+      clearHiddenValues,
+      requirements,
+      markFieldTouched,
+      clearAsyncField,
+    ],
   );
 
   const handleFieldBlur = useCallback(
     (fieldId: string) => {
       markFieldTouched(fieldId);
+
+      // Trigger async validation if the field is visible, not excluded, has no sync errors, and has a non-empty value
+      const fieldState = getFieldState(fieldId);
+      if (
+        fieldState.isVisible &&
+        !fieldState.isExcluded &&
+        fieldState.errors.length === 0 &&
+        fieldState.value != null &&
+        fieldState.value !== ''
+      ) {
+        triggerAsyncValidation(fieldId, fieldState.value, mergedFormData, requirements);
+      }
     },
-    [markFieldTouched],
+    [markFieldTouched, getFieldState, triggerAsyncValidation, mergedFormData, requirements],
   );
 
   const renderFieldContent = useCallback(
     (field: Field<TFieldId>) => {
       const fieldState = getFieldState(field.id);
+      const asyncFieldState = asyncState[field.id];
+      const fieldAsyncErrors = asyncFieldState?.errors ?? [];
+      const fieldIsValidating = asyncFieldState?.isValidating ?? false;
+      const mergedErrors = [...fieldState.errors, ...fieldAsyncErrors];
 
       if (renderField) {
         return renderField({
           field,
           fieldState,
-          displayErrors: getDisplayErrors(field.id, fieldState.errors),
+          displayErrors: getDisplayErrors(field.id, mergedErrors),
           isTouched: touchedFields.has(field.id),
+          isValidating: fieldIsValidating,
+          asyncErrors: fieldAsyncErrors,
           onChange: (newValue: FieldValue) => handleFieldChange(field.id, newValue),
           onBlur: () => handleFieldBlur(field.id),
           components,
@@ -406,16 +465,26 @@ export function DynamicForm<TFieldId extends string = string>({
           value={fieldState.value}
           onChange={(newValue: FieldValue) => handleFieldChange(field.id, newValue)}
           onBlur={() => handleFieldBlur(field.id)}
-          errors={getDisplayErrors(field.id, fieldState.errors)}
+          errors={getDisplayErrors(field.id, mergedErrors)}
           isRequired={fieldState.isRequired}
           isVisible={fieldState.isVisible}
           isReadOnly={fieldState.isReadOnly}
+          isValidating={fieldIsValidating}
           options={fieldState.options}
           label={fieldState.label}
         />
       );
     },
-    [getFieldState, renderField, components, handleFieldChange, handleFieldBlur, getDisplayErrors, touchedFields],
+    [
+      getFieldState,
+      renderField,
+      components,
+      handleFieldChange,
+      handleFieldBlur,
+      getDisplayErrors,
+      touchedFields,
+      asyncState,
+    ],
   );
 
   // Flow mode: show current step only, or all steps when showAllSteps is true
