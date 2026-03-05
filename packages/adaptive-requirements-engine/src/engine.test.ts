@@ -1,3 +1,4 @@
+import type { AsyncValidatorFn } from './engine';
 import type { RequirementsObject } from './types';
 
 import { describe, expect, it } from 'vitest';
@@ -7,10 +8,12 @@ import {
   builtInValidators,
   calculateData,
   checkField,
+  checkFieldAsync,
   clearHiddenFieldValues,
   createAdapter,
   resolveFieldOptions,
   resolveLabel,
+  runAsyncValidators,
   runCustomValidators,
   runRule,
 } from './engine';
@@ -1258,5 +1261,332 @@ describe('file field type', () => {
       const state = checkField(requirements, 'textField', { textField: 'not-a-file.exe' });
       expect(state.errors).toHaveLength(0);
     });
+  });
+});
+
+// Helper: wraps a sync predicate in an async validator that does a real await (satisfies require-await)
+async function asyncUniqueValidator(value: unknown): Promise<string | null> {
+  await Promise.resolve();
+  return value === 'taken' ? 'Already taken' : null;
+}
+
+async function asyncLookupValidator(value: unknown): Promise<string | null> {
+  await Promise.resolve();
+  return value === 'invalid' ? 'Not found in registry' : null;
+}
+
+async function asyncThrowValidator(): Promise<string | null> {
+  await Promise.resolve();
+  throw new Error('Network error');
+}
+
+// Always-fail async validator: returns an error message for any value (used to verify async is skipped)
+async function asyncAlwaysFailValidator(): Promise<string | null> {
+  await Promise.resolve();
+  return 'Should not be called';
+}
+
+async function asyncTakenUserValidator(value: unknown): Promise<string | null> {
+  await Promise.resolve();
+  return value === 'taken_user' ? 'Username already exists' : null;
+}
+
+// Slow validator that waits for abort or timeout — hoisted to satisfy consistent-function-scoping
+async function slowAsyncValidator(
+  _value: unknown,
+  _params: Record<string, unknown> | undefined,
+  _context: unknown,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  // oxlint-disable-next-line promise/avoid-new -- test helper requires manual promise to simulate delay with abort
+  await new Promise<void>((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    let settled = false;
+    const settle = () => {
+      if (!settled) {
+        settled = true;
+        resolve();
+      }
+    };
+    const timer = setTimeout(settle, 50);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        settle();
+      },
+      { once: true },
+    );
+  });
+  return 'Should be discarded';
+}
+
+describe(runAsyncValidators, () => {
+  const asyncValidators: Record<string, AsyncValidatorFn> = {
+    async_unique: asyncUniqueValidator,
+    async_lookup: asyncLookupValidator,
+    async_throw: asyncThrowValidator,
+  };
+
+  it('should skip validators that exist in syncValidatorKeys', async () => {
+    const validators = [{ type: 'age_range', params: { min: 18 } }, { type: 'async_unique' }];
+    // age_range is a sync validator, so it should be skipped by runAsyncValidators
+    const syncKeys = new Set(['age_range']);
+
+    const errors = await runAsyncValidators('taken', validators, { data: {} }, asyncValidators, syncKeys);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBe('Already taken');
+  });
+
+  it('should return empty array when signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const validators = [{ type: 'async_unique' }];
+    const errors = await runAsyncValidators(
+      'taken',
+      validators,
+      { data: {} },
+      asyncValidators,
+      new Set(),
+      controller.signal,
+    );
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should discard results when signal is aborted during execution', async () => {
+    const controller = new AbortController();
+
+    const validators = [{ type: 'slow_check' }];
+    const asyncValidatorsWithSlow = { ...asyncValidators, slow_check: slowAsyncValidator };
+
+    // Abort after the validator starts but before it completes
+    setTimeout(() => controller.abort(), 10);
+
+    const errors = await runAsyncValidators(
+      'test',
+      validators,
+      { data: {} },
+      asyncValidatorsWithSlow,
+      new Set(),
+      controller.signal,
+    );
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should respect params.when conditional guard', async () => {
+    const validators = [
+      {
+        type: 'async_unique',
+        params: { when: { '==': [{ var: 'country' }, 'US'] } },
+      },
+    ];
+
+    // When guard fails (country is not US), validator should be skipped
+    const errorsSkipped = await runAsyncValidators(
+      'taken',
+      validators,
+      { data: { country: 'IE' } },
+      asyncValidators,
+      new Set(),
+    );
+    expect(errorsSkipped).toHaveLength(0);
+
+    // When guard passes (country is US), validator should run
+    const errorsRun = await runAsyncValidators(
+      'taken',
+      validators,
+      { data: { country: 'US' } },
+      asyncValidators,
+      new Set(),
+    );
+    expect(errorsRun).toHaveLength(1);
+    expect(errorsRun[0]).toBe('Already taken');
+  });
+
+  it('should silently swallow throwing validators', async () => {
+    const validators = [{ type: 'async_throw' }];
+
+    const errors = await runAsyncValidators('test', validators, { data: {} }, asyncValidators, new Set());
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should run multiple validators in parallel', async () => {
+    const validators = [{ type: 'async_unique' }, { type: 'async_lookup' }];
+
+    const errors = await runAsyncValidators('taken', validators, { data: {} }, asyncValidators, new Set());
+    // 'taken' triggers async_unique but not async_lookup ('taken' !== 'invalid')
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBe('Already taken');
+
+    // Use a value that triggers async_lookup
+    const validators2 = [
+      { type: 'async_unique', message: 'Username taken' },
+      { type: 'async_lookup', message: 'Lookup failed' },
+    ];
+    const errorsLookup = await runAsyncValidators('invalid', validators2, { data: {} }, asyncValidators, new Set());
+    expect(errorsLookup).toHaveLength(1);
+    expect(errorsLookup[0]).toBe('Lookup failed');
+  });
+
+  it('should use validator.message when provided', async () => {
+    const validators = [{ type: 'async_unique', message: 'Custom error message' }];
+
+    const errors = await runAsyncValidators('taken', validators, { data: {} }, asyncValidators, new Set());
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBe('Custom error message');
+  });
+});
+
+describe(checkFieldAsync, () => {
+  it('should skip async validation for hidden fields', async () => {
+    const requirements: RequirementsObject = {
+      fields: [
+        {
+          id: 'toggle',
+          type: 'checkbox',
+          label: 'Toggle',
+        },
+        {
+          id: 'email',
+          type: 'text',
+          label: 'Email',
+          visibleWhen: { '==': [{ var: 'toggle' }, true] },
+          validation: {
+            validators: [{ type: 'async_unique' }],
+          },
+        },
+      ],
+    };
+
+    const asyncValidators: Record<string, AsyncValidatorFn> = {
+      async_unique: asyncAlwaysFailValidator,
+    };
+
+    const state = await checkFieldAsync(
+      requirements,
+      'email',
+      { toggle: false, email: 'test@example.com' },
+      { asyncValidators },
+    );
+    expect(state.isVisible).toBeFalsy();
+    expect(state.errors).toHaveLength(0);
+  });
+
+  it('should skip async validation for excluded fields', async () => {
+    const requirements: RequirementsObject = {
+      fields: [
+        {
+          id: 'email',
+          type: 'text',
+          label: 'Email',
+          excludeWhen: true,
+          validation: {
+            validators: [{ type: 'async_unique' }],
+          },
+        },
+      ],
+    };
+
+    const asyncValidators: Record<string, AsyncValidatorFn> = {
+      async_unique: asyncAlwaysFailValidator,
+    };
+
+    const state = await checkFieldAsync(requirements, 'email', { email: 'test@example.com' }, { asyncValidators });
+    expect(state.isExcluded).toBeTruthy();
+    expect(state.errors).toHaveLength(0);
+  });
+
+  it('should skip async validation when sync errors are present', async () => {
+    const requirements: RequirementsObject = {
+      fields: [
+        {
+          id: 'email',
+          type: 'text',
+          label: 'Email',
+          validation: {
+            required: true,
+            pattern: '^[^@]+@[^@]+$',
+            message: 'Invalid email',
+            validators: [{ type: 'async_unique' }],
+          },
+        },
+      ],
+    };
+
+    const asyncValidators: Record<string, AsyncValidatorFn> = {
+      async_unique: asyncAlwaysFailValidator,
+    };
+
+    // Pattern will fail (not a valid email format), so async should be skipped
+    const state = await checkFieldAsync(requirements, 'email', { email: 'not-an-email' }, { asyncValidators });
+    expect(state.errors.length).toBeGreaterThan(0);
+    // Should only have sync errors, not async ones
+    expect(state.errors).not.toContain('Should not be called');
+  });
+
+  it('should skip async validation when value is empty', async () => {
+    const requirements: RequirementsObject = {
+      fields: [
+        {
+          id: 'email',
+          type: 'text',
+          label: 'Email',
+          validation: {
+            validators: [{ type: 'async_unique' }],
+          },
+        },
+      ],
+    };
+
+    const asyncValidators: Record<string, AsyncValidatorFn> = {
+      async_unique: asyncAlwaysFailValidator,
+    };
+
+    const state = await checkFieldAsync(requirements, 'email', {}, { asyncValidators });
+    expect(state.errors).toHaveLength(0);
+  });
+
+  it('should merge async errors into FieldState', async () => {
+    const requirements: RequirementsObject = {
+      fields: [
+        {
+          id: 'username',
+          type: 'text',
+          label: 'Username',
+          validation: {
+            validators: [{ type: 'async_unique' }],
+          },
+        },
+      ],
+    };
+
+    const asyncValidators: Record<string, AsyncValidatorFn> = {
+      async_unique: asyncTakenUserValidator,
+    };
+
+    const state = await checkFieldAsync(requirements, 'username', { username: 'taken_user' }, { asyncValidators });
+    expect(state.errors).toHaveLength(1);
+    expect(state.errors[0]).toBe('Username already exists');
+  });
+
+  it('should return sync result when no async validators are configured', async () => {
+    const requirements: RequirementsObject = {
+      fields: [
+        {
+          id: 'name',
+          type: 'text',
+          label: 'Name',
+          validation: { required: true },
+        },
+      ],
+    };
+
+    const state = await checkFieldAsync(requirements, 'name', {});
+    expect(state.errors).toHaveLength(1);
+    expect(state.errors[0]).toContain('required');
   });
 });

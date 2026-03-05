@@ -34,11 +34,25 @@ export interface RuleContext {
 export type ValidatorFn = (value: FieldValue, params?: Record<string, unknown>, context?: RuleContext) => string | null;
 
 /**
+ * Async validator function type.
+ * Returns a promise resolving to an error message (string) or null if valid.
+ * Receives an optional AbortSignal for cancellation support.
+ */
+export type AsyncValidatorFn = (
+  value: FieldValue,
+  params?: Record<string, unknown>,
+  context?: RuleContext,
+  signal?: AbortSignal,
+) => Promise<string | null>;
+
+/**
  * Options for the rule engine
  */
 export interface EngineOptions {
   /** Custom validators for field validation */
   customValidators?: Record<string, ValidatorFn>;
+  /** Async validators for field validation (e.g. server-side uniqueness checks) */
+  asyncValidators?: Record<string, AsyncValidatorFn>;
   /** Locale for label resolution */
   locale?: string;
   /** Label resolver function for localization */
@@ -551,6 +565,82 @@ export function runCustomValidators(
 }
 
 /**
+ * Run async validators on a field value.
+ * Only runs validators that exist in the asyncValidators registry AND are NOT in syncValidatorKeys
+ * (sync validators take precedence). Respects params.when conditional guard (evaluated synchronously).
+ * Runs matching validators in parallel via Promise.allSettled.
+ * Aborted signals cause early exit or result discard.
+ * Rejected promises are silently swallowed (matches sync pattern).
+ */
+export async function runAsyncValidators(
+  value: FieldValue,
+  validators: CustomValidator[],
+  context: RuleContext,
+  asyncValidators: Record<string, AsyncValidatorFn>,
+  syncValidatorKeys: Set<string>,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  if (signal?.aborted) {
+    return [];
+  }
+
+  const pending: { validator: CustomValidator; promise: Promise<string | null> }[] = [];
+
+  for (const validator of validators) {
+    const validatorKey = validator.type ?? validator.name;
+    if (validatorKey == null) {
+      continue;
+    }
+
+    // Skip if this is a sync validator (sync takes precedence)
+    if (syncValidatorKeys.has(validatorKey)) {
+      continue;
+    }
+
+    const asyncFn = asyncValidators[validatorKey];
+    if (!asyncFn) {
+      continue;
+    }
+
+    // Respect params.when conditional guard (sync eval, same as runCustomValidators)
+    const whenRule = validator.params?.['when'];
+    if (whenRule != null && typeof whenRule === 'object') {
+      const whenResult = runRule(whenRule as Rule, context);
+      if (!whenResult) {
+        continue;
+      }
+    }
+
+    pending.push({
+      validator,
+      promise: asyncFn(value, validator.params, context, signal),
+    });
+  }
+
+  if (pending.length === 0) {
+    return [];
+  }
+
+  const results = await Promise.allSettled(pending.map((p) => p.promise));
+
+  // If signal was aborted during execution, discard results
+  if (signal?.aborted) {
+    return [];
+  }
+
+  const errors: string[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i]!;
+    // Rejected promises are silently swallowed (matches sync pattern)
+    if (result.status === 'fulfilled' && result.value) {
+      errors.push(pending[i]!.validator.message ?? result.value);
+    }
+  }
+
+  return errors;
+}
+
+/**
  * Dataset item can be a string or an object with optional id/value/label/name and additional properties for filtering
  * This is a wider type to allow for filtering on custom properties.
  */
@@ -748,6 +838,83 @@ export function checkField<TFieldId extends string = string>(
     options: fieldOptions,
     field: field,
     label,
+  };
+}
+
+/**
+ * Check field state asynchronously.
+ * Runs sync validation first via checkField(), then runs async validators if applicable.
+ * Short-circuits (returns sync result) if: field not visible, excluded, value empty,
+ * sync errors present, or no async validators configured.
+ */
+export async function checkFieldAsync<TFieldId extends string = string>(
+  requirements: RequirementsObject<TFieldId>,
+  fieldId: string,
+  data: FormData,
+  options?: EngineOptions,
+  signal?: AbortSignal,
+): Promise<FieldState<TFieldId>> {
+  // Run sync validation first
+  const syncResult = checkField(requirements, fieldId, data, options);
+
+  // Short-circuit: no async validators configured
+  if (!options?.asyncValidators || Object.keys(options.asyncValidators).length === 0) {
+    return syncResult;
+  }
+
+  // Short-circuit: field not visible or excluded
+  if (!syncResult.isVisible || syncResult.isExcluded) {
+    return syncResult;
+  }
+
+  // Short-circuit: value is empty
+  const fieldValue = data[fieldId];
+  const empty =
+    fieldValue === undefined ||
+    fieldValue === null ||
+    fieldValue === '' ||
+    (Array.isArray(fieldValue) && fieldValue.length === 0);
+  if (empty) {
+    return syncResult;
+  }
+
+  // Short-circuit: sync errors present
+  if (syncResult.errors.length > 0) {
+    return syncResult;
+  }
+
+  // Build syncValidatorKeys from builtInValidators + customValidators
+  const syncValidatorKeys = new Set<string>([
+    ...Object.keys(builtInValidators),
+    ...Object.keys(options.customValidators ?? {}),
+  ]);
+
+  // Find the field's validators
+  const field = requirements.fields.find((f) => f.id === fieldId);
+  const validators = field?.validation?.validators ?? [];
+
+  if (validators.length === 0) {
+    return syncResult;
+  }
+
+  const context: RuleContext = { data, answers: data };
+  const asyncErrors = await runAsyncValidators(
+    fieldValue,
+    validators,
+    context,
+    options.asyncValidators,
+    syncValidatorKeys,
+    signal,
+  );
+
+  // Merge async errors into FieldState
+  if (asyncErrors.length === 0) {
+    return syncResult;
+  }
+
+  return {
+    ...syncResult,
+    errors: [...syncResult.errors, ...asyncErrors],
   };
 }
 
@@ -1009,6 +1176,13 @@ export function createAdapter<TFieldId extends string = string>(
       const mappedFieldId = fieldIdMap[fieldId] ?? fieldId;
       return requirements.fields.find((f) => f.id === mappedFieldId);
     },
+
+    checkFieldAsync: (fieldId: string, data: FormData, signal?: AbortSignal) => {
+      const mappedFieldId = fieldIdMap[fieldId] ?? fieldId;
+      return checkFieldAsync(requirements, mappedFieldId, data, options, signal);
+    },
+
+    hasAsyncValidators: !!options?.asyncValidators && Object.keys(options.asyncValidators).length > 0,
 
     requirements,
     mapping,
