@@ -7,7 +7,7 @@ import type {
   RuleContext,
 } from '@kotaio/adaptive-requirements-engine';
 
-import { runAsyncValidators } from '@kotaio/adaptive-requirements-engine';
+import { checkField, runAsyncValidators } from '@kotaio/adaptive-requirements-engine';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /**
@@ -61,6 +61,10 @@ function cleanupTimersAndControllers(
   controllers.clear();
 }
 
+function isEmptyValue(value: FieldValue): boolean {
+  return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+}
+
 /**
  * React hook for managing asynchronous field validation with debouncing and abort controller lifecycle.
  *
@@ -76,6 +80,8 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
   const controllersRef = useRef<Map<string, AbortController>>(new Map());
   // One debounce timer per field
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Monotonic run id for validateAll; prevents stale runs from overwriting newer state.
+  const validateAllRunIdRef = useRef(0);
 
   // Clean up all timers and abort controllers on unmount
   useEffect(() => {
@@ -115,6 +121,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
    * Clear all async state, aborting all in-flight requests and clearing all debounce timers.
    */
   const clearAll = useCallback(() => {
+    validateAllRunIdRef.current += 1;
     cleanupTimersAndControllers(timersRef.current, controllersRef.current);
     setAsyncState({});
   }, []);
@@ -217,6 +224,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
    */
   const validateAll = useCallback(
     async (data: FormData, requirements: RequirementsObject): Promise<Record<string, string[]>> => {
+      const runId = ++validateAllRunIdRef.current;
       // Clear all debounce timers and abort existing controllers
       cleanupTimersAndControllers(timersRef.current, controllersRef.current);
 
@@ -240,10 +248,20 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
         });
 
         if (hasAsync) {
+          const syncState = checkField(requirements, field.id, data);
+          if (
+            !syncState.isVisible ||
+            syncState.isExcluded ||
+            syncState.errors.length > 0 ||
+            isEmptyValue(syncState.value)
+          ) {
+            continue;
+          }
+
           fieldsToValidate.push({
             fieldId: field.id,
             validators,
-            value: data[field.id],
+            value: syncState.value,
           });
         }
       }
@@ -257,7 +275,9 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
       for (const { fieldId } of fieldsToValidate) {
         validatingState[fieldId] = { isValidating: true, errors: [] };
       }
-      setAsyncState((prev) => ({ ...prev, ...validatingState }));
+      if (runId === validateAllRunIdRef.current) {
+        setAsyncState((prev) => ({ ...prev, ...validatingState }));
+      }
 
       // Create controllers and run validations in parallel
       const results = await Promise.allSettled(
@@ -293,7 +313,9 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
         }
       }
 
-      setAsyncState((prev) => ({ ...prev, ...finalState }));
+      if (runId === validateAllRunIdRef.current) {
+        setAsyncState((prev) => ({ ...prev, ...finalState }));
+      }
 
       return errorMap;
     },

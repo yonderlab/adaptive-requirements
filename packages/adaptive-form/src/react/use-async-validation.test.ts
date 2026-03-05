@@ -474,6 +474,127 @@ describe('useAsyncValidation', () => {
 
       expect(errorMap).toStrictEqual({});
     });
+
+    it('skips hidden, excluded, sync-invalid, and empty fields', async () => {
+      const emailUnique = createMockAsyncValidator(null);
+      const requirements = makeRequirements([
+        {
+          id: 'hiddenEmail',
+          type: 'text',
+          visibleWhen: { '==': [{ var: 'toggle' }, 'show'] },
+          validation: { validators: [{ name: 'email_unique' }] },
+        },
+        {
+          id: 'excludedEmail',
+          type: 'text',
+          excludeWhen: true,
+          validation: { validators: [{ name: 'email_unique' }] },
+        },
+        {
+          id: 'invalidEmail',
+          type: 'text',
+          validation: {
+            pattern: '^[^@]+@[^@]+$',
+            message: 'Invalid email',
+            validators: [{ name: 'email_unique' }],
+          },
+        },
+        {
+          id: 'emptyEmail',
+          type: 'text',
+          validation: { validators: [{ name: 'email_unique' }] },
+        },
+        {
+          id: 'validEmail',
+          type: 'text',
+          validation: { validators: [{ name: 'email_unique' }] },
+        },
+      ]);
+
+      const { result } = renderHook(() =>
+        useAsyncValidation({
+          asyncValidators: { email_unique: emailUnique },
+          syncValidatorKeys: new Set(),
+          debounceMs: 50,
+        }),
+      );
+
+      let errorMap: Record<string, string[]> = {};
+      await act(async () => {
+        errorMap = await result.current.validateAll(
+          {
+            toggle: 'hide',
+            hiddenEmail: 'hidden@example.com',
+            excludedEmail: 'excluded@example.com',
+            invalidEmail: 'not-an-email',
+            emptyEmail: '',
+            validEmail: 'valid@example.com',
+          },
+          requirements,
+        );
+      });
+
+      // eslint-disable-next-line vitest/prefer-called-times
+      expect(emailUnique).toHaveBeenCalledOnce();
+      expect(emailUnique).toHaveBeenCalledWith(
+        'valid@example.com',
+        undefined,
+        expect.objectContaining({ data: expect.objectContaining({ validEmail: 'valid@example.com' }) }),
+        expect.any(AbortSignal),
+      );
+      expect(errorMap['validEmail']).toStrictEqual([]);
+      expect(errorMap['hiddenEmail']).toBeUndefined();
+      expect(errorMap['excludedEmail']).toBeUndefined();
+      expect(errorMap['invalidEmail']).toBeUndefined();
+      expect(errorMap['emptyEmail']).toBeUndefined();
+    });
+
+    it('keeps newest validateAll result when calls overlap', async () => {
+      const resolvers: ((result: string | null) => void)[] = [];
+      const emailUnique: AsyncValidatorFn = vi.fn(
+        () =>
+          // eslint-disable-next-line promise/avoid-new
+          new Promise<string | null>((resolve) => {
+            resolvers.push(resolve);
+          }),
+      );
+
+      const requirements = makeRequirements([
+        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+      ]);
+
+      const { result } = renderHook(() =>
+        useAsyncValidation({
+          asyncValidators: { email_unique: emailUnique },
+          syncValidatorKeys: new Set(),
+        }),
+      );
+
+      let firstCall!: Promise<Record<string, string[]>>;
+      let secondCall!: Promise<Record<string, string[]>>;
+
+      await act(async () => {
+        firstCall = result.current.validateAll({ email: 'first@example.com' }, requirements);
+      });
+      await act(async () => {
+        secondCall = result.current.validateAll({ email: 'second@example.com' }, requirements);
+      });
+
+      expect(emailUnique).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        resolvers[1]!('Second error');
+        await secondCall;
+      });
+      expect(result.current.asyncState['email']).toStrictEqual({ isValidating: false, errors: ['Second error'] });
+
+      await act(async () => {
+        resolvers[0]!('First error');
+        await firstCall;
+      });
+
+      expect(result.current.asyncState['email']).toStrictEqual({ isValidating: false, errors: ['Second error'] });
+    });
   });
 
   // -----------------------------------------------------------------------

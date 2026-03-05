@@ -413,6 +413,37 @@ describe('dynamicForm async validation integration', () => {
     expect(mockRunAsyncValidators).not.toHaveBeenCalled();
   });
 
+  it('does not trigger async validation on blur for empty array values', async () => {
+    const requirements = makeRequirements([
+      {
+        id: 'emails',
+        type: 'text',
+        validation: {
+          validators: [{ name: 'email_unique', message: 'Email already taken' }],
+        },
+      },
+    ]);
+
+    const renderField = vi.fn((props: FieldRenderProps) => (
+      <button data-testid="blur-emails" type="button" onBlur={props.onBlur}>
+        Blur emails
+      </button>
+    ));
+
+    render(<DynamicForm requirements={requirements} defaultValue={{ emails: [] }} renderField={renderField} />);
+
+    await act(async () => {
+      fireEvent.blur(screen.getByTestId('blur-emails'));
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+      await vi.runAllTimersAsync();
+    });
+
+    expect(mockRunAsyncValidators).not.toHaveBeenCalled();
+  });
+
   it('blocks step navigation while async validation is in progress', async () => {
     let resolveValidation!: (errors: string[]) => void;
     mockRunAsyncValidators.mockImplementation(
