@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  builtInAsyncValidators,
-  callValidationApi,
-  isValidateResponse,
-} from './validate-api';
+import { builtInAsyncValidators, callValidationApi, isValidateResponse } from './validate-api';
 
 function mockFetch(response: { ok: boolean; status?: number; json: unknown }) {
   vi.stubGlobal(
@@ -22,9 +18,7 @@ describe('isValidateResponse', () => {
   });
 
   it('accepts a valid full response', () => {
-    expect(
-      isValidateResponse({ valid: false, message: 'Already taken' }),
-    ).toBeTruthy();
+    expect(isValidateResponse({ valid: false, message: 'Already taken' })).toBeTruthy();
   });
 
   it('rejects null', () => {
@@ -114,10 +108,7 @@ describe('callValidationApi', () => {
 
     await callValidationApi('iban_unique', 'DE89370400440532013000', undefined, controller.signal);
 
-    expect(fetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ signal: controller.signal }),
-    );
+    expect(fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ signal: controller.signal }));
   });
 
   it('rejects when fetch is aborted', async () => {
@@ -188,9 +179,6 @@ describe('builtInAsyncValidators', () => {
     const result = await builtInAsyncValidators['email_unique']!('test@example.com');
 
     expect(result).toBe('Email already exists');
-    expect(fetch).toHaveBeenCalledWith(
-      'https://api.kota.io/requirements/validate/email_unique',
-      expect.any(Object),
-    );
+    expect(fetch).toHaveBeenCalledWith('https://api.kota.io/requirements/validate/email_unique', expect.any(Object));
   });
 });

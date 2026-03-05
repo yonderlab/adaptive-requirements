@@ -63,9 +63,7 @@ export async function callValidationApi(
 // Built-in async validators — registered internally, consumers never see them.
 // Each wraps callValidationApi with the validator name.
 export const builtInAsyncValidators: Record<string, AsyncValidatorFn> = {
-  iban_unique: (value, params, _context, signal) =>
-    callValidationApi('iban_unique', value, params, signal),
+  iban_unique: (value, params, _context, signal) => callValidationApi('iban_unique', value, params, signal),
 
-  email_unique: (value, params, _context, signal) =>
-    callValidationApi('email_unique', value, params, signal),
+  email_unique: (value, params, _context, signal) => callValidationApi('email_unique', value, params, signal),
 };
