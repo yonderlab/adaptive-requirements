@@ -372,23 +372,23 @@ These are features expressed in the schema that DynamicForm handles automaticall
 
 ## DynamicForm props
 
-| Prop                      | Type                              | Default  | Description                                    |
-| ------------------------- | --------------------------------- | -------- | ---------------------------------------------- |
-| `requirements`            | `RequirementsObject`              | required | The schema from the API                        |
-| `defaultValue`            | `FormData`                        | `{}`     | Initial data (uncontrolled mode)               |
-| `value`                   | `FormData`                        | —        | Current data (controlled mode)                 |
-| `onChange`                | `(data: FormData) => void`        | —        | Change handler (required in controlled mode)   |
-| `onValidationStateChange` | `(isValidating: boolean) => void` | —        | Called when async validation state transitions |
-| `components`              | `Record<string, (props) => ReactNode>` | —   | Map of field type → render function             |
-| `renderField`             | `(props) => ReactNode`            | —        | Custom per-field render function               |
-| `renderStepNavigation`    | `(props) => ReactNode`            | —        | Custom step navigation UI                      |
-| `mapping`                 | `FieldMapping`                    | —        | Field ID remapping                             |
-| `clearHiddenValues`       | `boolean`                         | `false`  | Clear values when fields become hidden         |
-| `showAllSteps`            | `boolean`                         | `false`  | Render all flow steps as sections              |
-| `showAllErrors`           | `boolean`                         | `false`  | Show validation errors before interaction      |
-| `className`               | `string`                          | —        | Container class name                           |
-| `groupClassName`          | `string`                          | —        | Field group container class name               |
-| `children`                | `ReactNode`                       | —        | Content rendered after fields                  |
+| Prop                      | Type                                   | Default  | Description                                    |
+| ------------------------- | -------------------------------------- | -------- | ---------------------------------------------- |
+| `requirements`            | `RequirementsObject`                   | required | The schema from the API                        |
+| `defaultValue`            | `FormData`                             | `{}`     | Initial data (uncontrolled mode)               |
+| `value`                   | `FormData`                             | —        | Current data (controlled mode)                 |
+| `onChange`                | `(data: FormData) => void`             | —        | Change handler (required in controlled mode)   |
+| `onValidationStateChange` | `(isValidating: boolean) => void`      | —        | Called when async validation state transitions |
+| `components`              | `Record<string, (props) => ReactNode>` | —        | Map of field type → render function            |
+| `renderField`             | `(props) => ReactNode`                 | —        | Custom per-field render function               |
+| `renderStepNavigation`    | `(props) => ReactNode`                 | —        | Custom step navigation UI                      |
+| `mapping`                 | `FieldMapping`                         | —        | Field ID remapping                             |
+| `clearHiddenValues`       | `boolean`                              | `false`  | Clear values when fields become hidden         |
+| `showAllSteps`            | `boolean`                              | `false`  | Render all flow steps as sections              |
+| `showAllErrors`           | `boolean`                              | `false`  | Show validation errors before interaction      |
+| `className`               | `string`                               | —        | Container class name                           |
+| `groupClassName`          | `string`                               | —        | Field group container class name               |
+| `children`                | `ReactNode`                            | —        | Content rendered after fields                  |
 
 ## License
 

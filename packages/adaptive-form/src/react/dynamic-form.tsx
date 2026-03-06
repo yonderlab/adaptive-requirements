@@ -475,24 +475,26 @@ export function DynamicForm<TFieldId extends string = string>({
       }
 
       if (fieldType === 'computed') {
-        const renderComputed = renderFn as (props: FieldComputedProps<TFieldId>) => React.ReactNode;
-        return renderComputed({ field, value: fieldState.value, isVisible: fieldState.isVisible });
+        const ComputedField = renderFn as React.ComponentType<FieldComputedProps<TFieldId>>;
+        return <ComputedField field={field} value={fieldState.value} isVisible={fieldState.isVisible} />;
       }
 
-      const renderInput = renderFn as (props: FieldInputProps<TFieldId>) => React.ReactNode;
-      return renderInput({
-        field,
-        value: fieldState.value,
-        onChange: (newValue: FieldValue) => handleFieldChange(field.id, newValue),
-        onBlur: () => handleFieldBlur(field.id),
-        errors: getDisplayErrors(field.id, mergedErrors),
-        isRequired: fieldState.isRequired,
-        isVisible: fieldState.isVisible,
-        isReadOnly: fieldState.isReadOnly,
-        isValidating: fieldIsValidating,
-        options: fieldState.options,
-        label: fieldState.label,
-      });
+      const InputField = renderFn as React.ComponentType<FieldInputProps<TFieldId>>;
+      return (
+        <InputField
+          field={field}
+          value={fieldState.value}
+          onChange={(newValue: FieldValue) => handleFieldChange(field.id, newValue)}
+          onBlur={() => handleFieldBlur(field.id)}
+          errors={getDisplayErrors(field.id, mergedErrors)}
+          isRequired={fieldState.isRequired}
+          isVisible={fieldState.isVisible}
+          isReadOnly={fieldState.isReadOnly}
+          isValidating={fieldIsValidating}
+          options={fieldState.options}
+          label={fieldState.label}
+        />
+      );
     },
     [
       getFieldState,
