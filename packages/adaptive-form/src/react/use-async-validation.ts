@@ -1,6 +1,7 @@
 import type {
   AsyncValidatorFn,
   CustomValidator,
+  EngineOptions,
   FieldValue,
   FormData,
   RequirementsObject,
@@ -32,6 +33,8 @@ export interface UseAsyncValidationOptions {
   syncValidatorKeys: Set<string>;
   /** Debounce delay in milliseconds before async validation fires. Defaults to 300. */
   debounceMs?: number;
+  /** Engine options passed to checkField for sync gating in validateAll. */
+  engine?: EngineOptions;
 }
 
 export interface UseAsyncValidationReturn {
@@ -70,7 +73,7 @@ function cleanupTimersAndControllers(
  * Designed to be composed into DynamicForm or used standalone alongside useRequirements.
  */
 export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsyncValidationReturn {
-  const { asyncValidators, syncValidatorKeys, debounceMs = 300 } = options;
+  const { asyncValidators, syncValidatorKeys, debounceMs = 300, engine } = options;
 
   const [asyncState, setAsyncState] = useState<AsyncValidationState>({});
 
@@ -162,6 +165,17 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
           return;
         }
 
+        // Check if at least one validator is eligible for async validation
+        const asyncValidatorNames = new Set(Object.keys(asyncValidators));
+        const hasEligibleAsync = validators.some((v) => {
+          const key = v.type ?? v.name;
+          return key != null && asyncValidatorNames.has(key) && !syncValidatorKeys.has(key);
+        });
+
+        if (!hasEligibleAsync) {
+          return;
+        }
+
         // Create new AbortController
         const controller = new AbortController();
         controllersRef.current.set(fieldId, controller);
@@ -213,7 +227,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
 
       timersRef.current.set(fieldId, timer);
     },
-    [debounceMs, executeValidation],
+    [debounceMs, executeValidation, asyncValidators, syncValidatorKeys],
   );
 
   /**
@@ -246,7 +260,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
         });
 
         if (hasAsync) {
-          const syncState = checkField(requirements, field.id, data);
+          const syncState = checkField(requirements, field.id, data, engine);
           if (
             !syncState.isVisible ||
             syncState.isExcluded ||
@@ -317,7 +331,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
 
       return errorMap;
     },
-    [asyncValidators, syncValidatorKeys, executeValidation],
+    [asyncValidators, syncValidatorKeys, executeValidation, engine],
   );
 
   /**

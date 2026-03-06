@@ -324,6 +324,7 @@ The adapter accepts optional `serialize` and `deserialize` functions for custom 
 ```tsx
 import { DynamicForm } from '@kotaio/adaptive-form/react';
 import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik';
+import { useState } from 'react';
 
 function MyForm({ requirements }) {
   const formik = useFormikContext();
@@ -336,7 +337,7 @@ function MyForm({ requirements }) {
         requirements={requirements}
         value={value}
         onChange={onChange}
-        onValidatingChange={setIsValidating}
+        onValidationStateChange={setIsValidating}
         components={myComponents}
       />
       <button type="submit" disabled={isValidating || !formik.isValid}>
@@ -371,23 +372,23 @@ These are features expressed in the schema that DynamicForm handles automaticall
 
 ## DynamicForm props
 
-| Prop                   | Type                              | Default  | Description                                    |
-| ---------------------- | --------------------------------- | -------- | ---------------------------------------------- |
-| `requirements`         | `RequirementsObject`              | required | The schema from the API                        |
-| `defaultValue`         | `FormData`                        | `{}`     | Initial data (uncontrolled mode)               |
-| `value`                | `FormData`                        | —        | Current data (controlled mode)                 |
-| `onChange`             | `(data: FormData) => void`        | —        | Change handler (required in controlled mode)   |
-| `onValidatingChange`   | `(isValidating: boolean) => void` | —        | Called when async validation state transitions |
-| `components`           | `Record<string, ComponentType>`   | —        | Map of field type → React component            |
-| `renderField`          | `(props) => ReactNode`            | —        | Custom per-field render function               |
-| `renderStepNavigation` | `(props) => ReactNode`            | —        | Custom step navigation UI                      |
-| `mapping`              | `FieldMapping`                    | —        | Field ID remapping                             |
-| `clearHiddenValues`    | `boolean`                         | `false`  | Clear values when fields become hidden         |
-| `showAllSteps`         | `boolean`                         | `false`  | Render all flow steps as sections              |
-| `showAllErrors`        | `boolean`                         | `false`  | Show validation errors before interaction      |
-| `className`            | `string`                          | —        | Container class name                           |
-| `groupClassName`       | `string`                          | —        | Field group container class name               |
-| `children`             | `ReactNode`                       | —        | Content rendered after fields                  |
+| Prop                      | Type                              | Default  | Description                                    |
+| ------------------------- | --------------------------------- | -------- | ---------------------------------------------- |
+| `requirements`            | `RequirementsObject`              | required | The schema from the API                        |
+| `defaultValue`            | `FormData`                        | `{}`     | Initial data (uncontrolled mode)               |
+| `value`                   | `FormData`                        | —        | Current data (controlled mode)                 |
+| `onChange`                | `(data: FormData) => void`        | —        | Change handler (required in controlled mode)   |
+| `onValidationStateChange` | `(isValidating: boolean) => void` | —        | Called when async validation state transitions |
+| `components`              | `Record<string, ComponentType>`   | —        | Map of field type → React component            |
+| `renderField`             | `(props) => ReactNode`            | —        | Custom per-field render function               |
+| `renderStepNavigation`    | `(props) => ReactNode`            | —        | Custom step navigation UI                      |
+| `mapping`                 | `FieldMapping`                    | —        | Field ID remapping                             |
+| `clearHiddenValues`       | `boolean`                         | `false`  | Clear values when fields become hidden         |
+| `showAllSteps`            | `boolean`                         | `false`  | Render all flow steps as sections              |
+| `showAllErrors`           | `boolean`                         | `false`  | Show validation errors before interaction      |
+| `className`               | `string`                          | —        | Container class name                           |
+| `groupClassName`          | `string`                          | —        | Field group container class name               |
+| `children`                | `ReactNode`                       | —        | Content rendered after fields                  |
 
 ## License
 

@@ -41,18 +41,31 @@ export async function callValidationApi(
   params?: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<string | null> {
-  const response = await fetch(`${VALIDATE_BASE_URL}/${validatorName}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value, params } satisfies ValidateRequest),
-    signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${VALIDATE_BASE_URL}/${validatorName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value, params } satisfies ValidateRequest),
+      signal,
+    });
+  } catch {
+    // Network error or aborted — fail open
+    return null;
+  }
 
   if (!response.ok) {
     return null;
   }
 
-  const data: unknown = await response.json();
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    // Malformed JSON — fail open
+    return null;
+  }
+
   if (!isValidateResponse(data)) {
     return null;
   }

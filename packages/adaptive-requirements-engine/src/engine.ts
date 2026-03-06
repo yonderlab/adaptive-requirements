@@ -565,6 +565,21 @@ export function runCustomValidators(
 }
 
 /**
+ * Safely invoke an async validator function.
+ * Wraps the call so that synchronous throws from consumer-provided validators
+ * become rejected promises rather than breaking the validation flow.
+ */
+async function safeAsyncCall(
+  fn: AsyncValidatorFn,
+  value: FieldValue,
+  params: Record<string, unknown> | undefined,
+  context: RuleContext,
+  signal: AbortSignal | undefined,
+): Promise<string | null> {
+  return await fn(value, params, context, signal);
+}
+
+/**
  * Run async validators on a field value.
  * Only runs validators that exist in the asyncValidators registry AND are NOT in syncValidatorKeys
  * (sync validators take precedence). Respects params.when conditional guard (evaluated synchronously).
@@ -613,7 +628,7 @@ export async function runAsyncValidators(
 
     pending.push({
       validator,
-      promise: asyncFn(value, validator.params, context, signal),
+      promise: safeAsyncCall(asyncFn, value, validator.params, context, signal),
     });
   }
 
@@ -869,8 +884,8 @@ export async function checkFieldAsync<TFieldId extends string = string>(
     return syncResult;
   }
 
-  // Short-circuit: value is empty
-  const fieldValue = data[fieldId];
+  // Short-circuit: value is empty (use syncResult.value for computed field support)
+  const fieldValue = syncResult.value;
   const empty =
     fieldValue === undefined ||
     fieldValue === null ||

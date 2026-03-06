@@ -124,9 +124,9 @@ describe('callValidationApi', () => {
     );
 
     controller.abort();
-    await expect(
-      callValidationApi('iban_unique', 'DE89370400440532013000', undefined, controller.signal),
-    ).rejects.toThrow('The operation was aborted.');
+    // With error handling, aborted requests fail open (return null) rather than rejecting
+    const result = await callValidationApi('iban_unique', 'DE89370400440532013000', undefined, controller.signal);
+    expect(result).toBeNull();
   });
 
   it('sends request without params when none provided', async () => {

@@ -444,22 +444,22 @@ describe('dynamicForm async validation integration', () => {
     expect(mockRunAsyncValidators).not.toHaveBeenCalled();
   });
 
-  it('does not call onValidatingChange on initial mount', () => {
-    const onValidatingChange = vi.fn();
+  it('does not call onValidationStateChange on initial mount', () => {
+    const onValidationStateChange = vi.fn();
 
     render(
       <DynamicForm
         requirements={makeAsyncRequirements()}
         defaultValue={{ email: 'test@test.com' }}
-        onValidatingChange={onValidatingChange}
+        onValidationStateChange={onValidationStateChange}
         components={testComponents}
       />,
     );
 
-    expect(onValidatingChange).not.toHaveBeenCalled();
+    expect(onValidationStateChange).not.toHaveBeenCalled();
   });
 
-  it('calls onValidatingChange on async validation transitions', async () => {
+  it('calls onValidationStateChange on async validation transitions', async () => {
     let resolveValidation!: (errors: string[]) => void;
     mockRunAsyncValidators.mockImplementation(
       () =>
@@ -469,13 +469,13 @@ describe('dynamicForm async validation integration', () => {
         }),
     );
 
-    const onValidatingChange = vi.fn();
+    const onValidationStateChange = vi.fn();
 
     render(
       <DynamicForm
         requirements={makeAsyncRequirements()}
         defaultValue={{ email: 'test@test.com' }}
-        onValidatingChange={onValidatingChange}
+        onValidationStateChange={onValidationStateChange}
         components={testComponents}
       />,
     );
@@ -492,7 +492,7 @@ describe('dynamicForm async validation integration', () => {
       resolveValidation([]);
     });
 
-    expect(onValidatingChange.mock.calls).toStrictEqual([[true], [false]]);
+    expect(onValidationStateChange.mock.calls).toStrictEqual([[true], [false]]);
   });
 
   it('blocks step navigation while async validation is in progress', async () => {
