@@ -79,7 +79,7 @@ The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`
 
 > **Tip:** In controlled mode, define your `components` object outside the component or memoize it with `useMemo` to keep stable references. Inline arrow functions create new component identities each render, which causes React to remount fields (losing focus and internal state).
 
-If you need an explicit annotation (e.g. for a standalone variable), `FieldInputProps` is the only exported type:
+If you need an explicit annotation (e.g. for a standalone variable), `FieldInputProps` is exported for typing component renderers:
 
 ```tsx
 import type { FieldInputProps } from '@kotaio/adaptive-form/react';
