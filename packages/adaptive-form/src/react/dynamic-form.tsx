@@ -21,6 +21,7 @@ import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } fr
 
 // eslint-disable-next-line import/no-relative-parent-imports
 import { builtInAsyncValidators } from '../core/validate-api';
+import { isEmptyValue } from './is-empty-value';
 import { useAsyncValidation } from './use-async-validation';
 import { usePhoneHome } from './use-phone-home';
 import { useRequirements } from './use-requirements';
@@ -29,10 +30,6 @@ const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'pro
 
 /** Sync validator keys — module-level constant since builtInValidators is static */
 const SYNC_VALIDATOR_KEYS = new Set<string>(Object.keys(builtInValidators));
-
-function isEmptyValue(value: FieldValue): boolean {
-  return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
-}
 
 /**
  * Props for individual field input components

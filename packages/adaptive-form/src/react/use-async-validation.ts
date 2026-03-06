@@ -10,6 +10,8 @@ import type {
 import { checkField, runAsyncValidators } from '@kotaio/adaptive-requirements-engine';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { isEmptyValue } from './is-empty-value';
+
 /**
  * Per-field async validation state.
  */
@@ -59,10 +61,6 @@ function cleanupTimersAndControllers(
   }
   timers.clear();
   controllers.clear();
-}
-
-function isEmptyValue(value: FieldValue): boolean {
-  return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 }
 
 /**
