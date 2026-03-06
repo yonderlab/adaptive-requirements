@@ -34,8 +34,10 @@ export {
   runRule,
   builtInValidators,
   runCustomValidators,
+  runAsyncValidators,
   resolveFieldOptions,
   checkField,
+  checkFieldAsync,
   calculateData,
   clearHiddenFieldValues,
   applyExclusions,
@@ -45,7 +47,7 @@ export {
   getInitialStepId,
   createAdapter,
 } from './engine';
-export type { RuleContext, ValidatorFn, EngineOptions } from './engine';
+export type { RuleContext, ValidatorFn, AsyncValidatorFn, EngineOptions } from './engine';
 
 // Validate
 export { validateRequirementsObject, validateDatasetItems } from './validate';
