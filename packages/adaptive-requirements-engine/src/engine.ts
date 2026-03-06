@@ -585,7 +585,10 @@ async function safeAsyncCall(
  * (sync validators take precedence). Respects params.when conditional guard (evaluated synchronously).
  * Runs matching validators in parallel via Promise.allSettled.
  * Aborted signals cause early exit or result discard.
- * Rejected promises are silently swallowed (matches sync pattern).
+ * Rejected promises from async validators are silently ignored so that a failing
+ * async validator does not break overall validation (fail-open on rejection).
+ * Note: this is more permissive than the synchronous validator path, where thrown
+ * errors will still surface to the caller.
  */
 export async function runAsyncValidators(
   value: FieldValue,

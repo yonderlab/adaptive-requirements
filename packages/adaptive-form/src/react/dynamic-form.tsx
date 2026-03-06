@@ -299,11 +299,17 @@ export function DynamicForm<TFieldId extends string = string>({
     asyncState,
     validateField: triggerAsyncValidation,
     clearField: clearAsyncField,
+    clearAll: clearAllAsync,
     isValidating: isAsyncValidating,
   } = useAsyncValidation({
     asyncValidators: builtInAsyncValidators,
     syncValidatorKeys: SYNC_VALIDATOR_KEYS,
   });
+
+  // Reset async validation state when requirements (schema/fields) change
+  useEffect(() => {
+    clearAllAsync();
+  }, [fieldIdKey, clearAllAsync]);
 
   const previousIsAsyncValidatingRef = useRef(isAsyncValidating);
   useEffect(() => {
@@ -345,19 +351,19 @@ export function DynamicForm<TFieldId extends string = string>({
     if (!flow || currentStepFields.length === 0) {
       return true;
     }
-    if (isAsyncValidating) {
-      return false;
-    }
     return currentStepFields.every((field) => {
       const state = getFieldState(field.id);
       if (!state.isVisible) {
         return true;
       }
       const asyncFieldState = asyncState[field.id];
+      if (asyncFieldState?.isValidating) {
+        return false;
+      }
       const asyncErrors = asyncFieldState?.errors ?? [];
       return state.errors.length === 0 && asyncErrors.length === 0;
     });
-  }, [flow, currentStepFields, getFieldState, isAsyncValidating, asyncState]);
+  }, [flow, currentStepFields, getFieldState, asyncState]);
 
   const nextStepId = flow ? getNextStepId(flow, currentStepId, mergedFormData, { requirements }) : undefined;
   const previousStepId = flow ? getPreviousStepId(flow, currentStepId) : undefined;

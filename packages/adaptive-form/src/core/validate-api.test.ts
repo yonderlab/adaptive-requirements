@@ -111,7 +111,7 @@ describe('callValidationApi', () => {
     expect(fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ signal: controller.signal }));
   });
 
-  it('rejects when fetch is aborted', async () => {
+  it('returns null when fetch is aborted', async () => {
     const controller = new AbortController();
     vi.stubGlobal(
       'fetch',
