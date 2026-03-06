@@ -25,7 +25,7 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## DynamicForm Component
 
-- Pluggable component system: `components` prop maps field type strings to React components
+- Pluggable component system: `components` prop maps field type strings to render functions
 - Two rendering interfaces: `FieldInputProps` (interactive fields) and `FieldComputedProps` (display-only computed fields)
 - `renderField` prop for full per-field rendering control
 - `renderStepNavigation` prop for custom step navigation UI
@@ -65,7 +65,7 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 | Extension               | Mechanism                                                             |
 | ----------------------- | --------------------------------------------------------------------- |
-| Custom field types      | `components` prop — map any string to a React component               |
+| Custom field types      | `components` prop — map any string to a render function               |
 | Custom validators       | `EngineOptions.customValidators` — `Record<string, ValidatorFn>`      |
 | Custom label resolution | `EngineOptions.labelResolver` — integrate with i18n systems           |
 | Custom field rendering  | `renderField` prop — full control over per-field rendering            |

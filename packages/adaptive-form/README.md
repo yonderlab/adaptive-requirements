@@ -43,10 +43,10 @@ function RequirementsForm({ requirementId }) {
         requirements={requirements}
         defaultValue={{}}
         components={{
-          text: TextInput,
-          number: NumberInput,
-          select: SelectInput,
-          checkbox: CheckboxInput,
+          text: (props) => <TextInput {...props} />,
+          number: (props) => <NumberInput {...props} />,
+          select: (props) => <SelectInput {...props} />,
+          checkbox: (props) => <CheckboxInput {...props} />,
         }}
       />
       <button type="submit">Submit</button>
@@ -75,7 +75,7 @@ function MyForm({ requirements }) {
 
 ## Providing components
 
-The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`) to your React components. DynamicForm calls your component with these props:
+The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`) to render functions. Each render function receives typed props with full autocomplete — no need to import `FieldInputProps`:
 
 | Prop         | Type                                 | Description                                                                            |
 | ------------ | ------------------------------------ | -------------------------------------------------------------------------------------- |
@@ -151,8 +151,8 @@ function ComputedDisplay({ field, value, isVisible }) {
 
 // Register it in your components map:
 const components = {
-  text: TextInput,
-  computed: ComputedDisplay,
+  text: (props) => <TextInput {...props} />,
+  computed: (props) => <ComputedDisplay {...props} />,
 };
 ```
 
@@ -379,7 +379,7 @@ These are features expressed in the schema that DynamicForm handles automaticall
 | `value`                   | `FormData`                        | —        | Current data (controlled mode)                 |
 | `onChange`                | `(data: FormData) => void`        | —        | Change handler (required in controlled mode)   |
 | `onValidationStateChange` | `(isValidating: boolean) => void` | —        | Called when async validation state transitions |
-| `components`              | `Record<string, ComponentType>`   | —        | Map of field type → React component            |
+| `components`              | `Record<string, (props) => ReactNode>` | —   | Map of field type → render function             |
 | `renderField`             | `(props) => ReactNode`            | —        | Custom per-field render function               |
 | `renderStepNavigation`    | `(props) => ReactNode`            | —        | Custom step navigation UI                      |
 | `mapping`                 | `FieldMapping`                    | —        | Field ID remapping                             |

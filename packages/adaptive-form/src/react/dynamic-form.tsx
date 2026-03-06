@@ -130,18 +130,18 @@ export interface DynamicFormProps<TFieldId extends string = string> {
   /** Optional field ID mapping */
   mapping?: FieldMapping;
 
-  /** Component map for different field types */
+  /** Component map for different field types — render functions receive typed props with full autocomplete */
   components?: {
-    text?: React.ComponentType<FieldInputProps<TFieldId>>;
-    number?: React.ComponentType<FieldInputProps<TFieldId>>;
-    email?: React.ComponentType<FieldInputProps<TFieldId>>;
-    select?: React.ComponentType<FieldInputProps<TFieldId>>;
-    checkbox?: React.ComponentType<FieldInputProps<TFieldId>>;
-    radio?: React.ComponentType<FieldInputProps<TFieldId>>;
-    computed?: React.ComponentType<FieldComputedProps<TFieldId>>;
+    text?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
+    number?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
+    email?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
+    select?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
+    checkbox?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
+    radio?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
+    computed?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
     [key: string]:
-      | React.ComponentType<FieldInputProps<TFieldId>>
-      | React.ComponentType<FieldComputedProps<TFieldId>>
+      | ((props: FieldInputProps<TFieldId>) => React.ReactNode)
+      | ((props: FieldComputedProps<TFieldId>) => React.ReactNode)
       | undefined;
   };
 
@@ -203,7 +203,7 @@ export interface DynamicFormProps<TFieldId extends string = string> {
  * <DynamicForm
  *   requirements={requirements}
  *   defaultValue={{ firstName: 'John' }}
- *   components={{ text: TextInput, number: NumberInput }}
+ *   components={{ text: (props) => <TextInput {...props} />, number: (props) => <NumberInput {...props} /> }}
  * />
  *
  * // With flow (step-based): requirements.flow is used automatically
@@ -211,7 +211,7 @@ export interface DynamicFormProps<TFieldId extends string = string> {
  *   requirements={requirementsWithFlow}
  *   defaultValue={{}}
  *   renderStepNavigation={({ canGoPrevious, canGoNext, onPrevious, onNext }) => (...)}
- *   components={{ text: TextInput }}
+ *   components={{ text: (props) => <TextInput {...props} /> }}
  * />
  * ```
  */
@@ -462,39 +462,37 @@ export function DynamicForm<TFieldId extends string = string>({
       }
 
       const fieldType = field.type;
-      const Component = components?.[fieldType];
+      const renderFn = components?.[fieldType];
 
-      if (!Component) {
+      if (!renderFn) {
         if (isDev) {
           console.warn(
-            `[DynamicForm] No component found for field type: "${fieldType}". ` +
-              `Provide a component via the "components" prop or use "renderField" for custom rendering.`,
+            `[DynamicForm] No render function found for field type: "${fieldType}". ` +
+              `Provide a render function via the "components" prop or use "renderField" for custom rendering.`,
           );
         }
         return null;
       }
 
       if (fieldType === 'computed') {
-        const ComputedComponent = Component as React.ComponentType<FieldComputedProps<TFieldId>>;
-        return <ComputedComponent field={field} value={fieldState.value} isVisible={fieldState.isVisible} />;
+        const renderComputed = renderFn as (props: FieldComputedProps<TFieldId>) => React.ReactNode;
+        return renderComputed({ field, value: fieldState.value, isVisible: fieldState.isVisible });
       }
 
-      const InputComponent = Component as React.ComponentType<FieldInputProps<TFieldId>>;
-      return (
-        <InputComponent
-          field={field}
-          value={fieldState.value}
-          onChange={(newValue: FieldValue) => handleFieldChange(field.id, newValue)}
-          onBlur={() => handleFieldBlur(field.id)}
-          errors={getDisplayErrors(field.id, mergedErrors)}
-          isRequired={fieldState.isRequired}
-          isVisible={fieldState.isVisible}
-          isReadOnly={fieldState.isReadOnly}
-          isValidating={fieldIsValidating}
-          options={fieldState.options}
-          label={fieldState.label}
-        />
-      );
+      const renderInput = renderFn as (props: FieldInputProps<TFieldId>) => React.ReactNode;
+      return renderInput({
+        field,
+        value: fieldState.value,
+        onChange: (newValue: FieldValue) => handleFieldChange(field.id, newValue),
+        onBlur: () => handleFieldBlur(field.id),
+        errors: getDisplayErrors(field.id, mergedErrors),
+        isRequired: fieldState.isRequired,
+        isVisible: fieldState.isVisible,
+        isReadOnly: fieldState.isReadOnly,
+        isValidating: fieldIsValidating,
+        options: fieldState.options,
+        label: fieldState.label,
+      });
     },
     [
       getFieldState,

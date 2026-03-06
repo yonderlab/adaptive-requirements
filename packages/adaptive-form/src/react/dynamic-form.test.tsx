@@ -34,7 +34,7 @@ function TestTextInput({ field, value, onChange, onBlur, errors, isVisible, isVa
   );
 }
 
-const testComponents = { text: TestTextInput };
+const testComponents = { text: (props: FieldInputProps) => <TestTextInput {...props} /> };
 
 function makeRequirements(fields: RequirementsObject['fields']): RequirementsObject {
   return { fields };
