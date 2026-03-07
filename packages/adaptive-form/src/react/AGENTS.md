@@ -6,13 +6,13 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## Key Files
 
-| File                      | Purpose                                                       |
-| ------------------------- | ------------------------------------------------------------- |
+| File                      | Purpose                                                                    |
+| ------------------------- | -------------------------------------------------------------------------- |
 | `index.ts`                | Public API: exports `DynamicForm`, `useAsyncValidation`, `FieldInputProps` |
-| `use-requirements.ts`     | `useRequirements`, `useFieldState`, `useCalculatedData` hooks |
-| `use-async-validation.ts` | `useAsyncValidation` hook — debounce, abort, per-field state  |
-| `use-phone-home.ts`       | Version check hook (triggers on mount)                        |
-| `dynamic-form.tsx`        | `DynamicForm` component                                       |
+| `use-requirements.ts`     | `useRequirements`, `useFieldState`, `useCalculatedData` hooks              |
+| `use-async-validation.ts` | `useAsyncValidation` hook — debounce, abort, per-field state               |
+| `use-phone-home.ts`       | Version check hook (triggers on mount)                                     |
+| `dynamic-form.tsx`        | `DynamicForm` component                                                    |
 
 ## Hooks
 
