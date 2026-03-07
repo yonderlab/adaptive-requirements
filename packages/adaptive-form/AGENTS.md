@@ -16,7 +16,7 @@ React integration layer and browser utilities: `DynamicForm` component, hooks, f
 | --------------------------------------- | ----------------------------------------------------------------- |
 | `src/core/phone-home.ts`                | Version check ("phone home") utility — browser-only, no React dep |
 | `src/core/validate-api.ts`              | Async validation API client and `builtInAsyncValidators` registry |
-| `src/react/index.ts`                    | Public API: exports `DynamicForm`, `useAsyncValidation`           |
+| `src/react/index.ts`                    | Public API: exports `DynamicForm`, `useAsyncValidation`, `FieldInputProps` |
 | `src/react/use-requirements.ts`         | React hooks (internal): `useRequirements`, `useFieldState`        |
 | `src/react/use-async-validation.ts`     | React hook: `useAsyncValidation` — debounce, abort, async state   |
 | `src/react/use-phone-home.ts`           | React hook (internal): triggers version check on mount            |
