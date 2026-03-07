@@ -6,13 +6,13 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## Key Files
 
-| File                      | Purpose                                                       |
-| ------------------------- | ------------------------------------------------------------- |
-| `index.ts`                | Public API: exports `DynamicForm`, `useAsyncValidation`       |
-| `use-requirements.ts`     | `useRequirements`, `useFieldState`, `useCalculatedData` hooks |
-| `use-async-validation.ts` | `useAsyncValidation` hook — debounce, abort, per-field state  |
-| `use-phone-home.ts`       | Version check hook (triggers on mount)                        |
-| `dynamic-form.tsx`        | `DynamicForm` component                                       |
+| File                      | Purpose                                                                    |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `index.ts`                | Public API: exports `DynamicForm`, `useAsyncValidation`, `FieldInputProps` |
+| `use-requirements.ts`     | `useRequirements`, `useFieldState`, `useCalculatedData` hooks              |
+| `use-async-validation.ts` | `useAsyncValidation` hook — debounce, abort, per-field state               |
+| `use-phone-home.ts`       | Version check hook (triggers on mount)                                     |
+| `dynamic-form.tsx`        | `DynamicForm` component                                                    |
 
 ## Hooks
 
@@ -25,7 +25,7 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## DynamicForm Component
 
-- Pluggable component system: `components` prop maps field type strings to React components
+- Pluggable component system: `components` prop maps field type strings to render functions (typed as `(props) => ReactNode` for autocomplete, rendered via JSX internally to preserve component boundaries)
 - Two rendering interfaces: `FieldInputProps` (interactive fields) and `FieldComputedProps` (display-only computed fields)
 - `renderField` prop for full per-field rendering control
 - `renderStepNavigation` prop for custom step navigation UI
@@ -65,7 +65,7 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 | Extension               | Mechanism                                                             |
 | ----------------------- | --------------------------------------------------------------------- |
-| Custom field types      | `components` prop — map any string to a React component               |
+| Custom field types      | `components` prop — map any string to a render function               |
 | Custom validators       | `EngineOptions.customValidators` — `Record<string, ValidatorFn>`      |
 | Custom label resolution | `EngineOptions.labelResolver` — integrate with i18n systems           |
 | Custom field rendering  | `renderField` prop — full control over per-field rendering            |
