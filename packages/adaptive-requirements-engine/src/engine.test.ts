@@ -152,6 +152,33 @@ describe(runRule, () => {
     });
   });
 
+  describe('match operation', () => {
+    it('should match a regex pattern', () => {
+      const context = { data: { val: 'ABC123' } };
+      expect(runRule({ match: [{ var: 'val' }, '^[A-Z]+\\d+$'] }, context)).toBe(true);
+    });
+
+    it('should return false for non-matching pattern', () => {
+      const context = { data: { val: '123abc' } };
+      expect(runRule({ match: [{ var: 'val' }, '^[A-Z]+$'] }, context)).toBe(false);
+    });
+
+    it('should support case-insensitive flag', () => {
+      const context = { data: { val: 'abc' } };
+      expect(runRule({ match: [{ var: 'val' }, '^[A-Z]+$', 'i'] }, context)).toBe(true);
+    });
+
+    it('should return false for non-string value', () => {
+      const context = { data: { val: 42 } };
+      expect(runRule({ match: [{ var: 'val' }, '^\\d+$'] }, context)).toBe(false);
+    });
+
+    it('should return false for invalid regex pattern', () => {
+      const context = { data: { val: 'test' } };
+      expect(runRule({ match: [{ var: 'val' }, '[invalid'] }, context)).toBe(false);
+    });
+  });
+
   describe('string operations', () => {
     it('should handle cat operator', () => {
       const context = { data: { first: 'John', last: 'Doe' } };
