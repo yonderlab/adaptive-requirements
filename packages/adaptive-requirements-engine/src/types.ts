@@ -56,7 +56,9 @@ export type Rule =
   | { today: Record<string, never> }
   // String operations
   | { cat: Rule[] }
-  | { substr: [Rule, Rule, Rule?] };
+  | { substr: [Rule, Rule, Rule?] }
+  // Pattern matching
+  | { match: [Rule, Rule] | [Rule, Rule, Rule] };
 
 /**
  * Localized label - supports both string and localized object (requirements package shape).
@@ -85,30 +87,44 @@ export interface ResolvedFieldOption {
 }
 
 /**
- * Custom validator definition.
- * Accepts both `name` (requirements package shape) and `type` (UI shape).
- * At least one of `type` or `name` must be provided for the validator to be executed by the engine.
- * Params may include primitive values and optional `when` (JSON Logic rule) for conditional execution.
+ * A validation rule expressed as a JSON Logic expression with an error message.
+ * Truthy result = valid, falsy result = error.
  */
-export interface CustomValidator {
-  type?: string;
-  name?: string;
-  params?: Record<string, unknown>;
-  message?: string;
+export interface ValidationRule {
+  /** JSON Logic rule. Truthy = valid, falsy = shows error message. */
+  rule: Rule;
+  /** Error message displayed when rule evaluates to falsy. */
+  message: string;
+  /** Optional JSON Logic rule for conditional execution. Rule only runs when when evaluates truthy. */
+  when?: Rule;
 }
 
 /**
- * Field validation rules
+ * Reference to an async validator function in the runtime registry.
+ * Used for server-side validation (e.g., uniqueness checks) that cannot be expressed as JSON Logic.
+ */
+export interface AsyncValidatorRef {
+  /** Lookup key for the async validator in EngineOptions.asyncValidators */
+  name: string;
+  /** Optional parameters passed to the async validator function */
+  params?: Record<string, unknown>;
+  /** Error message override (falls back to validator function return) */
+  message?: string;
+  /** Optional JSON Logic rule for conditional execution */
+  when?: Rule;
+}
+
+/**
+ * Field validation configuration.
+ * Sync validation is expressed as JSON Logic rules. Async validation references runtime functions.
  */
 export interface FieldValidation {
   required?: boolean;
   requireWhen?: Rule;
-  min?: number;
-  max?: number;
-  pattern?: string;
-  message?: string;
-  /** Custom validators */
-  validators?: CustomValidator[];
+  /** Data-driven sync validation rules evaluated as JSON Logic. Truthy = valid. */
+  rules?: ValidationRule[];
+  /** References to async validator functions for server-side validation */
+  asyncValidators?: AsyncValidatorRef[];
 }
 
 /**

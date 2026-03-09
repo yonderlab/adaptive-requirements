@@ -1264,6 +1264,29 @@ describe('file field type', () => {
   });
 });
 
+describe('validation rules (JSON Logic)', () => {
+  it('should fail when rule evaluates to falsy', () => {
+    const req: RequirementsObject = {
+      fields: [
+        {
+          id: 'age',
+          type: 'number',
+          validation: {
+            rules: [
+              {
+                rule: { '>=': [{ var: 'age' }, 18] },
+                message: 'Must be at least 18',
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const state = checkField(req, 'age', { age: 15 });
+    expect(state.errors).toContain('Must be at least 18');
+  });
+});
+
 // Helper: wraps a sync predicate in an async validator that does a real await (satisfies require-await)
 async function asyncUniqueValidator(value: unknown): Promise<string | null> {
   await Promise.resolve();
