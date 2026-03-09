@@ -420,10 +420,6 @@ function validateFileType(value: FieldValue, accept: string[]): string | null {
     return null;
   }
 
-  // Extract filename from "name|size" encoding
-  const filename = value.split(';')[0]!.split('|')[0]!.toLowerCase();
-  const extension = filename.includes('.') ? `.${filename.split('.').pop()!}` : '';
-
   const extCategories: Record<string, string[]> = {
     image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff', '.avif'],
     audio: ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.wma'],
@@ -431,20 +427,30 @@ function validateFileType(value: FieldValue, accept: string[]): string | null {
     application: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.7z'],
   };
 
-  const isAccepted = accept.some((type: string) => {
-    const t = type.toLowerCase().trim();
-    if (t.startsWith('.')) {
-      return extension === t;
-    }
-    if (t.endsWith('/*')) {
-      const category = t.split('/')[0]!;
-      return extCategories[category]?.includes(extension) ?? false;
-    }
-    return false;
-  });
+  // Check each file in semicolon-delimited list
+  const files = value.split(';').filter(Boolean);
+  for (const file of files) {
+    const filename = file.split('|')[0]!.toLowerCase();
+    const extension = filename.includes('.') ? `.${filename.split('.').pop()!}` : '';
 
-  if (!isAccepted) {
-    return `File type not accepted. Allowed: ${accept.join(', ')}`;
+    const isAccepted = accept.some((type) => {
+      if (typeof type !== 'string') {
+        return false;
+      }
+      const t = type.toLowerCase().trim();
+      if (t.startsWith('.')) {
+        return extension === t;
+      }
+      if (t.endsWith('/*')) {
+        const category = t.split('/')[0]!;
+        return extCategories[category]?.includes(extension) ?? false;
+      }
+      return false;
+    });
+
+    if (!isAccepted) {
+      return `File type not accepted. Allowed: ${accept.join(', ')}`;
+    }
   }
   return null;
 }
@@ -525,8 +531,12 @@ export async function runAsyncValidators(
   const pending: { ref: AsyncValidatorRef; promise: Promise<string | null> }[] = [];
 
   for (const ref of refs) {
+    if (!Object.hasOwn(asyncValidators, ref.name)) {
+      continue;
+    }
+
     const asyncFn = asyncValidators[ref.name];
-    if (!asyncFn) {
+    if (typeof asyncFn !== 'function') {
       continue;
     }
 
@@ -832,6 +842,7 @@ export async function checkFieldAsync<TFieldId extends string = string>(
 export function calculateData<TFieldId extends string = string>(
   requirements: RequirementsObject<TFieldId>,
   inputData: FormData,
+  customOperations?: Record<string, (...args: unknown[]) => unknown>,
 ): FormData {
   const calculatedData: FormData = {};
 
@@ -848,7 +859,7 @@ export function calculateData<TFieldId extends string = string>(
         answers: { ...inputData, ...calculatedData },
       };
 
-      const result = runRule(computeRule, context);
+      const result = runRule(computeRule, context, customOperations);
       // Coerce NaN to 0 for consistency with original engine behavior
       calculatedData[field.id] = typeof result === 'number' && Number.isNaN(result) ? 0 : result;
     }
@@ -865,6 +876,7 @@ export function calculateData<TFieldId extends string = string>(
 export function clearHiddenFieldValues<TFieldId extends string = string>(
   requirements: RequirementsObject<TFieldId>,
   formData: FormData,
+  customOperations?: Record<string, (...args: unknown[]) => unknown>,
 ): FormData {
   let data = { ...formData };
   let changed = true;
@@ -880,7 +892,7 @@ export function clearHiddenFieldValues<TFieldId extends string = string>(
       }
 
       const context: RuleContext = { data, answers: data };
-      const isVisible = !!runRule(field.visibleWhen, context);
+      const isVisible = !!runRule(field.visibleWhen, context, customOperations);
 
       if (!isVisible && data[field.id] !== undefined) {
         data[field.id] = undefined;
@@ -889,7 +901,7 @@ export function clearHiddenFieldValues<TFieldId extends string = string>(
     }
 
     if (changed) {
-      const computed = calculateData(requirements, data);
+      const computed = calculateData(requirements, data, customOperations);
       data = { ...data, ...computed };
     }
   }
@@ -906,6 +918,7 @@ export function clearHiddenFieldValues<TFieldId extends string = string>(
 export function applyExclusions<TFieldId extends string = string>(
   requirements: RequirementsObject<TFieldId>,
   formData: FormData,
+  customOperations?: Record<string, (...args: unknown[]) => unknown>,
 ): FormData {
   let data = { ...formData };
   let changed = true;
@@ -921,7 +934,7 @@ export function applyExclusions<TFieldId extends string = string>(
       }
 
       const context: RuleContext = { data, answers: data };
-      const isExcluded = !!runRule(field.excludeWhen, context);
+      const isExcluded = !!runRule(field.excludeWhen, context, customOperations);
 
       if (isExcluded && data[field.id] !== undefined) {
         data[field.id] = undefined;
@@ -930,7 +943,7 @@ export function applyExclusions<TFieldId extends string = string>(
     }
 
     if (changed) {
-      const computed = calculateData(requirements, data);
+      const computed = calculateData(requirements, data, customOperations);
       data = { ...data, ...computed };
     }
   }
@@ -1004,7 +1017,7 @@ export function getNextStepId<TFieldId extends string = string>(
 
   const requirements = options?.requirements;
   if (candidate !== undefined && requirements && flow.steps.some((s) => s.id === candidate)) {
-    const mergedData = { ...formData, ...calculateData(requirements, formData) };
+    const mergedData = { ...formData, ...calculateData(requirements, formData, options?.engine?.customOperations) };
     if (!stepHasVisibleFields(requirements, candidate, mergedData, options?.engine)) {
       const candidateIndex = flow.steps.findIndex((s) => s.id === candidate);
       if (candidateIndex !== -1 && candidateIndex + 1 < flow.steps.length) {
@@ -1040,7 +1053,7 @@ export function getInitialStepId<TFieldId extends string = string>(
 
   const { requirements, formData } = options ?? {};
   if (requirements && formData) {
-    const mergedData = { ...formData, ...calculateData(requirements, formData) };
+    const mergedData = { ...formData, ...calculateData(requirements, formData, options?.engine?.customOperations) };
     while (stepId && !stepHasVisibleFields(requirements, stepId, mergedData, options?.engine)) {
       const stepIndex = flow.steps.findIndex((s) => s.id === stepId);
       const nextIndex = stepIndex + 1;
@@ -1067,7 +1080,7 @@ export function createAdapter<TFieldId extends string = string>(
       return checkField(requirements, mappedFieldId, data, options);
     },
 
-    calculateData: (inputData: FormData) => calculateData(requirements, inputData),
+    calculateData: (inputData: FormData) => calculateData(requirements, inputData, options?.customOperations),
 
     getFieldOptions: (fieldId: string, data?: FormData) => {
       const mappedFieldId = fieldIdMap[fieldId] ?? fieldId;

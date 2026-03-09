@@ -58,9 +58,14 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
         errors.push({ path: `fields[${i}].type`, message: 'Expected field type to be a string' });
       }
 
-      // validation.rules (optional)
+      // validation (optional)
       const validation = field['validation'];
-      if (validation !== undefined && isObject(validation)) {
+      if (validation !== undefined && !isObject(validation)) {
+        errors.push({
+          path: `fields[${i}].validation`,
+          message: 'Expected validation to be an object',
+        });
+      } else if (validation !== undefined && isObject(validation)) {
         const rules = validation['rules'];
         if (rules !== undefined) {
           if (!Array.isArray(rules)) {
@@ -116,6 +121,20 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
                 errors.push({
                   path: `fields[${i}].validation.asyncValidators[${j}].name`,
                   message: 'Expected async validator entry to have a name string',
+                });
+              }
+              const params = entry['params'];
+              if (params !== undefined && !isObject(params)) {
+                errors.push({
+                  path: `fields[${i}].validation.asyncValidators[${j}].params`,
+                  message: 'Expected async validator params to be an object',
+                });
+              }
+              const asyncMessage = entry['message'];
+              if (asyncMessage !== undefined && !isString(asyncMessage)) {
+                errors.push({
+                  path: `fields[${i}].validation.asyncValidators[${j}].message`,
+                  message: 'Expected async validator message to be a string',
                 });
               }
             }

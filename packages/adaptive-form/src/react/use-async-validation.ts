@@ -164,7 +164,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
         }
 
         // Check if at least one ref has a matching function
-        const hasEligible = asyncRefs.some((ref) => ref.name in asyncValidators);
+        const hasEligible = asyncRefs.some((ref) => Object.hasOwn(asyncValidators, ref.name));
 
         if (!hasEligible) {
           return;
@@ -247,7 +247,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
         }
 
         // Check if at least one ref has a matching function
-        const hasEligible = asyncRefs.some((ref) => ref.name in asyncValidators);
+        const hasEligible = asyncRefs.some((ref) => Object.hasOwn(asyncValidators, ref.name));
 
         if (hasEligible) {
           const syncState = checkField(requirements, field.id, data, engine);
