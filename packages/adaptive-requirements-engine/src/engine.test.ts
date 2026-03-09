@@ -1313,6 +1313,60 @@ describe('validation rules (JSON Logic)', () => {
     const state = checkField(req, 'age', { age: 15 });
     expect(state.errors).toContain('Must be at least 18');
   });
+
+  it('should validate with rules (replaces min/max)', () => {
+    const req: RequirementsObject = {
+      fields: [{
+        id: 'age', type: 'number',
+        validation: {
+          rules: [
+            { rule: { '>=': [{ var: 'age' }, 18] }, message: 'Minimum 18' },
+            { rule: { '<=': [{ var: 'age' }, 120] }, message: 'Maximum 120' },
+          ],
+        },
+      }],
+    };
+    expect(checkField(req, 'age', { age: 10 }).errors).toEqual(['Minimum 18']);
+    expect(checkField(req, 'age', { age: 25 }).errors).toEqual([]);
+    expect(checkField(req, 'age', { age: 150 }).errors).toEqual(['Maximum 120']);
+  });
+
+  it('should validate with pattern rule (replaces pattern)', () => {
+    const req: RequirementsObject = {
+      fields: [{
+        id: 'email', type: 'email',
+        validation: {
+          rules: [{ rule: { match: [{ var: 'email' }, '^.+@.+\\..+$'] }, message: 'Invalid email' }],
+        },
+      }],
+    };
+    expect(checkField(req, 'email', { email: 'bad' }).errors).toEqual(['Invalid email']);
+    expect(checkField(req, 'email', { email: 'a@b.com' }).errors).toEqual([]);
+  });
+
+  it('should auto-apply file validation from fileConfig', () => {
+    const req: RequirementsObject = {
+      fields: [{
+        id: 'doc', type: 'file',
+        fileConfig: { accept: ['.pdf'], maxSize: 1048576 },
+      }],
+    };
+    expect(checkField(req, 'doc', { doc: 'test.jpg|500' }).errors).toContain('File type not accepted. Allowed: .pdf');
+  });
+
+  it('should run rules after required check (no rules on empty value)', () => {
+    const req: RequirementsObject = {
+      fields: [{
+        id: 'age', type: 'number',
+        validation: {
+          required: true,
+          rules: [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }],
+        },
+      }],
+    };
+    // Empty value: only required error, rules not evaluated
+    expect(checkField(req, 'age', {}).errors).toEqual(['This field is required']);
+  });
 });
 
 // Helper: wraps a sync predicate in an async validator that does a real await (satisfies require-await)

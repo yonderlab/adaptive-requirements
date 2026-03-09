@@ -1,5 +1,4 @@
 import type {
-  CustomValidator,
   Dataset,
   Field,
   FieldMapping,
@@ -611,7 +610,6 @@ export function checkField<TFieldId extends string = string>(
 
   // Validation errors
   const errors: string[] = [];
-  // Only validate visible, non-excluded fields (but hidden type fields can still have validation for submission)
   if ((isVisible || isHiddenType) && !isExcluded) {
     const fieldValue = data[fieldId];
     const empty =
@@ -621,49 +619,32 @@ export function checkField<TFieldId extends string = string>(
       (Array.isArray(fieldValue) && fieldValue.length === 0);
 
     if (isRequired && empty) {
-      errors.push(field.validation?.message ?? 'This field is required');
+      errors.push('This field is required');
     }
 
     if (!empty) {
-      if (typeof field.validation?.min === 'number' && Number(fieldValue) < field.validation.min) {
-        errors.push(`Minimum ${field.validation.min}`);
-      }
-
-      if (typeof field.validation?.max === 'number' && Number(fieldValue) > field.validation.max) {
-        errors.push(`Maximum ${field.validation.max}`);
-      }
-
-      if (field.validation?.pattern && typeof fieldValue === 'string') {
-        const pattern = new RegExp(field.validation.pattern);
-        if (!pattern.test(fieldValue)) {
-          errors.push(field.validation.message ?? 'Invalid format');
-        }
-      }
-
       // Auto-apply file config validators for file fields
       if (field.type === 'file' && field.fileConfig) {
         const fc = field.fileConfig;
         if (fc.accept && fc.accept.length > 0) {
           const fileTypeError = validateFileType(fieldValue, fc.accept);
-          if (fileTypeError) {
-            errors.push(fileTypeError);
-          }
+          if (fileTypeError) errors.push(fileTypeError);
         }
         if (fc.maxSize !== undefined) {
           const fileSizeError = validateFileSize(fieldValue, fc.maxSize);
-          if (fileSizeError) {
-            errors.push(fileSizeError);
-          }
+          if (fileSizeError) errors.push(fileSizeError);
         }
         if (fc.multiple && fc.maxFiles !== undefined) {
           const fileCountError = validateFileCount(fieldValue, fc.maxFiles);
-          if (fileCountError) {
-            errors.push(fileCountError);
-          }
+          if (fileCountError) errors.push(fileCountError);
         }
       }
 
-      // TODO(task-4): Replace with runValidationRules() call for field.validation.rules
+      // Run data-driven validation rules
+      if (field.validation?.rules && field.validation.rules.length > 0) {
+        const ruleErrors = runValidationRules(field.validation.rules, context);
+        errors.push(...ruleErrors);
+      }
     }
   }
 
