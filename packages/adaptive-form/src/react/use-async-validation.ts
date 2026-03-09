@@ -130,8 +130,8 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
    */
   const executeValidation = useCallback(
     (value: FieldValue, refs: AsyncValidatorRef[], context: RuleContext, signal?: AbortSignal): Promise<string[]> =>
-      runAsyncValidators(value, refs, context, asyncValidators, signal),
-    [asyncValidators],
+      runAsyncValidators(value, refs, context, asyncValidators, signal, engine?.customOperations),
+    [asyncValidators, engine?.customOperations],
   );
 
   /**
