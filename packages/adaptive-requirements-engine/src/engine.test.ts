@@ -155,27 +155,27 @@ describe(runRule, () => {
   describe('match operation', () => {
     it('should match a regex pattern', () => {
       const context = { data: { val: 'ABC123' } };
-      expect(runRule({ match: [{ var: 'val' }, '^[A-Z]+\\d+$'] }, context)).toBe(true);
+      expect(runRule({ match: [{ var: 'val' }, '^[A-Z]+\\d+$'] }, context)).toBeTruthy();
     });
 
     it('should return false for non-matching pattern', () => {
       const context = { data: { val: '123abc' } };
-      expect(runRule({ match: [{ var: 'val' }, '^[A-Z]+$'] }, context)).toBe(false);
+      expect(runRule({ match: [{ var: 'val' }, '^[A-Z]+$'] }, context)).toBeFalsy();
     });
 
     it('should support case-insensitive flag', () => {
       const context = { data: { val: 'abc' } };
-      expect(runRule({ match: [{ var: 'val' }, '^[A-Z]+$', 'i'] }, context)).toBe(true);
+      expect(runRule({ match: [{ var: 'val' }, '^[A-Z]+$', 'i'] }, context)).toBeTruthy();
     });
 
     it('should return false for non-string value', () => {
       const context = { data: { val: 42 } };
-      expect(runRule({ match: [{ var: 'val' }, '^\\d+$'] }, context)).toBe(false);
+      expect(runRule({ match: [{ var: 'val' }, '^\\d+$'] }, context)).toBeFalsy();
     });
 
     it('should return false for invalid regex pattern', () => {
       const context = { data: { val: 'test' } };
-      expect(runRule({ match: [{ var: 'val' }, '[invalid'] }, context)).toBe(false);
+      expect(runRule({ match: [{ var: 'val' }, '[invalid'] }, context)).toBeFalsy();
     });
   });
 

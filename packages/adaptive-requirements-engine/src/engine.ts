@@ -252,7 +252,9 @@ function ensureCustomOperationsRegistered() {
   });
   jsonLogic.add_operation('abs', (value: unknown) => (typeof value === 'number' ? Math.abs(value) : null));
   jsonLogic.add_operation('match', (value: unknown, pattern: unknown, flags?: unknown) => {
-    if (typeof value !== 'string' || typeof pattern !== 'string') return false;
+    if (typeof value !== 'string' || typeof pattern !== 'string') {
+      return false;
+    }
     try {
       return new RegExp(pattern, typeof flags === 'string' ? flags : undefined).test(value);
     } catch {
