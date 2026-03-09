@@ -63,15 +63,15 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## Extension Points
 
-| Extension               | Mechanism                                                             |
-| ----------------------- | --------------------------------------------------------------------- |
-| Custom field types      | `components` prop — map any string to a render function               |
-| Custom validators       | `EngineOptions.customValidators` — `Record<string, ValidatorFn>`      |
-| Custom label resolution | `EngineOptions.labelResolver` — integrate with i18n systems           |
-| Custom field rendering  | `renderField` prop — full control over per-field rendering            |
-| Custom step navigation  | `renderStepNavigation` prop — custom Previous/Next UI                 |
-| Field ID remapping      | `FieldMapping.fieldIdMap` — remap consumer IDs to schema IDs          |
-| Async validators        | Built-in (`iban_unique`, `email_unique`) via `builtInAsyncValidators` |
+| Extension               | Mechanism                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| Custom field types      | `components` prop — map any string to a render function                          |
+| Custom JSON Logic ops   | `EngineOptions.customOperations` — register additional operations for validation |
+| Custom label resolution | `EngineOptions.labelResolver` — integrate with i18n systems                      |
+| Custom field rendering  | `renderField` prop — full control over per-field rendering                       |
+| Custom step navigation  | `renderStepNavigation` prop — custom Previous/Next UI                            |
+| Field ID remapping      | `FieldMapping.fieldIdMap` — remap consumer IDs to schema IDs                     |
+| Async validators        | `EngineOptions.asyncValidators` — `Record<string, AsyncValidatorFn>`             |
 
 ## Downlinks
 
