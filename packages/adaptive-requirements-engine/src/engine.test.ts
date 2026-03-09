@@ -653,6 +653,106 @@ describe(createAdapter, () => {
     expect(adapter.getField('fieldA')).toBeDefined();
     expect(adapter.getField('fieldA')?.id).toBe('field_a');
   });
+
+  it('should expose hasAsyncValidators as false when no asyncValidators provided', () => {
+    const adapter = createAdapter(requirements);
+    expect(adapter.hasAsyncValidators).toBeFalsy();
+  });
+
+  it('should expose hasAsyncValidators as false when asyncValidators is empty', () => {
+    const adapter = createAdapter(requirements, undefined, { asyncValidators: {} });
+    expect(adapter.hasAsyncValidators).toBeFalsy();
+  });
+
+  it('should expose hasAsyncValidators as true when asyncValidators registry is populated', () => {
+    const adapter = createAdapter(requirements, undefined, {
+      asyncValidators: {
+        email_unique: async () => {
+          await Promise.resolve();
+          return null;
+        },
+      },
+    });
+    expect(adapter.hasAsyncValidators).toBeTruthy();
+  });
+
+  it('should delegate checkField through field ID mapping', () => {
+    const adapter = createAdapter(requirements, { fieldIdMap: { a: 'field_a' } });
+    const state = adapter.checkField('a', { field_a: 'hello' });
+    expect(state.value).toBe('hello');
+    expect(state.field.id).toBe('field_a');
+  });
+
+  it('should delegate checkFieldAsync with asyncValidators from options', async () => {
+    const reqWithAsync: RequirementsObject = {
+      fields: [
+        {
+          id: 'username',
+          type: 'text',
+          label: 'Username',
+          validation: {
+            asyncValidators: [{ name: 'unique_check' }],
+          },
+        },
+      ],
+    };
+
+    const adapter = createAdapter(reqWithAsync, undefined, {
+      asyncValidators: {
+        unique_check: async (value) => {
+          await Promise.resolve();
+          return value === 'taken' ? 'Already taken' : null;
+        },
+      },
+    });
+
+    const state = await adapter.checkFieldAsync('username', { username: 'taken' });
+    expect(state.errors).toContain('Already taken');
+  });
+
+  it('should expose requirements, mapping, and options on the adapter', () => {
+    const mapping = { fieldIdMap: { a: 'field_a' } };
+    const options = { locale: 'en' };
+    const adapter = createAdapter(requirements, mapping, options);
+    expect(adapter.requirements).toBe(requirements);
+    expect(adapter.mapping).toBe(mapping);
+    expect(adapter.options).toBe(options);
+  });
+
+  it('should resolve field options through getFieldOptions', () => {
+    const reqWithOptions: RequirementsObject = {
+      fields: [
+        {
+          id: 'color',
+          type: 'select',
+          label: 'Color',
+          options: [
+            { value: 'red', label: 'Red' },
+            { value: 'blue', label: 'Blue' },
+          ],
+        },
+      ],
+    };
+
+    const adapter = createAdapter(reqWithOptions);
+    const options = adapter.getFieldOptions('color');
+    expect(options).toHaveLength(2);
+    expect(options?.[0]?.value).toBe('red');
+  });
+
+  it('should calculate computed data through calculateData', () => {
+    const reqWithComputed: RequirementsObject = {
+      fields: [
+        { id: 'a', type: 'number', label: 'A' },
+        { id: 'b', type: 'number', label: 'B' },
+        { id: 'total', type: 'computed', compute: { '+': [{ var: 'a' }, { var: 'b' }] } },
+      ],
+    };
+
+    const adapter = createAdapter(reqWithComputed);
+    const computed = adapter.calculateData({ a: 3, b: 7 });
+    expect(computed['total']).toBe(10);
+  });
 });
 
 describe(clearHiddenFieldValues, () => {
@@ -1182,9 +1282,9 @@ describe('validation rules (JSON Logic)', () => {
         },
       ],
     };
-    expect(checkField(req, 'age', { age: 10 }).errors).toEqual(['Minimum 18']);
-    expect(checkField(req, 'age', { age: 25 }).errors).toEqual([]);
-    expect(checkField(req, 'age', { age: 150 }).errors).toEqual(['Maximum 120']);
+    expect(checkField(req, 'age', { age: 10 }).errors).toStrictEqual(['Minimum 18']);
+    expect(checkField(req, 'age', { age: 25 }).errors).toStrictEqual([]);
+    expect(checkField(req, 'age', { age: 150 }).errors).toStrictEqual(['Maximum 120']);
   });
 
   it('should validate with pattern rule (replaces pattern)', () => {
@@ -1199,8 +1299,8 @@ describe('validation rules (JSON Logic)', () => {
         },
       ],
     };
-    expect(checkField(req, 'email', { email: 'bad' }).errors).toEqual(['Invalid email']);
-    expect(checkField(req, 'email', { email: 'a@b.com' }).errors).toEqual([]);
+    expect(checkField(req, 'email', { email: 'bad' }).errors).toStrictEqual(['Invalid email']);
+    expect(checkField(req, 'email', { email: 'a@b.com' }).errors).toStrictEqual([]);
   });
 
   it('should auto-apply file validation from fileConfig', () => {
@@ -1209,7 +1309,7 @@ describe('validation rules (JSON Logic)', () => {
         {
           id: 'doc',
           type: 'file',
-          fileConfig: { accept: ['.pdf'], maxSize: 1048576 },
+          fileConfig: { accept: ['.pdf'], maxSize: 1_048_576 },
         },
       ],
     };
@@ -1230,7 +1330,7 @@ describe('validation rules (JSON Logic)', () => {
       ],
     };
     // Empty value: only required error, rules not evaluated
-    expect(checkField(req, 'age', {}).errors).toEqual(['This field is required']);
+    expect(checkField(req, 'age', {}).errors).toStrictEqual(['This field is required']);
   });
 });
 
@@ -1255,13 +1355,13 @@ describe('runAsyncValidators (AsyncValidatorRef)', () => {
     };
     const refs: AsyncValidatorRef[] = [{ name: 'email_unique' }];
     const errors = await runAsyncValidators('taken@test.com', refs, { data: {} }, asyncValidatorRegistry);
-    expect(errors).toEqual(['Email already in use']);
+    expect(errors).toStrictEqual(['Email already in use']);
   });
 
   it('should skip unknown validator names', async () => {
     const refs: AsyncValidatorRef[] = [{ name: 'nonexistent' }];
     const errors = await runAsyncValidators('value', refs, { data: {} }, {});
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 
   it('should respect when conditional guard', async () => {
@@ -1278,7 +1378,7 @@ describe('runAsyncValidators (AsyncValidatorRef)', () => {
       },
     ];
     const errors = await runAsyncValidators('val', refs, { data: { country: 'IE' } }, asyncValidatorRegistry);
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 
   it('should run validator when when guard passes', async () => {
@@ -1295,7 +1395,7 @@ describe('runAsyncValidators (AsyncValidatorRef)', () => {
       },
     ];
     const errors = await runAsyncValidators('val', refs, { data: { country: 'US' } }, asyncValidatorRegistry);
-    expect(errors).toEqual(['Error']);
+    expect(errors).toStrictEqual(['Error']);
   });
 
   it('should use ref.message as override when provided', async () => {
@@ -1307,7 +1407,7 @@ describe('runAsyncValidators (AsyncValidatorRef)', () => {
     };
     const refs: AsyncValidatorRef[] = [{ name: 'email_unique', message: 'Custom error' }];
     const errors = await runAsyncValidators('val', refs, { data: {} }, asyncValidatorRegistry);
-    expect(errors).toEqual(['Custom error']);
+    expect(errors).toStrictEqual(['Custom error']);
   });
 
   it('should pass params to async validator function', async () => {
@@ -1319,7 +1419,7 @@ describe('runAsyncValidators (AsyncValidatorRef)', () => {
     };
     const refs: AsyncValidatorRef[] = [{ name: 'check', params: { strict: true } }];
     const errors = await runAsyncValidators('val', refs, { data: {} }, asyncValidatorRegistry);
-    expect(errors).toEqual(['Error']);
+    expect(errors).toStrictEqual(['Error']);
   });
 
   it('should discard results when signal is aborted', async () => {
@@ -1333,7 +1433,7 @@ describe('runAsyncValidators (AsyncValidatorRef)', () => {
     };
     const refs: AsyncValidatorRef[] = [{ name: 'slow' }];
     const errors = await runAsyncValidators('val', refs, { data: {} }, asyncValidatorRegistry, controller.signal);
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 
   it('should silently swallow throwing validators', async () => {
@@ -1345,7 +1445,7 @@ describe('runAsyncValidators (AsyncValidatorRef)', () => {
     };
     const refs: AsyncValidatorRef[] = [{ name: 'bad' }];
     const errors = await runAsyncValidators('val', refs, { data: {} }, asyncValidatorRegistry);
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 
   it('should run multiple validators in parallel', async () => {
@@ -1361,7 +1461,7 @@ describe('runAsyncValidators (AsyncValidatorRef)', () => {
     };
     const refs: AsyncValidatorRef[] = [{ name: 'check_a' }, { name: 'check_b' }];
     const errors = await runAsyncValidators('bad', refs, { data: {} }, asyncValidatorRegistry);
-    expect(errors).toEqual(['Error A', 'Error B']);
+    expect(errors).toStrictEqual(['Error A', 'Error B']);
   });
 });
 
@@ -1522,13 +1622,13 @@ describe('runValidationRules', () => {
   it('should return no errors when all rules pass', () => {
     const rules: ValidationRule[] = [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }];
     const errors = runValidationRules(rules, { data: { age: 25 } });
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 
   it('should return error message when rule fails', () => {
     const rules: ValidationRule[] = [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }];
     const errors = runValidationRules(rules, { data: { age: 15 } });
-    expect(errors).toEqual(['Too young']);
+    expect(errors).toStrictEqual(['Too young']);
   });
 
   it('should evaluate multiple rules and collect all errors', () => {
@@ -1537,7 +1637,7 @@ describe('runValidationRules', () => {
       { rule: { '<=': [{ var: 'age' }, 120] }, message: 'Too old' },
     ];
     const errors = runValidationRules(rules, { data: { age: 150 } });
-    expect(errors).toEqual(['Too old']);
+    expect(errors).toStrictEqual(['Too old']);
   });
 
   it('should skip rule when "when" guard evaluates to falsy', () => {
@@ -1549,7 +1649,7 @@ describe('runValidationRules', () => {
       },
     ];
     const errors = runValidationRules(rules, { data: { tax_id: 'invalid', country: 'IE' } });
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 
   it('should run rule when "when" guard evaluates to truthy', () => {
@@ -1561,7 +1661,7 @@ describe('runValidationRules', () => {
       },
     ];
     const errors = runValidationRules(rules, { data: { tax_id: 'invalid', country: 'DE' } });
-    expect(errors).toEqual(['Invalid German tax ID']);
+    expect(errors).toStrictEqual(['Invalid German tax ID']);
   });
 
   it('should support cross-field validation', () => {
@@ -1572,7 +1672,7 @@ describe('runValidationRules', () => {
       },
     ];
     const errors = runValidationRules(rules, { data: { start_date: '2025-06-01', end_date: '2025-01-01' } });
-    expect(errors).toEqual(['End date must be after start date']);
+    expect(errors).toStrictEqual(['End date must be after start date']);
   });
 
   it('should support date helpers in rules', () => {
@@ -1587,6 +1687,6 @@ describe('runValidationRules', () => {
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
     const dob = tenYearsAgo.toISOString().split('T')[0];
     const errors = runValidationRules(rules, { data: { dob } });
-    expect(errors).toEqual(['Must be at least 18 years old']);
+    expect(errors).toStrictEqual(['Must be at least 18 years old']);
   });
 });

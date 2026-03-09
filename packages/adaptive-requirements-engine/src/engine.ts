@@ -334,8 +334,8 @@ export function runValidationRules(rules: ValidationRule[], context: RuleContext
   ensureCustomOperationsRegistered();
   const errors: string[] = [];
   for (const validationRule of rules) {
-    if (validationRule.when != null) {
-      if (!runRule(validationRule.when, context)) continue;
+    if (validationRule.when != null && !runRule(validationRule.when, context)) {
+      continue;
     }
     if (!runRule(validationRule.rule, context)) {
       errors.push(validationRule.message);
@@ -344,7 +344,8 @@ export function runValidationRules(rules: ValidationRule[], context: RuleContext
   return errors;
 }
 
-/** @internal File type validation — used by checkField for fileConfig auto-application */
+/** @internal */
+/* File type validation — used by checkField for fileConfig auto-application */
 function validateFileType(value: FieldValue, accept: string[]): string | null {
   if (typeof value !== 'string' || !value) {
     return null;
@@ -382,7 +383,8 @@ function validateFileType(value: FieldValue, accept: string[]): string | null {
   return null;
 }
 
-/** @internal File size validation — used by checkField for fileConfig auto-application */
+/** @internal */
+/* File size validation — used by checkField for fileConfig auto-application */
 function validateFileSize(value: FieldValue, maxSize: number): string | null {
   if (typeof value !== 'string' || !value) {
     return null;
@@ -403,7 +405,8 @@ function validateFileSize(value: FieldValue, maxSize: number): string | null {
   return null;
 }
 
-/** @internal File count validation — used by checkField for fileConfig auto-application */
+/** @internal */
+/* File count validation — used by checkField for fileConfig auto-application */
 function validateFileCount(value: FieldValue, maxFiles: number): string | null {
   if (typeof value !== 'string' || !value) {
     return null;
@@ -461,8 +464,8 @@ export async function runAsyncValidators(
     }
 
     // Respect when conditional guard
-    if (ref.when != null) {
-      if (!runRule(ref.when, context)) continue;
+    if (ref.when != null && !runRule(ref.when, context)) {
+      continue;
     }
 
     pending.push({
@@ -622,15 +625,21 @@ export function checkField<TFieldId extends string = string>(
         const fc = field.fileConfig;
         if (fc.accept && fc.accept.length > 0) {
           const fileTypeError = validateFileType(fieldValue, fc.accept);
-          if (fileTypeError) errors.push(fileTypeError);
+          if (fileTypeError) {
+            errors.push(fileTypeError);
+          }
         }
         if (fc.maxSize !== undefined) {
           const fileSizeError = validateFileSize(fieldValue, fc.maxSize);
-          if (fileSizeError) errors.push(fileSizeError);
+          if (fileSizeError) {
+            errors.push(fileSizeError);
+          }
         }
         if (fc.multiple && fc.maxFiles !== undefined) {
           const fileCountError = validateFileCount(fieldValue, fc.maxFiles);
-          if (fileCountError) errors.push(fileCountError);
+          if (fileCountError) {
+            errors.push(fileCountError);
+          }
         }
       }
 

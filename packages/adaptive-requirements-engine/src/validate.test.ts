@@ -69,7 +69,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBeTruthy();
   });
 
   it('should reject rules without message', () => {
@@ -82,7 +82,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('should reject rules that are not an array', () => {
@@ -95,7 +95,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('should reject rule entries that are not objects', () => {
@@ -108,7 +108,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('should reject rule entries without a rule property', () => {
@@ -121,7 +121,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('should accept valid asyncValidators', () => {
@@ -134,7 +134,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBeTruthy();
   });
 
   it('should reject asyncValidators that are not an array', () => {
@@ -147,7 +147,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('should reject async validator entries without a name', () => {
@@ -160,7 +160,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('should reject async validator entries that are not objects', () => {
@@ -173,7 +173,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBeFalsy();
   });
 
   it('should accept fields with both rules and asyncValidators', () => {
@@ -189,7 +189,7 @@ describe('validateRequirementsObject with validation.rules', () => {
         },
       ],
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBeTruthy();
   });
 });
 
