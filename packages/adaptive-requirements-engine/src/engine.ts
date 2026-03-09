@@ -13,6 +13,7 @@ import type {
   ResolvedFieldOption,
   Rule,
   RuleResult,
+  ValidationRule,
 } from './types';
 
 import jsonLogic from 'json-logic-js';
@@ -319,259 +320,95 @@ export function runRule(rule: Rule, context: RuleContext): RuleResult {
 }
 
 /**
- * Built-in custom validators
+ * Evaluate data-driven validation rules (JSON Logic expressions with error messages).
+ * Each rule is evaluated against the form data context.
+ * Truthy = valid, falsy = push error message.
+ * Supports conditional execution via optional `when` guard.
  */
-export const builtInValidators = {
-  /**
-   * Validates that a date results in an age within a range
-   */
-  age_range: ((value, params) => {
-    const date = parseDate(value);
-    if (!date) {
-      return null;
-    } // Let required validation handle empty values
-    const age = calculateAge(date);
-    const minAge = typeof params?.['min'] === 'number' ? params['min'] : undefined;
-    const maxAge = typeof params?.['max'] === 'number' ? params['max'] : undefined;
-
-    if (minAge !== undefined && age < minAge) {
-      return (params?.['message'] as string) ?? `Must be at least ${minAge} years old`;
-    }
-    if (maxAge !== undefined && age > maxAge) {
-      return (params?.['message'] as string) ?? `Must be at most ${maxAge} years old`;
-    }
-    return null;
-  }) satisfies ValidatorFn,
-
-  /**
-   * Validates that a date is not in the future
-   */
-  dob_not_in_future: ((value, params) => {
-    const date = parseDate(value);
-    if (!date) {
-      return null;
-    }
-    if (date > new Date()) {
-      return (params?.['message'] as string) ?? 'Date cannot be in the future';
-    }
-    return null;
-  }) satisfies ValidatorFn,
-
-  /**
-   * Validates a date is after a specified date
-   */
-  date_after: ((value, params) => {
-    const date = parseDate(value);
-    if (!date) {
-      return null;
-    }
-    const dateParam = params?.['date'] as string | undefined;
-    const afterDate = dateParam ? parseDate(dateParam) : null;
-    if (afterDate && date <= afterDate) {
-      return (params?.['message'] as string) ?? `Date must be after ${dateParam}`;
-    }
-    return null;
-  }) satisfies ValidatorFn,
-
-  /**
-   * Validates a date is before a specified date
-   */
-  date_before: ((value, params) => {
-    const date = parseDate(value);
-    if (!date) {
-      return null;
-    }
-    const dateParam = params?.['date'] as string | undefined;
-    const beforeDate = dateParam ? parseDate(dateParam) : null;
-    if (beforeDate && date >= beforeDate) {
-      return (params?.['message'] as string) ?? `Date must be before ${dateParam}`;
-    }
-    return null;
-  }) satisfies ValidatorFn,
-
-  /**
-   * Validates a Spanish tax ID (NIF/NIE)
-   */
-  spanish_tax_id: ((value, params) => {
-    if (typeof value !== 'string' || !value) {
-      return null;
-    }
-    // NIF: 8 digits + letter, or letter + 7 digits + letter (NIE)
-    const nifRegex = /^[0-9]{8}[A-Z]$/i;
-    const nieRegex = /^[XYZ][0-9]{7}[A-Z]$/i;
-    if (!nifRegex.test(value) && !nieRegex.test(value)) {
-      return (params?.['message'] as string) ?? 'Please enter a valid Spanish tax ID (NIF/NIE)';
-    }
-    return null;
-  }) satisfies ValidatorFn,
-
-  /**
-   * Validates an Irish PPS number
-   */
-  irish_pps: ((value, params) => {
-    if (typeof value !== 'string' || !value) {
-      return null;
-    }
-    // PPS: 7 digits + 1-2 letters
-    const ppsRegex = /^[0-9]{7}[A-Z]{1,2}$/i;
-    if (!ppsRegex.test(value)) {
-      return (params?.['message'] as string) ?? 'Please enter a valid PPS number';
-    }
-    return null;
-  }) satisfies ValidatorFn,
-
-  /**
-   * Validates a German tax ID (Steuer-ID)
-   */
-  german_tax_id: ((value, params) => {
-    if (typeof value !== 'string' || !value) {
-      return null;
-    }
-    // Steuer-ID: 11 digits
-    const taxIdRegex = /^[0-9]{11}$/;
-    if (!taxIdRegex.test(value)) {
-      return (params?.['message'] as string) ?? 'Please enter a valid German tax ID (11 digits)';
-    }
-    return null;
-  }) satisfies ValidatorFn,
-
-  /**
-   * Validates that a filename matches accepted file types.
-   * Value is a filename string (e.g., "document.pdf" or "doc.pdf|1024").
-   * Params: accept - array of accepted types (e.g., ['.pdf', 'image/*'])
-   */
-  file_type: ((value, params) => {
-    if (typeof value !== 'string' || !value) {
-      return null;
-    }
-    const accept = params?.['accept'];
-    if (!Array.isArray(accept) || accept.length === 0) {
-      return null;
-    }
-
-    // Extract filename from "name|size" encoding
-    const filename = value.split(';')[0]!.split('|')[0]!.toLowerCase();
-    const extension = filename.includes('.') ? `.${filename.split('.').pop()!}` : '';
-
-    const extCategories: Record<string, string[]> = {
-      image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff', '.avif'],
-      audio: ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.wma'],
-      video: ['.mp4', '.webm', '.avi', '.mov', '.mkv', '.wmv'],
-      application: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.7z'],
-    };
-
-    const isAccepted = accept.some((type: unknown) => {
-      if (typeof type !== 'string') {
-        return false;
-      }
-      const t = type.toLowerCase().trim();
-      if (t.startsWith('.')) {
-        return extension === t;
-      }
-      if (t.endsWith('/*')) {
-        const category = t.split('/')[0]!;
-        return extCategories[category]?.includes(extension) ?? false;
-      }
-      return false;
-    });
-
-    if (!isAccepted) {
-      return (params?.['message'] as string) ?? `File type not accepted. Allowed: ${accept.join(', ')}`;
-    }
-    return null;
-  }) satisfies ValidatorFn,
-
-  /**
-   * Validates file size from "filename|size" encoding.
-   * Params: maxSize - maximum file size in bytes
-   */
-  file_size: ((value, params) => {
-    if (typeof value !== 'string' || !value) {
-      return null;
-    }
-    const maxSize = typeof params?.['maxSize'] === 'number' ? params['maxSize'] : undefined;
-    if (maxSize === undefined) {
-      return null;
-    }
-
-    // Check each file in semicolon-delimited list
-    const files = value.split(';').filter(Boolean);
-    for (const file of files) {
-      const sizeStr = file.split('|')[1];
-      if (sizeStr !== undefined) {
-        const size = Number(sizeStr);
-        if (!Number.isNaN(size) && size > maxSize) {
-          const maxMB = (maxSize / (1024 * 1024)).toFixed(1);
-          return (params?.['message'] as string) ?? `File exceeds maximum size of ${maxMB}MB`;
-        }
-      }
-    }
-    return null;
-  }) satisfies ValidatorFn,
-
-  /**
-   * Validates file count for multi-file fields.
-   * Value is semicolon-delimited filenames (e.g., "a.pdf|1024;b.pdf|2048").
-   * Params: maxFiles - maximum number of files allowed
-   */
-  file_count: ((value, params) => {
-    if (typeof value !== 'string' || !value) {
-      return null;
-    }
-    const maxFiles = typeof params?.['maxFiles'] === 'number' ? params['maxFiles'] : undefined;
-    if (maxFiles === undefined) {
-      return null;
-    }
-
-    const fileCount = value.split(';').filter(Boolean).length;
-    if (fileCount > maxFiles) {
-      return (params?.['message'] as string) ?? `Maximum ${maxFiles} file(s) allowed`;
-    }
-    return null;
-  }) satisfies ValidatorFn,
-} as const;
-
-/**
- * Run custom validators on a field value.
- * Supports both validator.type (UI) and validator.name (requirements package).
- * If params.when (JSON Logic rule) is present, the validator is skipped when the rule evaluates to falsy.
- */
-export function runCustomValidators(
-  value: FieldValue,
-  validators: CustomValidator[],
-  context: RuleContext,
-  customValidators?: Record<string, ValidatorFn>,
-): string[] {
+export function runValidationRules(rules: ValidationRule[], context: RuleContext): string[] {
+  ensureCustomOperationsRegistered();
   const errors: string[] = [];
-  const allValidators: Record<string, ValidatorFn> = { ...builtInValidators, ...customValidators };
-
-  for (const validator of validators) {
-    const validatorKey = validator.type ?? validator.name;
-    if (validatorKey == null) {
-      continue;
+  for (const validationRule of rules) {
+    if (validationRule.when != null) {
+      if (!runRule(validationRule.when, context)) continue;
     }
-
-    const validatorFn = allValidators[validatorKey];
-    if (!validatorFn) {
-      continue;
-    }
-
-    const { params } = validator;
-    const whenRule = params?.['when'];
-    if (whenRule != null && typeof whenRule === 'object') {
-      const whenResult = runRule(whenRule as Rule, context);
-      if (!whenResult) {
-        continue;
-      }
-    }
-
-    const error = validatorFn(value, validator.params, context);
-    if (error) {
-      errors.push(validator.message ?? error);
+    if (!runRule(validationRule.rule, context)) {
+      errors.push(validationRule.message);
     }
   }
-
   return errors;
+}
+
+/** @internal File type validation — used by checkField for fileConfig auto-application */
+function validateFileType(value: FieldValue, accept: string[]): string | null {
+  if (typeof value !== 'string' || !value) {
+    return null;
+  }
+  if (accept.length === 0) {
+    return null;
+  }
+
+  // Extract filename from "name|size" encoding
+  const filename = value.split(';')[0]!.split('|')[0]!.toLowerCase();
+  const extension = filename.includes('.') ? `.${filename.split('.').pop()!}` : '';
+
+  const extCategories: Record<string, string[]> = {
+    image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff', '.avif'],
+    audio: ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.wma'],
+    video: ['.mp4', '.webm', '.avi', '.mov', '.mkv', '.wmv'],
+    application: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.7z'],
+  };
+
+  const isAccepted = accept.some((type: string) => {
+    const t = type.toLowerCase().trim();
+    if (t.startsWith('.')) {
+      return extension === t;
+    }
+    if (t.endsWith('/*')) {
+      const category = t.split('/')[0]!;
+      return extCategories[category]?.includes(extension) ?? false;
+    }
+    return false;
+  });
+
+  if (!isAccepted) {
+    return `File type not accepted. Allowed: ${accept.join(', ')}`;
+  }
+  return null;
+}
+
+/** @internal File size validation — used by checkField for fileConfig auto-application */
+function validateFileSize(value: FieldValue, maxSize: number): string | null {
+  if (typeof value !== 'string' || !value) {
+    return null;
+  }
+
+  // Check each file in semicolon-delimited list
+  const files = value.split(';').filter(Boolean);
+  for (const file of files) {
+    const sizeStr = file.split('|')[1];
+    if (sizeStr !== undefined) {
+      const size = Number(sizeStr);
+      if (!Number.isNaN(size) && size > maxSize) {
+        const maxMB = (maxSize / (1024 * 1024)).toFixed(1);
+        return `File exceeds maximum size of ${maxMB}MB`;
+      }
+    }
+  }
+  return null;
+}
+
+/** @internal File count validation — used by checkField for fileConfig auto-application */
+function validateFileCount(value: FieldValue, maxFiles: number): string | null {
+  if (typeof value !== 'string' || !value) {
+    return null;
+  }
+
+  const fileCount = value.split(';').filter(Boolean).length;
+  if (fileCount > maxFiles) {
+    return `Maximum ${maxFiles} file(s) allowed`;
+  }
+  return null;
 }
 
 /**
@@ -630,7 +467,7 @@ export async function runAsyncValidators(
       continue;
     }
 
-    // Respect params.when conditional guard (sync eval, same as runCustomValidators)
+    // Respect params.when conditional guard (sync eval)
     const whenRule = validator.params?.['when'];
     if (whenRule != null && typeof whenRule === 'object') {
       const whenResult = runRule(whenRule as Rule, context);
@@ -807,35 +644,26 @@ export function checkField<TFieldId extends string = string>(
       if (field.type === 'file' && field.fileConfig) {
         const fc = field.fileConfig;
         if (fc.accept && fc.accept.length > 0) {
-          const fileTypeError = builtInValidators.file_type(fieldValue, { accept: fc.accept });
+          const fileTypeError = validateFileType(fieldValue, fc.accept);
           if (fileTypeError) {
             errors.push(fileTypeError);
           }
         }
         if (fc.maxSize !== undefined) {
-          const fileSizeError = builtInValidators.file_size(fieldValue, { maxSize: fc.maxSize });
+          const fileSizeError = validateFileSize(fieldValue, fc.maxSize);
           if (fileSizeError) {
             errors.push(fileSizeError);
           }
         }
         if (fc.multiple && fc.maxFiles !== undefined) {
-          const fileCountError = builtInValidators.file_count(fieldValue, { maxFiles: fc.maxFiles });
+          const fileCountError = validateFileCount(fieldValue, fc.maxFiles);
           if (fileCountError) {
             errors.push(fileCountError);
           }
         }
       }
 
-      // Run custom validators
-      if (field.validation?.validators && field.validation.validators.length > 0) {
-        const customErrors = runCustomValidators(
-          fieldValue,
-          field.validation.validators,
-          context,
-          options?.customValidators,
-        );
-        errors.push(...customErrors);
-      }
+      // TODO(task-4): Replace with runValidationRules() call for field.validation.rules
     }
   }
 
@@ -913,9 +741,8 @@ export async function checkFieldAsync<TFieldId extends string = string>(
     return syncResult;
   }
 
-  // Build syncValidatorKeys from builtInValidators + customValidators
+  // TODO(task-5): Rework async validation to use new asyncValidators references
   const syncValidatorKeys = new Set<string>([
-    ...Object.keys(builtInValidators),
     ...Object.keys(options.customValidators ?? {}),
   ]);
 

@@ -16,6 +16,7 @@ import {
   runAsyncValidators,
   runCustomValidators,
   runRule,
+  runValidationRules,
 } from './engine';
 
 describe(runRule, () => {
@@ -1638,5 +1639,70 @@ describe(checkFieldAsync, () => {
     const state = await checkFieldAsync(requirements, 'name', {});
     expect(state.errors).toHaveLength(1);
     expect(state.errors[0]).toContain('required');
+  });
+});
+
+describe('runValidationRules', () => {
+  it('should return no errors when all rules pass', () => {
+    const rules = [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }];
+    const errors = runValidationRules(rules, { data: { age: 25 } });
+    expect(errors).toEqual([]);
+  });
+
+  it('should return error message when rule fails', () => {
+    const rules = [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }];
+    const errors = runValidationRules(rules, { data: { age: 15 } });
+    expect(errors).toEqual(['Too young']);
+  });
+
+  it('should evaluate multiple rules and collect all errors', () => {
+    const rules = [
+      { rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' },
+      { rule: { '<=': [{ var: 'age' }, 120] }, message: 'Too old' },
+    ];
+    const errors = runValidationRules(rules, { data: { age: 150 } });
+    expect(errors).toEqual(['Too old']);
+  });
+
+  it('should skip rule when "when" guard evaluates to falsy', () => {
+    const rules = [{
+      rule: { match: [{ var: 'tax_id' }, '^[0-9]{11}$'] },
+      message: 'Invalid German tax ID',
+      when: { '==': [{ var: 'country' }, 'DE'] },
+    }];
+    const errors = runValidationRules(rules, { data: { tax_id: 'invalid', country: 'IE' } });
+    expect(errors).toEqual([]);
+  });
+
+  it('should run rule when "when" guard evaluates to truthy', () => {
+    const rules = [{
+      rule: { match: [{ var: 'tax_id' }, '^[0-9]{11}$'] },
+      message: 'Invalid German tax ID',
+      when: { '==': [{ var: 'country' }, 'DE'] },
+    }];
+    const errors = runValidationRules(rules, { data: { tax_id: 'invalid', country: 'DE' } });
+    expect(errors).toEqual(['Invalid German tax ID']);
+  });
+
+  it('should support cross-field validation', () => {
+    const rules = [{
+      rule: { '>': [{ var: 'end_date' }, { var: 'start_date' }] },
+      message: 'End date must be after start date',
+    }];
+    const errors = runValidationRules(rules, { data: { start_date: '2025-06-01', end_date: '2025-01-01' } });
+    expect(errors).toEqual(['End date must be after start date']);
+  });
+
+  it('should support date helpers in rules', () => {
+    const rules = [{
+      rule: { '>=': [{ age_from_date: { var: 'dob' } }, 18] },
+      message: 'Must be at least 18 years old',
+    }];
+    // A date that makes someone 10 years old
+    const tenYearsAgo = new Date();
+    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+    const dob = tenYearsAgo.toISOString().split('T')[0];
+    const errors = runValidationRules(rules, { data: { dob } });
+    expect(errors).toEqual(['Must be at least 18 years old']);
   });
 });
