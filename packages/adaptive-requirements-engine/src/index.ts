@@ -8,7 +8,8 @@ export type {
   LocalizedLabel,
   FieldOption,
   ResolvedFieldOption,
-  CustomValidator,
+  ValidationRule,
+  AsyncValidatorRef,
   FieldValidation,
   OptionsSource,
   FileConfig,
@@ -32,8 +33,7 @@ export type {
 export {
   resolveLabel,
   runRule,
-  builtInValidators,
-  runCustomValidators,
+  runValidationRules,
   runAsyncValidators,
   resolveFieldOptions,
   checkField,
@@ -47,7 +47,7 @@ export {
   getInitialStepId,
   createAdapter,
 } from './engine';
-export type { RuleContext, ValidatorFn, AsyncValidatorFn, EngineOptions } from './engine';
+export type { RuleContext, AsyncValidatorFn, EngineOptions } from './engine';
 
 // Validate
 export { validateRequirementsObject, validateDatasetItems } from './validate';

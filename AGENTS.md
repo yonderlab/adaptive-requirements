@@ -77,7 +77,7 @@ Packages are versioned independently. When engine is bumped, adaptive-form autom
 
 Things to be aware of when preparing for open source:
 
-1. **Domain-specific validators** — Built-in validators include `spanish_tax_id`, `irish_pps`, `german_tax_id`. Consider whether these should be built-in or moved to a separate package/plugin.
+1. **Domain-specific validation** — Validation logic (including regex patterns for Spanish NIF/NIE, Irish PPS, German Steuer-ID) is now data-driven via JSON Logic `ValidationRule[]`. Domain-specific rules live in requirements data, not in engine code.
 2. **Kota-specific types** — `RequirementsObject` includes `object_type` (employee/employer/associated_person), `benefit_type` (health), and `context` (dependant_management_intent/enrolment_intent/setup_intent) which are Kota domain enums.
 3. **README references** — `src/README.md` references `@kota/ui` import paths in examples.
 4. **Package scope** — Published as `@kotaio/adaptive-form` and `@kotaio/adaptive-requirements-engine`.

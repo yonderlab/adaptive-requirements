@@ -251,7 +251,7 @@ function makeAsyncRequirements(): RequirementsObject {
         id: 'email',
         type: 'text',
         validation: {
-          validators: [{ name: 'email_unique', message: 'Email already taken' }],
+          asyncValidators: [{ name: 'email_unique', message: 'Email already taken' }],
         },
       },
     ],
@@ -392,7 +392,7 @@ describe('dynamicForm async validation integration', () => {
         id: 'email',
         type: 'text',
         validation: {
-          validators: [{ name: 'email_unique', message: 'Email already taken' }],
+          asyncValidators: [{ name: 'email_unique', message: 'Email already taken' }],
         },
         visibleWhen: { '==': [{ var: 'toggle' }, 'show'] },
       },
@@ -419,7 +419,7 @@ describe('dynamicForm async validation integration', () => {
         id: 'emails',
         type: 'text',
         validation: {
-          validators: [{ name: 'email_unique', message: 'Email already taken' }],
+          asyncValidators: [{ name: 'email_unique', message: 'Email already taken' }],
         },
       },
     ]);
@@ -511,7 +511,7 @@ describe('dynamicForm async validation integration', () => {
           id: 'email',
           type: 'text',
           validation: {
-            validators: [{ name: 'email_unique', message: 'Email already taken' }],
+            asyncValidators: [{ name: 'email_unique', message: 'Email already taken' }],
           },
         },
         { id: 'name', type: 'text' },
@@ -572,7 +572,7 @@ describe('dynamicForm async validation integration', () => {
           type: 'text',
           validation: {
             required: true,
-            validators: [{ name: 'email_unique', message: 'Email already taken' }],
+            asyncValidators: [{ name: 'email_unique', message: 'Email already taken' }],
           },
         },
       ],

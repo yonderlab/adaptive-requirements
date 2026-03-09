@@ -11,7 +11,6 @@ import type {
 
 import {
   applyExclusions,
-  builtInValidators,
   clearHiddenFieldValues,
   getInitialStepId,
   getNextStepId,
@@ -27,9 +26,6 @@ import { usePhoneHome } from './use-phone-home';
 import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
-
-/** Sync validator keys — module-level constant since builtInValidators is static */
-const SYNC_VALIDATOR_KEYS = new Set<string>(Object.keys(builtInValidators));
 
 /**
  * Props for individual field input components
@@ -303,7 +299,6 @@ export function DynamicForm<TFieldId extends string = string>({
     isValidating: isAsyncValidating,
   } = useAsyncValidation({
     asyncValidators: builtInAsyncValidators,
-    syncValidatorKeys: SYNC_VALIDATOR_KEYS,
   });
 
   // Reset async validation state when requirements (schema/fields) change

@@ -63,13 +63,12 @@ describe('useAsyncValidation', () => {
     it('triggers validation after debounce delay', async () => {
       const emailUnique = createMockAsyncValidator(null);
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 300,
         }),
       );
@@ -95,13 +94,12 @@ describe('useAsyncValidation', () => {
     it('cancels previous debounce on re-call', async () => {
       const emailUnique = createMockAsyncValidator(null);
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 300,
         }),
       );
@@ -153,13 +151,12 @@ describe('useAsyncValidation', () => {
     it('sets isValidating to true then false with errors', async () => {
       const [emailUnique, resolveValidator] = createControllableValidator();
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 50,
         }),
       );
@@ -191,13 +188,12 @@ describe('useAsyncValidation', () => {
     it('sets empty errors when validation passes', async () => {
       const emailUnique = createMockAsyncValidator(null);
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 50,
         }),
       );
@@ -224,13 +220,12 @@ describe('useAsyncValidation', () => {
     it('aborts in-flight validation and clears state', async () => {
       const [emailUnique] = createControllableValidator();
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 50,
         }),
       );
@@ -261,13 +256,12 @@ describe('useAsyncValidation', () => {
     it('clears debounce timer before it fires', async () => {
       const emailUnique = createMockAsyncValidator(null);
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 300,
         }),
       );
@@ -301,14 +295,13 @@ describe('useAsyncValidation', () => {
       const [emailUnique] = createControllableValidator();
       const [ibanUnique] = createControllableValidator();
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
-        { id: 'iban', type: 'text', validation: { validators: [{ name: 'iban_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
+        { id: 'iban', type: 'text', validation: { asyncValidators: [{ name: 'iban_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique, iban_unique: ibanUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 50,
         }),
       );
@@ -353,15 +346,14 @@ describe('useAsyncValidation', () => {
       const emailUnique = createMockAsyncValidator('Email taken');
       const ibanUnique = createMockAsyncValidator(null);
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
-        { id: 'iban', type: 'text', validation: { validators: [{ name: 'iban_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
+        { id: 'iban', type: 'text', validation: { asyncValidators: [{ name: 'iban_unique' }] } },
         { id: 'name', type: 'text', validation: { required: true } }, // No async validator
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique, iban_unique: ibanUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 300,
         }),
       );
@@ -392,20 +384,19 @@ describe('useAsyncValidation', () => {
       expect(result.current.isValidating).toBeFalsy();
     });
 
-    it('skips fields whose validators are all sync', async () => {
+    it('skips fields with no asyncValidators array', async () => {
       const emailUnique = createMockAsyncValidator(null);
       const requirements = makeRequirements([
         {
           id: 'email',
           type: 'text',
-          validation: { validators: [{ name: 'email_format' }] }, // Only sync
+          validation: { required: true }, // No asyncValidators
         },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(['email_format']),
           debounceMs: 50,
         }),
       );
@@ -416,7 +407,7 @@ describe('useAsyncValidation', () => {
         errorMap = await result.current.validateAll({ email: 'test@example.com' }, requirements);
       });
 
-      // email_unique should not have been called (email_format is sync, not in asyncValidators)
+      // email_unique should not have been called (field has no asyncValidators)
       expect(emailUnique).not.toHaveBeenCalled();
       expect(errorMap).toStrictEqual({});
     });
@@ -424,13 +415,12 @@ describe('useAsyncValidation', () => {
     it('clears debounce timers before running', async () => {
       const emailUnique = createMockAsyncValidator(null);
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 300,
         }),
       );
@@ -461,7 +451,6 @@ describe('useAsyncValidation', () => {
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: {},
-          syncValidatorKeys: new Set(),
           debounceMs: 300,
         }),
       );
@@ -482,39 +471,37 @@ describe('useAsyncValidation', () => {
           id: 'hiddenEmail',
           type: 'text',
           visibleWhen: { '==': [{ var: 'toggle' }, 'show'] },
-          validation: { validators: [{ name: 'email_unique' }] },
+          validation: { asyncValidators: [{ name: 'email_unique' }] },
         },
         {
           id: 'excludedEmail',
           type: 'text',
           excludeWhen: true,
-          validation: { validators: [{ name: 'email_unique' }] },
+          validation: { asyncValidators: [{ name: 'email_unique' }] },
         },
         {
           id: 'invalidEmail',
           type: 'text',
           validation: {
-            pattern: '^[^@]+@[^@]+$',
-            message: 'Invalid email',
-            validators: [{ name: 'email_unique' }],
+            rules: [{ rule: { match: [{ var: 'invalidEmail' }, '^[^@]+@[^@]+$'] }, message: 'Invalid email' }],
+            asyncValidators: [{ name: 'email_unique' }],
           },
         },
         {
           id: 'emptyEmail',
           type: 'text',
-          validation: { validators: [{ name: 'email_unique' }] },
+          validation: { asyncValidators: [{ name: 'email_unique' }] },
         },
         {
           id: 'validEmail',
           type: 'text',
-          validation: { validators: [{ name: 'email_unique' }] },
+          validation: { asyncValidators: [{ name: 'email_unique' }] },
         },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 50,
         }),
       );
@@ -560,13 +547,12 @@ describe('useAsyncValidation', () => {
       );
 
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
         }),
       );
 
@@ -606,7 +592,6 @@ describe('useAsyncValidation', () => {
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: {},
-          syncValidatorKeys: new Set(),
         }),
       );
 
@@ -616,13 +601,12 @@ describe('useAsyncValidation', () => {
     it('reflects in-flight validation status', async () => {
       const [emailUnique, resolveValidator] = createControllableValidator();
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 50,
         }),
       );
@@ -655,13 +639,12 @@ describe('useAsyncValidation', () => {
     it('passes AbortSignal to async validator functions', async () => {
       const emailUnique = createMockAsyncValidator(null);
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 50,
         }),
       );
@@ -701,13 +684,12 @@ describe('useAsyncValidation', () => {
       });
 
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 50,
         }),
       );
@@ -752,13 +734,12 @@ describe('useAsyncValidation', () => {
     it('uses 300ms debounce by default', async () => {
       const emailUnique = createMockAsyncValidator(null);
       const requirements = makeRequirements([
-        { id: 'email', type: 'text', validation: { validators: [{ name: 'email_unique' }] } },
+        { id: 'email', type: 'text', validation: { asyncValidators: [{ name: 'email_unique' }] } },
       ]);
 
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           // No debounceMs specified -- should default to 300
         }),
       );
@@ -796,7 +777,6 @@ describe('useAsyncValidation', () => {
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: { email_unique: emailUnique },
-          syncValidatorKeys: new Set(),
           debounceMs: 50,
         }),
       );
@@ -817,7 +797,6 @@ describe('useAsyncValidation', () => {
       const { result } = renderHook(() =>
         useAsyncValidation({
           asyncValidators: {},
-          syncValidatorKeys: new Set(),
         }),
       );
 

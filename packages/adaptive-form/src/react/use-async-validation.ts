@@ -1,6 +1,6 @@
 import type {
   AsyncValidatorFn,
-  CustomValidator,
+  AsyncValidatorRef,
   EngineOptions,
   FieldValue,
   FormData,
@@ -29,8 +29,6 @@ export type AsyncValidationState = Record<string, AsyncFieldState>;
 export interface UseAsyncValidationOptions {
   /** Registered async validator functions keyed by name. */
   asyncValidators: Record<string, AsyncValidatorFn>;
-  /** Keys of synchronous validators (built-in + custom). Async validators with matching keys are skipped. */
-  syncValidatorKeys: Set<string>;
   /** Debounce delay in milliseconds before async validation fires. Defaults to 300. */
   debounceMs?: number;
   /** Engine options passed to checkField for sync gating in validateAll. */
@@ -73,7 +71,7 @@ function cleanupTimersAndControllers(
  * Designed to be composed into DynamicForm or used standalone alongside useRequirements.
  */
 export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsyncValidationReturn {
-  const { asyncValidators, syncValidatorKeys, debounceMs = 300, engine } = options;
+  const { asyncValidators, debounceMs = 300, engine } = options;
 
   const [asyncState, setAsyncState] = useState<AsyncValidationState>({});
 
@@ -131,9 +129,9 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
    * Execute async validation for a single field (no debounce). Used internally by validateField and validateAll.
    */
   const executeValidation = useCallback(
-    (value: FieldValue, validators: CustomValidator[], context: RuleContext, signal?: AbortSignal): Promise<string[]> =>
-      runAsyncValidators(value, validators, context, asyncValidators, syncValidatorKeys, signal),
-    [asyncValidators, syncValidatorKeys],
+    (value: FieldValue, refs: AsyncValidatorRef[], context: RuleContext, signal?: AbortSignal): Promise<string[]> =>
+      runAsyncValidators(value, refs, context, asyncValidators, signal, engine?.customOperations),
+    [asyncValidators, engine?.customOperations],
   );
 
   /**
@@ -157,22 +155,18 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
           existingController.abort();
         }
 
-        // Find the field's validators
+        // Find the field's async validators
         const field = requirements.fields.find((f) => f.id === fieldId);
-        const validators = field?.validation?.validators ?? [];
+        const asyncRefs = field?.validation?.asyncValidators ?? [];
 
-        if (validators.length === 0) {
+        if (asyncRefs.length === 0) {
           return;
         }
 
-        // Check if at least one validator is eligible for async validation
-        const asyncValidatorNames = new Set(Object.keys(asyncValidators));
-        const hasEligibleAsync = validators.some((v) => {
-          const key = v.type ?? v.name;
-          return key != null && asyncValidatorNames.has(key) && !syncValidatorKeys.has(key);
-        });
+        // Check if at least one ref has a matching function
+        const hasEligible = asyncRefs.some((ref) => Object.hasOwn(asyncValidators, ref.name));
 
-        if (!hasEligibleAsync) {
+        if (!hasEligible) {
           return;
         }
 
@@ -191,7 +185,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
         // Fire-and-forget async validation (lifecycle managed by abort controller)
         void (async () => {
           try {
-            const errors = await executeValidation(value, validators, context, controller.signal);
+            const errors = await executeValidation(value, asyncRefs, context, controller.signal);
 
             // If aborted, do not update state
             if (controller.signal.aborted) {
@@ -227,7 +221,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
 
       timersRef.current.set(fieldId, timer);
     },
-    [debounceMs, executeValidation, asyncValidators, syncValidatorKeys],
+    [debounceMs, executeValidation, asyncValidators],
   );
 
   /**
@@ -240,26 +234,22 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
       // Clear all debounce timers and abort existing controllers
       cleanupTimersAndControllers(timersRef.current, controllersRef.current);
 
-      const asyncValidatorNames = new Set(Object.keys(asyncValidators));
       const context: RuleContext = { data, answers: data };
       const errorMap: Record<string, string[]> = {};
 
-      // Find fields that have validators matching async validator names (not in syncValidatorKeys)
-      const fieldsToValidate: { fieldId: string; validators: CustomValidator[]; value: FieldValue }[] = [];
+      // Find fields that have async validators with a matching function in the registry
+      const fieldsToValidate: { fieldId: string; asyncRefs: AsyncValidatorRef[]; value: FieldValue }[] = [];
 
       for (const field of requirements.fields) {
-        const validators = field.validation?.validators;
-        if (!validators || validators.length === 0) {
+        const asyncRefs = field.validation?.asyncValidators;
+        if (!asyncRefs || asyncRefs.length === 0) {
           continue;
         }
 
-        // Check if any validator is async (exists in asyncValidators but not in syncValidatorKeys)
-        const hasAsync = validators.some((v) => {
-          const key = v.type ?? v.name;
-          return key != null && asyncValidatorNames.has(key) && !syncValidatorKeys.has(key);
-        });
+        // Check if at least one ref has a matching function
+        const hasEligible = asyncRefs.some((ref) => Object.hasOwn(asyncValidators, ref.name));
 
-        if (hasAsync) {
+        if (hasEligible) {
           const syncState = checkField(requirements, field.id, data, engine);
           if (
             !syncState.isVisible ||
@@ -272,7 +262,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
 
           fieldsToValidate.push({
             fieldId: field.id,
-            validators,
+            asyncRefs,
             value: syncState.value,
           });
         }
@@ -293,11 +283,11 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
 
       // Create controllers and run validations in parallel
       const results = await Promise.allSettled(
-        fieldsToValidate.map(async ({ fieldId, validators, value }) => {
+        fieldsToValidate.map(async ({ fieldId, asyncRefs, value }) => {
           const controller = new AbortController();
           controllersRef.current.set(fieldId, controller);
 
-          const errors = await executeValidation(value, validators, context, controller.signal);
+          const errors = await executeValidation(value, asyncRefs, context, controller.signal);
 
           // Clean up controller
           if (controllersRef.current.get(fieldId) === controller) {
@@ -331,7 +321,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
 
       return errorMap;
     },
-    [asyncValidators, syncValidatorKeys, executeValidation, engine],
+    [asyncValidators, executeValidation, engine],
   );
 
   /**
