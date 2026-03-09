@@ -142,7 +142,50 @@ function calculateDateDiff(from: Date, to: Date, unit: 'days' | 'months' | 'year
   }
 }
 
-let customOperationsRegistered = false;
+const ENGINE_OPERATION_NAMES = ['today', 'age_from_date', 'months_since', 'date_diff', 'abs', 'match'] as const;
+
+const JSON_LOGIC_CORE_OPERATION_NAMES = [
+  '==',
+  '===',
+  '!=',
+  '!==',
+  '>',
+  '>=',
+  '<',
+  '<=',
+  '!!',
+  '!',
+  '%',
+  'log',
+  'in',
+  'cat',
+  'substr',
+  '+',
+  '*',
+  '-',
+  '/',
+  'min',
+  'max',
+  'merge',
+  'var',
+  'missing',
+  'missing_some',
+  'if',
+  '?:',
+  'and',
+  'or',
+  'filter',
+  'map',
+  'reduce',
+  'all',
+  'none',
+  'some',
+] as const;
+
+const RESERVED_OPERATION_NAMES = new Set<string>([...JSON_LOGIC_CORE_OPERATION_NAMES, ...ENGINE_OPERATION_NAMES]);
+
+let builtInOperationsRegistered = false;
+const registeredCustomOperations = new Map<string, (...args: unknown[]) => unknown>();
 
 type NormalizedPrimitive = string | number | boolean | null | undefined;
 
@@ -221,8 +264,8 @@ function normalizeRule(value: unknown): NormalizedRule {
   return normalized;
 }
 
-function ensureCustomOperationsRegistered() {
-  if (customOperationsRegistered) {
+function ensureBuiltInOperationsRegistered() {
+  if (builtInOperationsRegistered) {
     return;
   }
 
@@ -258,16 +301,29 @@ function ensureCustomOperationsRegistered() {
     }
   });
 
-  customOperationsRegistered = true;
+  builtInOperationsRegistered = true;
 }
 
 /**
  * Register consumer-provided custom JSON Logic operations.
- * Called by checkField when options.customOperations is provided.
+ * Registration is lazy and only happens through runRule().
  */
 function registerCustomOperations(ops: Record<string, (...args: unknown[]) => unknown>) {
   for (const [name, fn] of Object.entries(ops)) {
+    if (RESERVED_OPERATION_NAMES.has(name)) {
+      throw new Error(`Cannot register custom JSON Logic operation "${name}": name is reserved`);
+    }
+
+    const existing = registeredCustomOperations.get(name);
+    if (existing) {
+      if (existing !== fn) {
+        throw new Error(`Cannot re-register custom JSON Logic operation "${name}" with a different implementation`);
+      }
+      continue;
+    }
+
     jsonLogic.add_operation(name, fn);
+    registeredCustomOperations.set(name, fn);
   }
 }
 
@@ -295,8 +351,15 @@ function buildLogicData(context: RuleContext): Record<string, unknown> {
  * - { var: "answers.field" } - answers context (alias for data)
  * - { var: "item.field" } - item context (for dataset filtering)
  */
-export function runRule(rule: Rule, context: RuleContext): RuleResult {
-  ensureCustomOperationsRegistered();
+export function runRule(
+  rule: Rule,
+  context: RuleContext,
+  customOperations?: Record<string, (...args: unknown[]) => unknown>,
+): RuleResult {
+  ensureBuiltInOperationsRegistered();
+  if (customOperations) {
+    registerCustomOperations(customOperations);
+  }
 
   try {
     const normalizedRule = normalizeRule(rule);
@@ -330,14 +393,17 @@ export function runRule(rule: Rule, context: RuleContext): RuleResult {
  * Truthy = valid, falsy = push error message.
  * Supports conditional execution via optional `when` guard.
  */
-export function runValidationRules(rules: ValidationRule[], context: RuleContext): string[] {
-  ensureCustomOperationsRegistered();
+export function runValidationRules(
+  rules: ValidationRule[],
+  context: RuleContext,
+  customOperations?: Record<string, (...args: unknown[]) => unknown>,
+): string[] {
   const errors: string[] = [];
   for (const validationRule of rules) {
-    if (validationRule.when != null && !runRule(validationRule.when, context)) {
+    if (validationRule.when != null && !runRule(validationRule.when, context, customOperations)) {
       continue;
     }
-    if (!runRule(validationRule.rule, context)) {
+    if (!runRule(validationRule.rule, context, customOperations)) {
       errors.push(validationRule.message);
     }
   }
@@ -450,6 +516,7 @@ export async function runAsyncValidators(
   context: RuleContext,
   asyncValidators: Record<string, AsyncValidatorFn>,
   signal?: AbortSignal,
+  customOperations?: Record<string, (...args: unknown[]) => unknown>,
 ): Promise<string[]> {
   if (signal?.aborted) {
     return [];
@@ -464,7 +531,7 @@ export async function runAsyncValidators(
     }
 
     // Respect when conditional guard
-    if (ref.when != null && !runRule(ref.when, context)) {
+    if (ref.when != null && !runRule(ref.when, context, customOperations)) {
       continue;
     }
 
@@ -512,6 +579,7 @@ export function resolveFieldOptions<TFieldId extends string = string>(
   datasets?: Dataset[],
   context?: RuleContext,
   labelResolver: (label: LocalizedLabel | undefined, locale?: string) => string | undefined = resolveLabel,
+  customOperations?: Record<string, (...args: unknown[]) => unknown>,
 ): ResolvedFieldOption[] | undefined {
   if (field.options) {
     return field.options.map(
@@ -537,7 +605,7 @@ export function resolveFieldOptions<TFieldId extends string = string>(
             ...context,
             item: typeof item === 'string' ? { value: item } : item,
           };
-          return !!runRule(field.optionsSource!.filter!, itemContext);
+          return !!runRule(field.optionsSource!.filter!, itemContext, customOperations);
         });
       }
 
@@ -578,24 +646,23 @@ export function checkField<TFieldId extends string = string>(
     throw new Error(`Unknown field: ${fieldId}`);
   }
 
-  // Register consumer-provided custom JSON Logic operations before any rule evaluation
-  if (options?.customOperations) {
-    registerCustomOperations(options.customOperations);
-  }
-
   const context: RuleContext = { data, answers: data };
 
   // Handle hidden type - always invisible but included in data
   const isHiddenType = field.type === 'hidden';
-  const isVisible = isHiddenType ? false : field.visibleWhen ? !!runRule(field.visibleWhen, context) : true;
+  const isVisible = isHiddenType
+    ? false
+    : field.visibleWhen
+      ? !!runRule(field.visibleWhen, context, options?.customOperations)
+      : true;
 
   // Evaluate exclusion state - when true, field value is excluded (set to undefined)
-  const isExcluded = field.excludeWhen ? !!runRule(field.excludeWhen, context) : false;
+  const isExcluded = field.excludeWhen ? !!runRule(field.excludeWhen, context, options?.customOperations) : false;
 
   // Evaluate required state
   let isRequired = !!field.validation?.required;
   if (field.validation?.requireWhen) {
-    isRequired ||= !!runRule(field.validation.requireWhen, context);
+    isRequired ||= !!runRule(field.validation.requireWhen, context, options?.customOperations);
   }
 
   // Evaluate readOnly state
@@ -645,13 +712,19 @@ export function checkField<TFieldId extends string = string>(
 
       // Run data-driven validation rules
       if (field.validation?.rules && field.validation.rules.length > 0) {
-        const ruleErrors = runValidationRules(field.validation.rules, context);
+        const ruleErrors = runValidationRules(field.validation.rules, context, options?.customOperations);
         errors.push(...ruleErrors);
       }
     }
   }
 
-  const fieldOptions = resolveFieldOptions(field, requirements.datasets, context, labelResolverFn);
+  const fieldOptions = resolveFieldOptions(
+    field,
+    requirements.datasets,
+    context,
+    labelResolverFn,
+    options?.customOperations,
+  );
 
   // Get the value - for computed fields, always calculate from current data
   let value: FieldValue;
@@ -662,7 +735,7 @@ export function checkField<TFieldId extends string = string>(
       computeRule = (computeRule as { rule: Rule }).rule;
     }
     // Always recalculate computed fields from current data
-    value = runRule(computeRule, context);
+    value = runRule(computeRule, context, options?.customOperations);
   } else {
     // For non-computed fields, use the value from data
     value = data[fieldId];
@@ -733,7 +806,14 @@ export async function checkFieldAsync<TFieldId extends string = string>(
   }
 
   const context: RuleContext = { data, answers: data };
-  const asyncErrors = await runAsyncValidators(fieldValue, asyncRefs, context, options.asyncValidators, signal);
+  const asyncErrors = await runAsyncValidators(
+    fieldValue,
+    asyncRefs,
+    context,
+    options.asyncValidators,
+    signal,
+    options.customOperations,
+  );
 
   // Merge async errors into FieldState
   if (asyncErrors.length === 0) {
@@ -911,7 +991,7 @@ export function getNextStepId<TFieldId extends string = string>(
   let candidate: string | undefined;
   if (flow.navigation?.rules?.length) {
     for (const rule of flow.navigation.rules) {
-      if (runRule(rule.when, context)) {
+      if (runRule(rule.when, context, options?.engine?.customOperations)) {
         candidate = rule.action.stepId;
         break;
       }
@@ -997,7 +1077,7 @@ export function createAdapter<TFieldId extends string = string>(
       }
       const context: RuleContext | undefined = data ? { data, answers: data } : undefined;
       const labelResolverFn = options?.labelResolver ?? resolveLabel;
-      return resolveFieldOptions(field, requirements.datasets, context, labelResolverFn);
+      return resolveFieldOptions(field, requirements.datasets, context, labelResolverFn, options?.customOperations);
     },
 
     getField: (fieldId: string) => {

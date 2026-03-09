@@ -17,6 +17,9 @@ import {
   runValidationRules,
 } from './engine';
 
+const multipleOfForTest = (value: unknown, divisor: unknown) =>
+  typeof value === 'number' && typeof divisor === 'number' ? value % divisor === 0 : false;
+
 describe(runRule, () => {
   it('should return primitive values as-is', () => {
     expect(runRule('hello', {})).toBe('hello');
@@ -188,6 +191,53 @@ describe(runRule, () => {
       const context = { data: { text: 'Hello World' } };
       expect(runRule({ substr: [{ var: 'text' }, 0, 5] }, context)).toBe('Hello');
       expect(runRule({ substr: [{ var: 'text' }, 6] }, context)).toBe('World');
+    });
+  });
+
+  describe('custom operations', () => {
+    it('should evaluate custom operations when provided', () => {
+      const context = { data: { age: 21 } };
+      const result = runRule({ double_for_test: { var: 'age' } } as never, context, {
+        double_for_test: (value: unknown) => (typeof value === 'number' ? value * 2 : null),
+      });
+
+      expect(result).toBe(42);
+    });
+
+    it('should reject custom operations that shadow built-in operators', () => {
+      expect(() =>
+        runRule(
+          { '==': [1, 1] },
+          {},
+          {
+            match: () => true,
+          },
+        ),
+      ).toThrow(/Cannot register custom JSON Logic operation "match"/);
+    });
+
+    it('should reject re-registering an existing custom operation with a different implementation', () => {
+      const operationName = 'increment_for_test';
+
+      expect(
+        runRule(
+          { [operationName]: 1 } as never,
+          {},
+          {
+            [operationName]: (value: unknown) => (typeof value === 'number' ? value + 1 : null),
+          },
+        ),
+      ).toBe(2);
+
+      expect(() =>
+        runRule(
+          { [operationName]: 1 } as never,
+          {},
+          {
+            [operationName]: (value: unknown) => (typeof value === 'number' ? value + 2 : null),
+          },
+        ),
+      ).toThrow(new RegExp(`Cannot re-register custom JSON Logic operation "${operationName}"`));
     });
   });
 });
@@ -369,6 +419,50 @@ describe(checkField, () => {
       futureDate.setFullYear(futureDate.getFullYear() + 1);
       const state = checkField(requirementsWithRules, 'dob', { dob: futureDate.toISOString() });
       expect(state.errors.some((e) => e.includes('future'))).toBeTruthy();
+    });
+
+    it('should evaluate validation rules using custom operations from engine options', () => {
+      const customRequirements: RequirementsObject = {
+        fields: [
+          {
+            id: 'score',
+            type: 'number',
+            label: 'Score',
+            validation: {
+              rules: [
+                {
+                  rule: { multiple_of_for_test: [{ var: 'score' }, 5] } as never,
+                  message: 'Must be a multiple of 5',
+                },
+              ],
+            },
+          },
+        ],
+      };
+
+      const invalidState = checkField(
+        customRequirements,
+        'score',
+        { score: 12 },
+        {
+          customOperations: {
+            multiple_of_for_test: multipleOfForTest,
+          },
+        },
+      );
+      expect(invalidState.errors).toContain('Must be a multiple of 5');
+
+      const validState = checkField(
+        customRequirements,
+        'score',
+        { score: 15 },
+        {
+          customOperations: {
+            multiple_of_for_test: multipleOfForTest,
+          },
+        },
+      );
+      expect(validState.errors).toHaveLength(0);
     });
   });
 
