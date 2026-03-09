@@ -56,6 +56,143 @@ describe(validateRequirementsObject, () => {
   });
 });
 
+describe('validateRequirementsObject with validation.rules', () => {
+  it('should accept valid rules', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'age',
+          type: 'number',
+          validation: {
+            rules: [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }],
+          },
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject rules without message', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'age',
+          type: 'number',
+          validation: { rules: [{ rule: { '>=': [{ var: 'age' }, 18] } }] },
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject rules that are not an array', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'age',
+          type: 'number',
+          validation: { rules: 'not_an_array' },
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject rule entries that are not objects', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'age',
+          type: 'number',
+          validation: { rules: ['not_an_object'] },
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject rule entries without a rule property', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'age',
+          type: 'number',
+          validation: { rules: [{ message: 'Too young' }] },
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept valid asyncValidators', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'email',
+          type: 'email',
+          validation: { asyncValidators: [{ name: 'email_unique' }] },
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject asyncValidators that are not an array', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'email',
+          type: 'email',
+          validation: { asyncValidators: 'not_an_array' },
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject async validator entries without a name', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'email',
+          type: 'email',
+          validation: { asyncValidators: [{ params: {} }] },
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject async validator entries that are not objects', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'email',
+          type: 'email',
+          validation: { asyncValidators: [42] },
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept fields with both rules and asyncValidators', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'email',
+          type: 'email',
+          validation: {
+            rules: [{ rule: { '!!': [{ var: 'email' }] }, message: 'Required' }],
+            asyncValidators: [{ name: 'email_unique' }],
+          },
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
 describe(validateDatasetItems, () => {
   it('accepts valid dataset items', () => {
     const result = validateDatasetItems([
