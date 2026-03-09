@@ -1,5 +1,5 @@
 import type { AsyncValidatorFn } from './engine';
-import type { AsyncValidatorRef, RequirementsObject } from './types';
+import type { AsyncValidatorRef, RequirementsObject, ValidationRule } from './types';
 
 import { describe, expect, it } from 'vitest';
 
@@ -1520,19 +1520,19 @@ describe(checkFieldAsync, () => {
 
 describe('runValidationRules', () => {
   it('should return no errors when all rules pass', () => {
-    const rules = [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }];
+    const rules: ValidationRule[] = [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }];
     const errors = runValidationRules(rules, { data: { age: 25 } });
     expect(errors).toEqual([]);
   });
 
   it('should return error message when rule fails', () => {
-    const rules = [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }];
+    const rules: ValidationRule[] = [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }];
     const errors = runValidationRules(rules, { data: { age: 15 } });
     expect(errors).toEqual(['Too young']);
   });
 
   it('should evaluate multiple rules and collect all errors', () => {
-    const rules = [
+    const rules: ValidationRule[] = [
       { rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' },
       { rule: { '<=': [{ var: 'age' }, 120] }, message: 'Too old' },
     ];
@@ -1541,7 +1541,7 @@ describe('runValidationRules', () => {
   });
 
   it('should skip rule when "when" guard evaluates to falsy', () => {
-    const rules = [
+    const rules: ValidationRule[] = [
       {
         rule: { match: [{ var: 'tax_id' }, '^[0-9]{11}$'] },
         message: 'Invalid German tax ID',
@@ -1553,7 +1553,7 @@ describe('runValidationRules', () => {
   });
 
   it('should run rule when "when" guard evaluates to truthy', () => {
-    const rules = [
+    const rules: ValidationRule[] = [
       {
         rule: { match: [{ var: 'tax_id' }, '^[0-9]{11}$'] },
         message: 'Invalid German tax ID',
@@ -1565,7 +1565,7 @@ describe('runValidationRules', () => {
   });
 
   it('should support cross-field validation', () => {
-    const rules = [
+    const rules: ValidationRule[] = [
       {
         rule: { '>': [{ var: 'end_date' }, { var: 'start_date' }] },
         message: 'End date must be after start date',
@@ -1576,7 +1576,7 @@ describe('runValidationRules', () => {
   });
 
   it('should support date helpers in rules', () => {
-    const rules = [
+    const rules: ValidationRule[] = [
       {
         rule: { '>=': [{ age_from_date: { var: 'dob' } }, 18] },
         message: 'Must be at least 18 years old',
