@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   applyExclusions,
-  builtInValidators,
   calculateData,
   checkField,
   checkFieldAsync,
@@ -14,7 +13,6 @@ import {
   resolveFieldOptions,
   resolveLabel,
   runAsyncValidators,
-  runCustomValidators,
   runRule,
   runValidationRules,
 } from './engine';
@@ -208,7 +206,12 @@ describe(checkField, () => {
         type: 'number',
         label: 'Age',
         visibleWhen: { var: 'firstName' },
-        validation: { min: 0, max: 120 },
+        validation: {
+          rules: [
+            { rule: { '>=': [{ var: 'age' }, 0] }, message: 'Minimum 0' },
+            { rule: { '<=': [{ var: 'age' }, 120] }, message: 'Maximum 120' },
+          ],
+        },
       },
       {
         id: 'email',
@@ -216,8 +219,12 @@ describe(checkField, () => {
         label: 'Email',
         validation: {
           required: true,
-          pattern: '^[^@]+@[^@]+\\.[^@]+$',
-          message: 'Please enter a valid email',
+          rules: [
+            {
+              rule: { match: [{ var: 'email' }, '^[^@]+@[^@]+\\.[^@]+$'] },
+              message: 'Please enter a valid email',
+            },
+          ],
         },
       },
     ],
@@ -315,39 +322,52 @@ describe(checkField, () => {
     });
   });
 
-  describe('custom validators', () => {
-    const requirementsWithCustomValidators: RequirementsObject = {
+  describe('validation rules', () => {
+    const requirementsWithRules: RequirementsObject = {
       fields: [
         {
           id: 'dob',
           type: 'date',
           label: 'Date of Birth',
           validation: {
-            validators: [{ type: 'dob_not_in_future' }, { type: 'age_range', params: { min: 18, max: 100 } }],
+            rules: [
+              {
+                rule: { '<=': [{ var: 'dob' }, { today: {} }] },
+                message: 'Date of birth must not be in the future',
+              },
+              {
+                rule: { '>=': [{ age_from_date: { var: 'dob' } }, 18] },
+                message: 'Must be at least 18 years old',
+              },
+              {
+                rule: { '<=': [{ age_from_date: { var: 'dob' } }, 100] },
+                message: 'Must be at most 100 years old',
+              },
+            ],
           },
         },
       ],
     };
 
-    it('should validate with custom age_range validator', () => {
+    it('should validate with age rules', () => {
       // Too young (10 years old)
       const tenYearsAgo = new Date();
       tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-      const state1 = checkField(requirementsWithCustomValidators, 'dob', { dob: tenYearsAgo.toISOString() });
+      const state1 = checkField(requirementsWithRules, 'dob', { dob: tenYearsAgo.toISOString() });
       expect(state1.errors.length).toBeGreaterThan(0);
       expect(state1.errors.some((e) => e.includes('18'))).toBeTruthy();
 
       // Valid age (30 years old)
       const thirtyYearsAgo = new Date();
       thirtyYearsAgo.setFullYear(thirtyYearsAgo.getFullYear() - 30);
-      const state2 = checkField(requirementsWithCustomValidators, 'dob', { dob: thirtyYearsAgo.toISOString() });
+      const state2 = checkField(requirementsWithRules, 'dob', { dob: thirtyYearsAgo.toISOString() });
       expect(state2.errors).toHaveLength(0);
     });
 
-    it('should validate with dob_not_in_future validator', () => {
+    it('should validate dob not in the future', () => {
       const futureDate = new Date();
       futureDate.setFullYear(futureDate.getFullYear() + 1);
-      const state = checkField(requirementsWithCustomValidators, 'dob', { dob: futureDate.toISOString() });
+      const state = checkField(requirementsWithRules, 'dob', { dob: futureDate.toISOString() });
       expect(state.errors.some((e) => e.includes('future'))).toBeTruthy();
     });
   });
@@ -391,92 +411,6 @@ describe(resolveLabel, () => {
 
   it('should return default from localized object', () => {
     expect(resolveLabel({ default: 'Default Label', key: 'some.key' })).toBe('Default Label');
-  });
-});
-
-describe('builtInValidators', () => {
-  describe('age_range', () => {
-    it('should pass for valid age', () => {
-      const thirtyYearsAgo = new Date();
-      thirtyYearsAgo.setFullYear(thirtyYearsAgo.getFullYear() - 30);
-      const result = builtInValidators.age_range(thirtyYearsAgo.toISOString(), { min: 18, max: 100 });
-      expect(result).toBeNull();
-    });
-
-    it('should fail for too young', () => {
-      const tenYearsAgo = new Date();
-      tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-      const result = builtInValidators.age_range(tenYearsAgo.toISOString(), { min: 18, max: 100 });
-      expect(result).not.toBeNull();
-    });
-  });
-
-  describe('dob_not_in_future', () => {
-    it('should pass for past date', () => {
-      const result = builtInValidators.dob_not_in_future('2000-01-01', {});
-      expect(result).toBeNull();
-    });
-
-    it('should fail for future date', () => {
-      const futureDate = new Date();
-      futureDate.setFullYear(futureDate.getFullYear() + 1);
-      const result = builtInValidators.dob_not_in_future(futureDate.toISOString(), {});
-      expect(result).not.toBeNull();
-    });
-  });
-
-  describe('spanish_tax_id', () => {
-    it('should pass for valid NIF', () => {
-      const result = builtInValidators.spanish_tax_id('12345678Z', {});
-      expect(result).toBeNull();
-    });
-
-    it('should pass for valid NIE', () => {
-      const result = builtInValidators.spanish_tax_id('X1234567Z', {});
-      expect(result).toBeNull();
-    });
-
-    it('should fail for invalid format', () => {
-      const result = builtInValidators.spanish_tax_id('invalid', {});
-      expect(result).not.toBeNull();
-    });
-  });
-
-  describe('irish_pps', () => {
-    it('should pass for valid PPS', () => {
-      const result = builtInValidators.irish_pps('1234567AB', {});
-      expect(result).toBeNull();
-    });
-
-    it('should fail for invalid format', () => {
-      const result = builtInValidators.irish_pps('invalid', {});
-      expect(result).not.toBeNull();
-    });
-  });
-});
-
-describe(runCustomValidators, () => {
-  it('should run multiple validators', () => {
-    const validators = [{ type: 'dob_not_in_future' }, { type: 'age_range', params: { min: 18 } }];
-
-    const tenYearsAgo = new Date();
-    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-
-    const errors = runCustomValidators(tenYearsAgo.toISOString(), validators, { data: {} });
-    expect(errors).toHaveLength(1); // Only age_range should fail
-  });
-
-  it('should support custom validators via options', () => {
-    const validators = [{ type: 'custom_validator' }];
-    const customValidators = {
-      custom_validator: (value: unknown) => (value === 'bad' ? 'Value is bad' : null),
-    };
-
-    const errors1 = runCustomValidators('bad', validators, { data: {} }, customValidators);
-    expect(errors1).toContain('Value is bad');
-
-    const errors2 = runCustomValidators('good', validators, { data: {} }, customValidators);
-    expect(errors2).toHaveLength(0);
   });
 });
 
@@ -1065,87 +999,6 @@ describe('checkField with excludeWhen', () => {
 });
 
 describe('file field type', () => {
-  describe('file_type validator', () => {
-    it('should pass for accepted extension', () => {
-      const result = builtInValidators.file_type('document.pdf', { accept: ['.pdf'] });
-      expect(result).toBeNull();
-    });
-
-    it('should fail for rejected extension', () => {
-      const result = builtInValidators.file_type('document.exe', { accept: ['.pdf', '.doc'] });
-      expect(result).not.toBeNull();
-    });
-
-    it('should pass for wildcard image type', () => {
-      const result = builtInValidators.file_type('photo.jpg', { accept: ['image/*'] });
-      expect(result).toBeNull();
-    });
-
-    it('should handle name|size encoding', () => {
-      const result = builtInValidators.file_type('document.pdf|1024', { accept: ['.pdf'] });
-      expect(result).toBeNull();
-    });
-
-    it('should pass for empty value (let required handle)', () => {
-      const result = builtInValidators.file_type('', { accept: ['.pdf'] });
-      expect(result).toBeNull();
-    });
-
-    it('should pass when no accept types specified', () => {
-      const result = builtInValidators.file_type('any.file', { accept: [] });
-      expect(result).toBeNull();
-    });
-
-    it('should handle case insensitive matching', () => {
-      const result = builtInValidators.file_type('Photo.JPG', { accept: ['.jpg'] });
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('file_size validator', () => {
-    it('should pass when size is under limit', () => {
-      const result = builtInValidators.file_size('doc.pdf|500000', { maxSize: 1_048_576 });
-      expect(result).toBeNull();
-    });
-
-    it('should fail when size exceeds limit', () => {
-      const result = builtInValidators.file_size('doc.pdf|2000000', { maxSize: 1_048_576 });
-      expect(result).not.toBeNull();
-    });
-
-    it('should pass when no size metadata in value', () => {
-      const result = builtInValidators.file_size('doc.pdf', { maxSize: 1_048_576 });
-      expect(result).toBeNull();
-    });
-
-    it('should check each file in multi-file value', () => {
-      const result = builtInValidators.file_size('a.pdf|500;b.pdf|2000000', { maxSize: 1_048_576 });
-      expect(result).not.toBeNull();
-    });
-
-    it('should pass when all files are under limit', () => {
-      const result = builtInValidators.file_size('a.pdf|500;b.pdf|600', { maxSize: 1_048_576 });
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('file_count validator', () => {
-    it('should pass when under limit', () => {
-      const result = builtInValidators.file_count('a.pdf;b.pdf', { maxFiles: 3 });
-      expect(result).toBeNull();
-    });
-
-    it('should fail when over limit', () => {
-      const result = builtInValidators.file_count('a.pdf;b.pdf;c.pdf;d.pdf', { maxFiles: 3 });
-      expect(result).not.toBeNull();
-    });
-
-    it('should pass for single file with no limit', () => {
-      const result = builtInValidators.file_count('a.pdf', {});
-      expect(result).toBeNull();
-    });
-  });
-
   describe('checkField with file type', () => {
     it('should auto-validate file type from fileConfig', () => {
       const requirements: RequirementsObject = {
@@ -1316,15 +1169,18 @@ describe('validation rules (JSON Logic)', () => {
 
   it('should validate with rules (replaces min/max)', () => {
     const req: RequirementsObject = {
-      fields: [{
-        id: 'age', type: 'number',
-        validation: {
-          rules: [
-            { rule: { '>=': [{ var: 'age' }, 18] }, message: 'Minimum 18' },
-            { rule: { '<=': [{ var: 'age' }, 120] }, message: 'Maximum 120' },
-          ],
+      fields: [
+        {
+          id: 'age',
+          type: 'number',
+          validation: {
+            rules: [
+              { rule: { '>=': [{ var: 'age' }, 18] }, message: 'Minimum 18' },
+              { rule: { '<=': [{ var: 'age' }, 120] }, message: 'Maximum 120' },
+            ],
+          },
         },
-      }],
+      ],
     };
     expect(checkField(req, 'age', { age: 10 }).errors).toEqual(['Minimum 18']);
     expect(checkField(req, 'age', { age: 25 }).errors).toEqual([]);
@@ -1333,12 +1189,15 @@ describe('validation rules (JSON Logic)', () => {
 
   it('should validate with pattern rule (replaces pattern)', () => {
     const req: RequirementsObject = {
-      fields: [{
-        id: 'email', type: 'email',
-        validation: {
-          rules: [{ rule: { match: [{ var: 'email' }, '^.+@.+\\..+$'] }, message: 'Invalid email' }],
+      fields: [
+        {
+          id: 'email',
+          type: 'email',
+          validation: {
+            rules: [{ rule: { match: [{ var: 'email' }, '^.+@.+\\..+$'] }, message: 'Invalid email' }],
+          },
         },
-      }],
+      ],
     };
     expect(checkField(req, 'email', { email: 'bad' }).errors).toEqual(['Invalid email']);
     expect(checkField(req, 'email', { email: 'a@b.com' }).errors).toEqual([]);
@@ -1346,44 +1205,34 @@ describe('validation rules (JSON Logic)', () => {
 
   it('should auto-apply file validation from fileConfig', () => {
     const req: RequirementsObject = {
-      fields: [{
-        id: 'doc', type: 'file',
-        fileConfig: { accept: ['.pdf'], maxSize: 1048576 },
-      }],
+      fields: [
+        {
+          id: 'doc',
+          type: 'file',
+          fileConfig: { accept: ['.pdf'], maxSize: 1048576 },
+        },
+      ],
     };
     expect(checkField(req, 'doc', { doc: 'test.jpg|500' }).errors).toContain('File type not accepted. Allowed: .pdf');
   });
 
   it('should run rules after required check (no rules on empty value)', () => {
     const req: RequirementsObject = {
-      fields: [{
-        id: 'age', type: 'number',
-        validation: {
-          required: true,
-          rules: [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }],
+      fields: [
+        {
+          id: 'age',
+          type: 'number',
+          validation: {
+            required: true,
+            rules: [{ rule: { '>=': [{ var: 'age' }, 18] }, message: 'Too young' }],
+          },
         },
-      }],
+      ],
     };
     // Empty value: only required error, rules not evaluated
     expect(checkField(req, 'age', {}).errors).toEqual(['This field is required']);
   });
 });
-
-// Helper: wraps a sync predicate in an async validator that does a real await (satisfies require-await)
-async function asyncUniqueValidator(value: unknown): Promise<string | null> {
-  await Promise.resolve();
-  return value === 'taken' ? 'Already taken' : null;
-}
-
-async function asyncLookupValidator(value: unknown): Promise<string | null> {
-  await Promise.resolve();
-  return value === 'invalid' ? 'Not found in registry' : null;
-}
-
-async function asyncThrowValidator(): Promise<string | null> {
-  await Promise.resolve();
-  throw new Error('Network error');
-}
 
 // Always-fail async validator: returns an error message for any value (used to verify async is skipped)
 async function asyncAlwaysFailValidator(): Promise<string | null> {
@@ -1395,156 +1244,6 @@ async function asyncTakenUserValidator(value: unknown): Promise<string | null> {
   await Promise.resolve();
   return value === 'taken_user' ? 'Username already exists' : null;
 }
-
-// Slow validator that waits for abort or timeout — hoisted to satisfy consistent-function-scoping
-async function slowAsyncValidator(
-  _value: unknown,
-  _params: Record<string, unknown> | undefined,
-  _context: unknown,
-  signal?: AbortSignal,
-): Promise<string | null> {
-  // oxlint-disable-next-line promise/avoid-new -- test helper requires manual promise to simulate delay with abort
-  await new Promise<void>((resolve) => {
-    if (signal?.aborted) {
-      resolve();
-      return;
-    }
-    let settled = false;
-    const settle = () => {
-      if (!settled) {
-        settled = true;
-        resolve();
-      }
-    };
-    const timer = setTimeout(settle, 50);
-    signal?.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        settle();
-      },
-      { once: true },
-    );
-  });
-  return 'Should be discarded';
-}
-
-describe(runAsyncValidators, () => {
-  const asyncValidators: Record<string, AsyncValidatorFn> = {
-    async_unique: asyncUniqueValidator,
-    async_lookup: asyncLookupValidator,
-    async_throw: asyncThrowValidator,
-  };
-
-  it('should skip validators that exist in syncValidatorKeys', async () => {
-    const validators = [{ type: 'age_range', params: { min: 18 } }, { type: 'async_unique' }];
-    // age_range is a sync validator, so it should be skipped by runAsyncValidators
-    const syncKeys = new Set(['age_range']);
-
-    const errors = await runAsyncValidators('taken', validators, { data: {} }, asyncValidators, syncKeys);
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toBe('Already taken');
-  });
-
-  it('should return empty array when signal is already aborted', async () => {
-    const controller = new AbortController();
-    controller.abort();
-
-    const validators = [{ type: 'async_unique' }];
-    const errors = await runAsyncValidators(
-      'taken',
-      validators,
-      { data: {} },
-      asyncValidators,
-      new Set(),
-      controller.signal,
-    );
-    expect(errors).toHaveLength(0);
-  });
-
-  it('should discard results when signal is aborted during execution', async () => {
-    const controller = new AbortController();
-
-    const validators = [{ type: 'slow_check' }];
-    const asyncValidatorsWithSlow = { ...asyncValidators, slow_check: slowAsyncValidator };
-
-    // Abort after the validator starts but before it completes
-    setTimeout(() => controller.abort(), 10);
-
-    const errors = await runAsyncValidators(
-      'test',
-      validators,
-      { data: {} },
-      asyncValidatorsWithSlow,
-      new Set(),
-      controller.signal,
-    );
-    expect(errors).toHaveLength(0);
-  });
-
-  it('should respect params.when conditional guard', async () => {
-    const validators = [
-      {
-        type: 'async_unique',
-        params: { when: { '==': [{ var: 'country' }, 'US'] } },
-      },
-    ];
-
-    // When guard fails (country is not US), validator should be skipped
-    const errorsSkipped = await runAsyncValidators(
-      'taken',
-      validators,
-      { data: { country: 'IE' } },
-      asyncValidators,
-      new Set(),
-    );
-    expect(errorsSkipped).toHaveLength(0);
-
-    // When guard passes (country is US), validator should run
-    const errorsRun = await runAsyncValidators(
-      'taken',
-      validators,
-      { data: { country: 'US' } },
-      asyncValidators,
-      new Set(),
-    );
-    expect(errorsRun).toHaveLength(1);
-    expect(errorsRun[0]).toBe('Already taken');
-  });
-
-  it('should silently swallow throwing validators', async () => {
-    const validators = [{ type: 'async_throw' }];
-
-    const errors = await runAsyncValidators('test', validators, { data: {} }, asyncValidators, new Set());
-    expect(errors).toHaveLength(0);
-  });
-
-  it('should run multiple validators in parallel', async () => {
-    const validators = [{ type: 'async_unique' }, { type: 'async_lookup' }];
-
-    const errors = await runAsyncValidators('taken', validators, { data: {} }, asyncValidators, new Set());
-    // 'taken' triggers async_unique but not async_lookup ('taken' !== 'invalid')
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toBe('Already taken');
-
-    // Use a value that triggers async_lookup
-    const validators2 = [
-      { type: 'async_unique', message: 'Username taken' },
-      { type: 'async_lookup', message: 'Lookup failed' },
-    ];
-    const errorsLookup = await runAsyncValidators('invalid', validators2, { data: {} }, asyncValidators, new Set());
-    expect(errorsLookup).toHaveLength(1);
-    expect(errorsLookup[0]).toBe('Lookup failed');
-  });
-
-  it('should use validator.message when provided', async () => {
-    const validators = [{ type: 'async_unique', message: 'Custom error message' }];
-
-    const errors = await runAsyncValidators('taken', validators, { data: {} }, asyncValidators, new Set());
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toBe('Custom error message');
-  });
-});
 
 describe('runAsyncValidators (AsyncValidatorRef)', () => {
   it('should run async validators by name from registry', async () => {
@@ -1842,39 +1541,47 @@ describe('runValidationRules', () => {
   });
 
   it('should skip rule when "when" guard evaluates to falsy', () => {
-    const rules = [{
-      rule: { match: [{ var: 'tax_id' }, '^[0-9]{11}$'] },
-      message: 'Invalid German tax ID',
-      when: { '==': [{ var: 'country' }, 'DE'] },
-    }];
+    const rules = [
+      {
+        rule: { match: [{ var: 'tax_id' }, '^[0-9]{11}$'] },
+        message: 'Invalid German tax ID',
+        when: { '==': [{ var: 'country' }, 'DE'] },
+      },
+    ];
     const errors = runValidationRules(rules, { data: { tax_id: 'invalid', country: 'IE' } });
     expect(errors).toEqual([]);
   });
 
   it('should run rule when "when" guard evaluates to truthy', () => {
-    const rules = [{
-      rule: { match: [{ var: 'tax_id' }, '^[0-9]{11}$'] },
-      message: 'Invalid German tax ID',
-      when: { '==': [{ var: 'country' }, 'DE'] },
-    }];
+    const rules = [
+      {
+        rule: { match: [{ var: 'tax_id' }, '^[0-9]{11}$'] },
+        message: 'Invalid German tax ID',
+        when: { '==': [{ var: 'country' }, 'DE'] },
+      },
+    ];
     const errors = runValidationRules(rules, { data: { tax_id: 'invalid', country: 'DE' } });
     expect(errors).toEqual(['Invalid German tax ID']);
   });
 
   it('should support cross-field validation', () => {
-    const rules = [{
-      rule: { '>': [{ var: 'end_date' }, { var: 'start_date' }] },
-      message: 'End date must be after start date',
-    }];
+    const rules = [
+      {
+        rule: { '>': [{ var: 'end_date' }, { var: 'start_date' }] },
+        message: 'End date must be after start date',
+      },
+    ];
     const errors = runValidationRules(rules, { data: { start_date: '2025-06-01', end_date: '2025-01-01' } });
     expect(errors).toEqual(['End date must be after start date']);
   });
 
   it('should support date helpers in rules', () => {
-    const rules = [{
-      rule: { '>=': [{ age_from_date: { var: 'dob' } }, 18] },
-      message: 'Must be at least 18 years old',
-    }];
+    const rules = [
+      {
+        rule: { '>=': [{ age_from_date: { var: 'dob' } }, 18] },
+        message: 'Must be at least 18 years old',
+      },
+    ];
     // A date that makes someone 10 years old
     const tenYearsAgo = new Date();
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);

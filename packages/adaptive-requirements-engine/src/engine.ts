@@ -30,11 +30,6 @@ export interface RuleContext {
 }
 
 /**
- * Custom validator function type
- */
-export type ValidatorFn = (value: FieldValue, params?: Record<string, unknown>, context?: RuleContext) => string | null;
-
-/**
  * Async validator function type.
  * Returns a promise resolving to an error message (string) or null if valid.
  * Receives an optional AbortSignal for cancellation support.
@@ -729,13 +724,7 @@ export async function checkFieldAsync<TFieldId extends string = string>(
   }
 
   const context: RuleContext = { data, answers: data };
-  const asyncErrors = await runAsyncValidators(
-    fieldValue,
-    asyncRefs,
-    context,
-    options.asyncValidators,
-    signal,
-  );
+  const asyncErrors = await runAsyncValidators(fieldValue, asyncRefs, context, options.asyncValidators, signal);
 
   // Merge async errors into FieldState
   if (asyncErrors.length === 0) {
