@@ -1,4 +1,5 @@
 import type {
+  AsyncValidatorRef,
   Dataset,
   Field,
   FieldMapping,
@@ -49,8 +50,8 @@ export type AsyncValidatorFn = (
  * Options for the rule engine
  */
 export interface EngineOptions {
-  /** Custom validators for field validation */
-  customValidators?: Record<string, ValidatorFn>;
+  /** Custom JSON Logic operations for use in validation rules */
+  customOperations?: Record<string, (...args: unknown[]) => unknown>;
   /** Async validators for field validation (e.g. server-side uniqueness checks) */
   asyncValidators?: Record<string, AsyncValidatorFn>;
   /** Locale for label resolution */
@@ -265,6 +266,16 @@ function ensureCustomOperationsRegistered() {
   customOperationsRegistered = true;
 }
 
+/**
+ * Register consumer-provided custom JSON Logic operations.
+ * Called by checkField when options.customOperations is provided.
+ */
+function registerCustomOperations(ops: Record<string, (...args: unknown[]) => unknown>) {
+  for (const [name, fn] of Object.entries(ops)) {
+    jsonLogic.add_operation(name, fn);
+  }
+}
+
 function buildLogicData(context: RuleContext): Record<string, unknown> {
   const data = context.data ?? {};
   const answers = context.answers ?? data;
@@ -427,57 +438,41 @@ async function safeAsyncCall(
 
 /**
  * Run async validators on a field value.
- * Only runs validators that exist in the asyncValidators registry AND are NOT in syncValidatorKeys
- * (sync validators take precedence). Respects params.when conditional guard (evaluated synchronously).
+ * Looks up each AsyncValidatorRef by name in the asyncValidators registry.
+ * Respects ref.when conditional guard (JSON Logic, evaluated synchronously).
  * Runs matching validators in parallel via Promise.allSettled.
  * Aborted signals cause early exit or result discard.
  * Rejected promises from async validators are silently ignored so that a failing
  * async validator does not break overall validation (fail-open on rejection).
- * Note: this is more permissive than the synchronous validator path, where thrown
- * errors will still surface to the caller.
+ * ref.message overrides the error message returned by the async function.
  */
 export async function runAsyncValidators(
   value: FieldValue,
-  validators: CustomValidator[],
+  refs: AsyncValidatorRef[],
   context: RuleContext,
   asyncValidators: Record<string, AsyncValidatorFn>,
-  syncValidatorKeys: Set<string>,
   signal?: AbortSignal,
 ): Promise<string[]> {
   if (signal?.aborted) {
     return [];
   }
 
-  const pending: { validator: CustomValidator; promise: Promise<string | null> }[] = [];
+  const pending: { ref: AsyncValidatorRef; promise: Promise<string | null> }[] = [];
 
-  for (const validator of validators) {
-    const validatorKey = validator.type ?? validator.name;
-    if (validatorKey == null) {
-      continue;
-    }
-
-    // Skip if this is a sync validator (sync takes precedence)
-    if (syncValidatorKeys.has(validatorKey)) {
-      continue;
-    }
-
-    const asyncFn = asyncValidators[validatorKey];
+  for (const ref of refs) {
+    const asyncFn = asyncValidators[ref.name];
     if (!asyncFn) {
       continue;
     }
 
-    // Respect params.when conditional guard (sync eval)
-    const whenRule = validator.params?.['when'];
-    if (whenRule != null && typeof whenRule === 'object') {
-      const whenResult = runRule(whenRule as Rule, context);
-      if (!whenResult) {
-        continue;
-      }
+    // Respect when conditional guard
+    if (ref.when != null) {
+      if (!runRule(ref.when, context)) continue;
     }
 
     pending.push({
-      validator,
-      promise: safeAsyncCall(asyncFn, value, validator.params, context, signal),
+      ref,
+      promise: safeAsyncCall(asyncFn, value, ref.params, context, signal),
     });
   }
 
@@ -493,11 +488,10 @@ export async function runAsyncValidators(
   }
 
   const errors: string[] = [];
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i]!;
-    // Rejected promises are silently swallowed (matches sync pattern)
+  for (const [i, result] of results.entries()) {
     if (result.status === 'fulfilled' && result.value) {
-      errors.push(pending[i]!.validator.message ?? result.value);
+      // Use ref.message as override if provided
+      errors.push(pending[i]!.ref.message ?? result.value);
     }
   }
 
@@ -584,6 +578,11 @@ export function checkField<TFieldId extends string = string>(
   const field = requirements.fields.find((f) => f.id === fieldId);
   if (!field) {
     throw new Error(`Unknown field: ${fieldId}`);
+  }
+
+  // Register consumer-provided custom JSON Logic operations before any rule evaluation
+  if (options?.customOperations) {
+    registerCustomOperations(options.customOperations);
   }
 
   const context: RuleContext = { data, answers: data };
@@ -722,25 +721,19 @@ export async function checkFieldAsync<TFieldId extends string = string>(
     return syncResult;
   }
 
-  // TODO(task-5): Rework async validation to use new asyncValidators references
-  const syncValidatorKeys = new Set<string>([
-    ...Object.keys(options.customValidators ?? {}),
-  ]);
-
   // Use the field from sync result (already looked up by checkField)
-  const validators = syncResult.field.validation?.validators ?? [];
+  const asyncRefs = syncResult.field.validation?.asyncValidators ?? [];
 
-  if (validators.length === 0) {
+  if (asyncRefs.length === 0) {
     return syncResult;
   }
 
   const context: RuleContext = { data, answers: data };
   const asyncErrors = await runAsyncValidators(
     fieldValue,
-    validators,
+    asyncRefs,
     context,
     options.asyncValidators,
-    syncValidatorKeys,
     signal,
   );
 

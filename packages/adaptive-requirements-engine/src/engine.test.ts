@@ -1,5 +1,5 @@
 import type { AsyncValidatorFn } from './engine';
-import type { RequirementsObject } from './types';
+import type { AsyncValidatorRef, RequirementsObject } from './types';
 
 import { describe, expect, it } from 'vitest';
 
@@ -1546,6 +1546,126 @@ describe(runAsyncValidators, () => {
   });
 });
 
+describe('runAsyncValidators (AsyncValidatorRef)', () => {
+  it('should run async validators by name from registry', async () => {
+    const asyncValidatorRegistry: Record<string, AsyncValidatorFn> = {
+      email_unique: async (value) => {
+        await Promise.resolve();
+        return value === 'taken@test.com' ? 'Email already in use' : null;
+      },
+    };
+    const refs: AsyncValidatorRef[] = [{ name: 'email_unique' }];
+    const errors = await runAsyncValidators('taken@test.com', refs, { data: {} }, asyncValidatorRegistry);
+    expect(errors).toEqual(['Email already in use']);
+  });
+
+  it('should skip unknown validator names', async () => {
+    const refs: AsyncValidatorRef[] = [{ name: 'nonexistent' }];
+    const errors = await runAsyncValidators('value', refs, { data: {} }, {});
+    expect(errors).toEqual([]);
+  });
+
+  it('should respect when conditional guard', async () => {
+    const asyncValidatorRegistry: Record<string, AsyncValidatorFn> = {
+      email_unique: async () => {
+        await Promise.resolve();
+        return 'Error';
+      },
+    };
+    const refs: AsyncValidatorRef[] = [
+      {
+        name: 'email_unique',
+        when: { '==': [{ var: 'country' }, 'US'] },
+      },
+    ];
+    const errors = await runAsyncValidators('val', refs, { data: { country: 'IE' } }, asyncValidatorRegistry);
+    expect(errors).toEqual([]);
+  });
+
+  it('should run validator when when guard passes', async () => {
+    const asyncValidatorRegistry: Record<string, AsyncValidatorFn> = {
+      email_unique: async () => {
+        await Promise.resolve();
+        return 'Error';
+      },
+    };
+    const refs: AsyncValidatorRef[] = [
+      {
+        name: 'email_unique',
+        when: { '==': [{ var: 'country' }, 'US'] },
+      },
+    ];
+    const errors = await runAsyncValidators('val', refs, { data: { country: 'US' } }, asyncValidatorRegistry);
+    expect(errors).toEqual(['Error']);
+  });
+
+  it('should use ref.message as override when provided', async () => {
+    const asyncValidatorRegistry: Record<string, AsyncValidatorFn> = {
+      email_unique: async () => {
+        await Promise.resolve();
+        return 'Original error';
+      },
+    };
+    const refs: AsyncValidatorRef[] = [{ name: 'email_unique', message: 'Custom error' }];
+    const errors = await runAsyncValidators('val', refs, { data: {} }, asyncValidatorRegistry);
+    expect(errors).toEqual(['Custom error']);
+  });
+
+  it('should pass params to async validator function', async () => {
+    const asyncValidatorRegistry: Record<string, AsyncValidatorFn> = {
+      check: async (_value, params) => {
+        await Promise.resolve();
+        return params?.['strict'] ? 'Error' : null;
+      },
+    };
+    const refs: AsyncValidatorRef[] = [{ name: 'check', params: { strict: true } }];
+    const errors = await runAsyncValidators('val', refs, { data: {} }, asyncValidatorRegistry);
+    expect(errors).toEqual(['Error']);
+  });
+
+  it('should discard results when signal is aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const asyncValidatorRegistry: Record<string, AsyncValidatorFn> = {
+      slow: async () => {
+        await Promise.resolve();
+        return 'Error';
+      },
+    };
+    const refs: AsyncValidatorRef[] = [{ name: 'slow' }];
+    const errors = await runAsyncValidators('val', refs, { data: {} }, asyncValidatorRegistry, controller.signal);
+    expect(errors).toEqual([]);
+  });
+
+  it('should silently swallow throwing validators', async () => {
+    const asyncValidatorRegistry: Record<string, AsyncValidatorFn> = {
+      bad: async () => {
+        await Promise.resolve();
+        throw new Error('Network error');
+      },
+    };
+    const refs: AsyncValidatorRef[] = [{ name: 'bad' }];
+    const errors = await runAsyncValidators('val', refs, { data: {} }, asyncValidatorRegistry);
+    expect(errors).toEqual([]);
+  });
+
+  it('should run multiple validators in parallel', async () => {
+    const asyncValidatorRegistry: Record<string, AsyncValidatorFn> = {
+      check_a: async (value) => {
+        await Promise.resolve();
+        return value === 'bad' ? 'Error A' : null;
+      },
+      check_b: async (value) => {
+        await Promise.resolve();
+        return value === 'bad' ? 'Error B' : null;
+      },
+    };
+    const refs: AsyncValidatorRef[] = [{ name: 'check_a' }, { name: 'check_b' }];
+    const errors = await runAsyncValidators('bad', refs, { data: {} }, asyncValidatorRegistry);
+    expect(errors).toEqual(['Error A', 'Error B']);
+  });
+});
+
 describe(checkFieldAsync, () => {
   it('should skip async validation for hidden fields', async () => {
     const requirements: RequirementsObject = {
@@ -1561,7 +1681,7 @@ describe(checkFieldAsync, () => {
           label: 'Email',
           visibleWhen: { '==': [{ var: 'toggle' }, true] },
           validation: {
-            validators: [{ type: 'async_unique' }],
+            asyncValidators: [{ name: 'async_unique' }],
           },
         },
       ],
@@ -1590,7 +1710,7 @@ describe(checkFieldAsync, () => {
           label: 'Email',
           excludeWhen: true,
           validation: {
-            validators: [{ type: 'async_unique' }],
+            asyncValidators: [{ name: 'async_unique' }],
           },
         },
       ],
@@ -1613,10 +1733,13 @@ describe(checkFieldAsync, () => {
           type: 'text',
           label: 'Email',
           validation: {
-            required: true,
-            pattern: '^[^@]+@[^@]+$',
-            message: 'Invalid email',
-            validators: [{ type: 'async_unique' }],
+            rules: [
+              {
+                rule: { match: [{ var: 'email' }, '^[^@]+@[^@]+$'] },
+                message: 'Invalid email',
+              },
+            ],
+            asyncValidators: [{ name: 'async_unique' }],
           },
         },
       ],
@@ -1641,7 +1764,7 @@ describe(checkFieldAsync, () => {
           type: 'text',
           label: 'Email',
           validation: {
-            validators: [{ type: 'async_unique' }],
+            asyncValidators: [{ name: 'async_unique' }],
           },
         },
       ],
@@ -1663,7 +1786,7 @@ describe(checkFieldAsync, () => {
           type: 'text',
           label: 'Username',
           validation: {
-            validators: [{ type: 'async_unique' }],
+            asyncValidators: [{ name: 'async_unique' }],
           },
         },
       ],
