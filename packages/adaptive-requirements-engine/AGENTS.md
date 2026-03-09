@@ -28,23 +28,23 @@ Framework-agnostic core: types, rule engine, validation. Zero React/browser depe
 
 ## Engine Functions
 
-| Function                                                             | Purpose                                                                   |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `runRule(rule, context, customOperations?)`                          | Evaluates a JSON Logic expression against a data context                  |
-| `checkField(requirements, fieldId, data, options?)`                  | Computes full `FieldState` for one field                                  |
-| `calculateData(requirements, data, customOperations?)`               | Returns computed field values only                                        |
-| `resolveFieldOptions(field, datasets?, context?, labelResolver?, customOperations?)` | Resolves static options or dataset items, applies filters                 |
-| `clearHiddenFieldValues(requirements, data, customOperations?)`      | Iterates until stable, clearing values where `visibleWhen` is false       |
-| `applyExclusions(requirements, data, customOperations?)`             | Iterates until stable, clearing values where `excludeWhen` is true        |
-| `createAdapter(requirements, mapping?, options?)`                    | Factory bundling engine functions with optional field ID remapping        |
-| `getNextStepId(flow, currentStepId, data, options?)`                 | Resolves next step (rules first, then sequential), skips empty            |
-| `getPreviousStepId(flow, currentStepId)`                             | Returns previous step (sequential only)                                   |
-| `getInitialStepId(flow, options?)`                                   | Returns start step, skipping empty steps                                  |
-| `stepHasVisibleFields(requirements, stepId, data, options?)`         | Checks if a step has at least one visible field                           |
-| `resolveLabel(label, locale?)`                                       | Default label resolver (string passthrough, `{ default }` extraction)     |
-| `runValidationRules(rules, context, customOperations?)`              | Evaluates `ValidationRule[]` as JSON Logic, returns error messages        |
+| Function                                                                                | Purpose                                                                   |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `runRule(rule, context, customOperations?)`                                             | Evaluates a JSON Logic expression against a data context                  |
+| `checkField(requirements, fieldId, data, options?)`                                     | Computes full `FieldState` for one field                                  |
+| `calculateData(requirements, data, customOperations?)`                                  | Returns computed field values only                                        |
+| `resolveFieldOptions(field, datasets?, context?, labelResolver?, customOperations?)`    | Resolves static options or dataset items, applies filters                 |
+| `clearHiddenFieldValues(requirements, data, customOperations?)`                         | Iterates until stable, clearing values where `visibleWhen` is false       |
+| `applyExclusions(requirements, data, customOperations?)`                                | Iterates until stable, clearing values where `excludeWhen` is true        |
+| `createAdapter(requirements, mapping?, options?)`                                       | Factory bundling engine functions with optional field ID remapping        |
+| `getNextStepId(flow, currentStepId, data, options?)`                                    | Resolves next step (rules first, then sequential), skips empty            |
+| `getPreviousStepId(flow, currentStepId)`                                                | Returns previous step (sequential only)                                   |
+| `getInitialStepId(flow, options?)`                                                      | Returns start step, skipping empty steps                                  |
+| `stepHasVisibleFields(requirements, stepId, data, options?)`                            | Checks if a step has at least one visible field                           |
+| `resolveLabel(label, locale?)`                                                          | Default label resolver (string passthrough, `{ default }` extraction)     |
+| `runValidationRules(rules, context, customOperations?)`                                 | Evaluates `ValidationRule[]` as JSON Logic, returns error messages        |
 | `runAsyncValidators(value, refs, context, asyncValidators, signal?, customOperations?)` | Runs `AsyncValidatorRef[]` in parallel with AbortSignal support           |
-| `checkFieldAsync(requirements, fieldId, data, options?, signal?)`    | Async version of `checkField` — runs sync first, then async if applicable |
+| `checkFieldAsync(requirements, fieldId, data, options?, signal?)`                       | Async version of `checkField` — runs sync first, then async if applicable |
 
 ## JSON Logic
 
