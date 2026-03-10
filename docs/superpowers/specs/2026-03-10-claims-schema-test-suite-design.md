@@ -12,13 +12,14 @@ Note: existing `engine.test.ts` has thorough unit-level coverage of individual e
 
 Exports:
 
-- `claimsSubmissionSchema` — typed `RequirementsObject` with 23 fields, 4 datasets, 4-step flow with conditional navigation. Async validator refs on `provider_reference` (in-network lookup, with `when` guard: only runs when claim_type is not wellness) and `diagnosis_code` (ICD-10 validation). `claim_reference` field has `defaultValue: "CLM-DRAFT"`. Includes a `ValidationRule.when` guard on `diagnosis_code` validation (only validates format when claim_type is medical).
+- `claimsSubmissionSchema` — typed `RequirementsObject` with 22 fields, 4 datasets, 4-step flow with conditional navigation. Async validator refs on `provider_reference` (in-network lookup, with `when` guard: only runs when claim_type is not wellness) and `diagnosis_code` (ICD-10 validation). `claim_reference` field has `defaultValue: "CLM-DRAFT"`. Includes a `ValidationRule.when` guard on `diagnosis_code` validation (only validates format when claim_type is medical).
 - `emptyFormData` — all fields undefined
 - `medicalClaimData` — medical claim, all required fields filled
 - `wellnessClaimData` — wellness claim (triggers step skip, hides treatment fields)
 - `emergencyClaimData` — emergency flag on, high amount (triggers pre-auth)
 - `dentalWithNetworkData` — dental + in-network provider (tests provider_reference visibility)
-- `mockAsyncValidators()` — factory returning a mock `EngineOptions.asyncValidators` registry with controllable resolve/reject
+- `createMockAsyncValidators()` — factory returning a mock `EngineOptions.asyncValidators` registry with controllable resolve/reject
+- `createEngineOptionsWithAsync()` — helper that wires `createMockAsyncValidators()` into an `EngineOptions` object for tests
 
 Not exported from `src/index.ts`.
 
