@@ -2,16 +2,16 @@
 import type { FieldComputedProps, FieldInputProps } from '../dynamic-form';
 import type { FormData } from '@kotaio/adaptive-requirements-engine';
 
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import {
   claimsSubmissionSchema as schema,
   dentalWithNetworkData,
   medicalClaimData,
   wellnessClaimData,
-} from '../../../../adaptive-requirements-engine/src/__fixtures__/claims-submission';
+} from '@kotaio/adaptive-requirements-engine/test-fixtures/claims-submission';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { DynamicForm } from '../dynamic-form';
 
 // Mock runAsyncValidators from the engine (used by useAsyncValidation internally)
@@ -21,6 +21,21 @@ vi.mock(import('@kotaio/adaptive-requirements-engine'), async (importOriginal) =
   return {
     ...actual,
     runAsyncValidators: (...args: unknown[]) => mockRunAsyncValidators(...args),
+  };
+});
+
+// Register test schema's async validators in the built-in registry so the
+// eligibility check in useAsyncValidation passes (it checks Object.hasOwn
+// against builtInAsyncValidators before calling runAsyncValidators).
+vi.mock(import('../../core/validate-api'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    builtInAsyncValidators: {
+      ...actual.builtInAsyncValidators,
+      check_provider_reference: vi.fn(),
+      check_icd10_code: vi.fn(),
+    },
   };
 });
 
@@ -396,17 +411,28 @@ describe('claims submission form', () => {
       fireEvent.change(refInput, { target: { value: 'NW-BAD' } });
       fireEvent.blur(refInput);
 
+      // Advance past debounce — async validation should be in-flight
       await act(() => {
         vi.advanceTimersByTime(300);
       });
 
+      // Resolve the async validation promise
       await act(async () => {
         await vi.runAllTimersAsync();
       });
 
-      // The async validation flow completed (debounce → validate → result)
-      // Verify the flow ran without errors by checking the form is still interactive
-      expect(screen.getByTestId('input-provider_reference')).toBeTruthy();
+      expect(mockRunAsyncValidators).toHaveBeenCalledWith(
+        'NW-BAD',
+        expect.any(Array),
+        expect.objectContaining({ data: expect.objectContaining({ claim_type: 'dental' }) }),
+        expect.any(Object),
+        expect.any(AbortSignal),
+        undefined,
+      );
+      expect(screen.getByTestId('error-provider_reference')).toBeTruthy();
+      expect(screen.getByTestId('error-provider_reference').textContent).toContain(
+        'Provider reference not found in network',
+      );
     });
   });
 

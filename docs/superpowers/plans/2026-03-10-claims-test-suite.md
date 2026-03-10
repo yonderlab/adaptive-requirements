@@ -17,6 +17,7 @@
 ### Task 1: Create the claims submission fixture
 
 **Files:**
+
 - Create: `packages/adaptive-requirements-engine/src/__fixtures__/claims-submission.ts`
 
 - [ ] **Step 1: Create fixture file with typed schema**
@@ -252,10 +253,7 @@ export const claimsSubmissionSchema: RequirementsObject = {
       label: { default: 'Pre-authorisation required' },
       readOnly: true,
       compute: {
-        or: [
-          { '>': [{ var: 'answers.total_amount' }, 500] },
-          { '==': [{ var: 'answers.is_emergency' }, true] },
-        ],
+        or: [{ '>': [{ var: 'answers.total_amount' }, 500] }, { '==': [{ var: 'answers.is_emergency' }, true] }],
       },
     },
     {
@@ -501,6 +499,7 @@ git commit -m "test(engine): add claims submission schema fixture"
 ### Task 2: Schema validation and field visibility tests
 
 **Files:**
+
 - Create: `packages/adaptive-requirements-engine/src/__tests__/claims-submission.test.ts`
 
 - [ ] **Step 1: Write schema validation and visibility tests**
@@ -620,6 +619,7 @@ git commit -m "test(engine): add claims schema visibility and validation tests"
 ### Task 3: Dataset filtering and computed field tests
 
 **Files:**
+
 - Modify: `packages/adaptive-requirements-engine/src/__tests__/claims-submission.test.ts`
 
 - [ ] **Step 1: Add dataset filtering tests**
@@ -627,99 +627,101 @@ git commit -m "test(engine): add claims schema visibility and validation tests"
 Append inside the outer `describe('claims submission schema')` block:
 
 ```ts
-  describe('dataset filtering', () => {
-    it('returns medical treatment options when claim_type is medical', () => {
-      const field = schema.fields.find((f) => f.id === 'treatment_category')!;
-      const context = { data: { claim_type: 'medical' }, answers: { claim_type: 'medical' } };
-      const options = resolveFieldOptions(field, schema.datasets, context);
-      expect(options).toHaveLength(5);
-      expect(options!.map((o) => o.value)).toEqual([
-        'consultation', 'surgery', 'diagnostic', 'physiotherapy', 'prescription',
-      ]);
-    });
-
-    it('returns dental treatment options when claim_type is dental', () => {
-      const field = schema.fields.find((f) => f.id === 'treatment_category')!;
-      const context = { data: { claim_type: 'dental' }, answers: { claim_type: 'dental' } };
-      const options = resolveFieldOptions(field, schema.datasets, context);
-      expect(options).toHaveLength(3);
-      expect(options!.map((o) => o.value)).toEqual([
-        'dental_checkup', 'dental_procedure', 'orthodontics',
-      ]);
-    });
-
-    it('returns optical treatment options when claim_type is optical', () => {
-      const field = schema.fields.find((f) => f.id === 'treatment_category')!;
-      const context = { data: { claim_type: 'optical' }, answers: { claim_type: 'optical' } };
-      const options = resolveFieldOptions(field, schema.datasets, context);
-      expect(options).toHaveLength(3);
-      expect(options!.map((o) => o.value)).toEqual(['eye_exam', 'lenses', 'laser_surgery']);
-    });
-
-    it('resolves boolean yes_no dataset for has_other_coverage', () => {
-      const field = schema.fields.find((f) => f.id === 'has_other_coverage')!;
-      const options = resolveFieldOptions(field, schema.datasets);
-      expect(options).toHaveLength(2);
-      expect(options![0]!.value).toBe(true);
-      expect(options![1]!.value).toBe(false);
-    });
+describe('dataset filtering', () => {
+  it('returns medical treatment options when claim_type is medical', () => {
+    const field = schema.fields.find((f) => f.id === 'treatment_category')!;
+    const context = { data: { claim_type: 'medical' }, answers: { claim_type: 'medical' } };
+    const options = resolveFieldOptions(field, schema.datasets, context);
+    expect(options).toHaveLength(5);
+    expect(options!.map((o) => o.value)).toEqual([
+      'consultation',
+      'surgery',
+      'diagnostic',
+      'physiotherapy',
+      'prescription',
+    ]);
   });
 
-  describe('computed fields', () => {
-    it('needs_pre_auth is true when total_amount > 500', () => {
-      const computed = calculateData(schema, { total_amount: 600, is_emergency: false });
-      expect(computed['needs_pre_auth']).toBe(true);
-    });
-
-    it('needs_pre_auth is true when is_emergency is true', () => {
-      const computed = calculateData(schema, { total_amount: 100, is_emergency: true });
-      expect(computed['needs_pre_auth']).toBe(true);
-    });
-
-    it('needs_pre_auth is false when amount <= 500 and not emergency', () => {
-      const computed = calculateData(schema, { total_amount: 200, is_emergency: false });
-      expect(computed['needs_pre_auth']).toBe(false);
-    });
-
-    it('reimbursement_estimate is 90 for in-network emergency', () => {
-      const computed = calculateData(schema, { is_network_provider: true, is_emergency: true });
-      expect(computed['reimbursement_estimate']).toBe(90);
-    });
-
-    it('reimbursement_estimate is 80 for in-network non-emergency', () => {
-      const computed = calculateData(schema, { is_network_provider: true, is_emergency: false });
-      expect(computed['reimbursement_estimate']).toBe(80);
-    });
-
-    it('reimbursement_estimate is 75 for out-of-network emergency', () => {
-      const computed = calculateData(schema, { is_network_provider: false, is_emergency: true });
-      expect(computed['reimbursement_estimate']).toBe(75);
-    });
-
-    it('reimbursement_estimate is 60 for out-of-network non-emergency', () => {
-      const computed = calculateData(schema, { is_network_provider: false, is_emergency: false });
-      expect(computed['reimbursement_estimate']).toBe(60);
-    });
+  it('returns dental treatment options when claim_type is dental', () => {
+    const field = schema.fields.find((f) => f.id === 'treatment_category')!;
+    const context = { data: { claim_type: 'dental' }, answers: { claim_type: 'dental' } };
+    const options = resolveFieldOptions(field, schema.datasets, context);
+    expect(options).toHaveLength(3);
+    expect(options!.map((o) => o.value)).toEqual(['dental_checkup', 'dental_procedure', 'orthodontics']);
   });
 
-  describe('computed → visibility chain', () => {
-    it('pre_auth_reference is visible and required when amount > 500', () => {
-      const data: FormData = { total_amount: 600, is_emergency: false };
-      const computed = calculateData(schema, data);
-      const merged = { ...data, ...computed };
-      const state = checkField(schema, 'pre_auth_reference', merged);
-      expect(state.isVisible).toBe(true);
-      expect(state.isRequired).toBe(true);
-    });
-
-    it('pre_auth_reference is hidden when amount <= 500 and not emergency', () => {
-      const data: FormData = { total_amount: 100, is_emergency: false };
-      const computed = calculateData(schema, data);
-      const merged = { ...data, ...computed };
-      const state = checkField(schema, 'pre_auth_reference', merged);
-      expect(state.isVisible).toBe(false);
-    });
+  it('returns optical treatment options when claim_type is optical', () => {
+    const field = schema.fields.find((f) => f.id === 'treatment_category')!;
+    const context = { data: { claim_type: 'optical' }, answers: { claim_type: 'optical' } };
+    const options = resolveFieldOptions(field, schema.datasets, context);
+    expect(options).toHaveLength(3);
+    expect(options!.map((o) => o.value)).toEqual(['eye_exam', 'lenses', 'laser_surgery']);
   });
+
+  it('resolves boolean yes_no dataset for has_other_coverage', () => {
+    const field = schema.fields.find((f) => f.id === 'has_other_coverage')!;
+    const options = resolveFieldOptions(field, schema.datasets);
+    expect(options).toHaveLength(2);
+    expect(options![0]!.value).toBe(true);
+    expect(options![1]!.value).toBe(false);
+  });
+});
+
+describe('computed fields', () => {
+  it('needs_pre_auth is true when total_amount > 500', () => {
+    const computed = calculateData(schema, { total_amount: 600, is_emergency: false });
+    expect(computed['needs_pre_auth']).toBe(true);
+  });
+
+  it('needs_pre_auth is true when is_emergency is true', () => {
+    const computed = calculateData(schema, { total_amount: 100, is_emergency: true });
+    expect(computed['needs_pre_auth']).toBe(true);
+  });
+
+  it('needs_pre_auth is false when amount <= 500 and not emergency', () => {
+    const computed = calculateData(schema, { total_amount: 200, is_emergency: false });
+    expect(computed['needs_pre_auth']).toBe(false);
+  });
+
+  it('reimbursement_estimate is 90 for in-network emergency', () => {
+    const computed = calculateData(schema, { is_network_provider: true, is_emergency: true });
+    expect(computed['reimbursement_estimate']).toBe(90);
+  });
+
+  it('reimbursement_estimate is 80 for in-network non-emergency', () => {
+    const computed = calculateData(schema, { is_network_provider: true, is_emergency: false });
+    expect(computed['reimbursement_estimate']).toBe(80);
+  });
+
+  it('reimbursement_estimate is 75 for out-of-network emergency', () => {
+    const computed = calculateData(schema, { is_network_provider: false, is_emergency: true });
+    expect(computed['reimbursement_estimate']).toBe(75);
+  });
+
+  it('reimbursement_estimate is 60 for out-of-network non-emergency', () => {
+    const computed = calculateData(schema, { is_network_provider: false, is_emergency: false });
+    expect(computed['reimbursement_estimate']).toBe(60);
+  });
+});
+
+describe('computed → visibility chain', () => {
+  it('pre_auth_reference is visible and required when amount > 500', () => {
+    const data: FormData = { total_amount: 600, is_emergency: false };
+    const computed = calculateData(schema, data);
+    const merged = { ...data, ...computed };
+    const state = checkField(schema, 'pre_auth_reference', merged);
+    expect(state.isVisible).toBe(true);
+    expect(state.isRequired).toBe(true);
+  });
+
+  it('pre_auth_reference is hidden when amount <= 500 and not emergency', () => {
+    const data: FormData = { total_amount: 100, is_emergency: false };
+    const computed = calculateData(schema, data);
+    const merged = { ...data, ...computed };
+    const state = checkField(schema, 'pre_auth_reference', merged);
+    expect(state.isVisible).toBe(false);
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests**
@@ -737,6 +739,7 @@ git commit -m "test(engine): add dataset filtering and computed field tests"
 ### Task 4: Validation rules, conditional required, and default values
 
 **Files:**
+
 - Modify: `packages/adaptive-requirements-engine/src/__tests__/claims-submission.test.ts`
 
 - [ ] **Step 1: Add validation and requireWhen tests**
@@ -744,103 +747,109 @@ git commit -m "test(engine): add dataset filtering and computed field tests"
 Append inside the outer `describe`:
 
 ```ts
-  describe('validation rules', () => {
-    it('incident_date in the past passes validation', () => {
-      const data: FormData = { incident_date: '2020-01-01' };
-      const state = checkField(schema, 'incident_date', data);
-      const dateErrors = state.errors.filter((e) => e === 'Date cannot be in the future');
-      expect(dateErrors).toHaveLength(0);
-    });
-
-    it('incident_date in the future fails validation', () => {
-      const data: FormData = { incident_date: '2099-12-31' };
-      const state = checkField(schema, 'incident_date', data);
-      expect(state.errors).toContain('Date cannot be in the future');
-    });
-
-    it('total_amount of -5 fails validation', () => {
-      const data: FormData = { total_amount: -5 };
-      const state = checkField(schema, 'total_amount', data);
-      expect(state.errors).toContain('Amount must be zero or greater');
-    });
-
-    it('total_amount of 0 passes validation', () => {
-      const data: FormData = { total_amount: 0 };
-      const state = checkField(schema, 'total_amount', data);
-      const amountErrors = state.errors.filter((e) => e === 'Amount must be zero or greater');
-      expect(amountErrors).toHaveLength(0);
-    });
-
-    it('diagnosis_code with valid ICD-10 format passes when claim_type is medical', () => {
-      const data: FormData = { claim_type: 'medical', diagnosis_code: 'J06.9' };
-      const state = checkField(schema, 'diagnosis_code', data);
-      const formatErrors = state.errors.filter((e) => e === 'Invalid ICD-10 code format');
-      expect(formatErrors).toHaveLength(0);
-    });
-
-    it('diagnosis_code with invalid format fails when claim_type is medical', () => {
-      const data: FormData = { claim_type: 'medical', diagnosis_code: 'invalid' };
-      const state = checkField(schema, 'diagnosis_code', data);
-      expect(state.errors).toContain('Invalid ICD-10 code format');
-    });
-
-    it('diagnosis_code validation rule when guard skips rule for non-medical (tested via runValidationRules)', () => {
-      // checkField skips validation entirely for hidden fields, so we test the when guard
-      // directly via runValidationRules to verify the guard itself works
-      const field = schema.fields.find((f) => f.id === 'diagnosis_code')!;
-      const context = { data: { claim_type: 'dental', diagnosis_code: 'invalid' }, answers: { claim_type: 'dental', diagnosis_code: 'invalid' } };
-      const errors = runValidationRules(field.validation!.rules!, context);
-      expect(errors).toHaveLength(0);
-    });
-
-    it('diagnosis_code validation rule when guard fires for medical', () => {
-      const field = schema.fields.find((f) => f.id === 'diagnosis_code')!;
-      const context = { data: { claim_type: 'medical', diagnosis_code: 'invalid' }, answers: { claim_type: 'medical', diagnosis_code: 'invalid' } };
-      const errors = runValidationRules(field.validation!.rules!, context);
-      expect(errors).toContain('Invalid ICD-10 code format');
-    });
+describe('validation rules', () => {
+  it('incident_date in the past passes validation', () => {
+    const data: FormData = { incident_date: '2020-01-01' };
+    const state = checkField(schema, 'incident_date', data);
+    const dateErrors = state.errors.filter((e) => e === 'Date cannot be in the future');
+    expect(dateErrors).toHaveLength(0);
   });
 
-  describe('conditional required (requireWhen)', () => {
-    it('emergency_description is required when is_emergency is true', () => {
-      const data: FormData = { is_emergency: true };
-      const state = checkField(schema, 'emergency_description', data);
-      expect(state.isRequired).toBe(true);
-    });
-
-    it('emergency_description is not required when is_emergency is false', () => {
-      const data: FormData = { is_emergency: false };
-      const state = checkField(schema, 'emergency_description', data);
-      expect(state.isRequired).toBe(false);
-    });
-
-    it('other_insurer_name is required when has_other_coverage is true', () => {
-      const data: FormData = { has_other_coverage: true };
-      const state = checkField(schema, 'other_insurer_name', data);
-      expect(state.isRequired).toBe(true);
-    });
-
-    it('other_policy_number is required when has_other_coverage is true', () => {
-      const data: FormData = { has_other_coverage: true };
-      const state = checkField(schema, 'other_policy_number', data);
-      expect(state.isRequired).toBe(true);
-    });
-
-    it('pre_auth_reference is required when needs_pre_auth computes to true', () => {
-      const data: FormData = { total_amount: 600, is_emergency: false };
-      const computed = calculateData(schema, data);
-      const merged = { ...data, ...computed };
-      const state = checkField(schema, 'pre_auth_reference', merged);
-      expect(state.isRequired).toBe(true);
-    });
+  it('incident_date in the future fails validation', () => {
+    const data: FormData = { incident_date: '2099-12-31' };
+    const state = checkField(schema, 'incident_date', data);
+    expect(state.errors).toContain('Date cannot be in the future');
   });
 
-  describe('default values', () => {
-    it('claim_reference has defaultValue CLM-DRAFT', () => {
-      const field = schema.fields.find((f) => f.id === 'claim_reference')!;
-      expect(field.defaultValue).toBe('CLM-DRAFT');
-    });
+  it('total_amount of -5 fails validation', () => {
+    const data: FormData = { total_amount: -5 };
+    const state = checkField(schema, 'total_amount', data);
+    expect(state.errors).toContain('Amount must be zero or greater');
   });
+
+  it('total_amount of 0 passes validation', () => {
+    const data: FormData = { total_amount: 0 };
+    const state = checkField(schema, 'total_amount', data);
+    const amountErrors = state.errors.filter((e) => e === 'Amount must be zero or greater');
+    expect(amountErrors).toHaveLength(0);
+  });
+
+  it('diagnosis_code with valid ICD-10 format passes when claim_type is medical', () => {
+    const data: FormData = { claim_type: 'medical', diagnosis_code: 'J06.9' };
+    const state = checkField(schema, 'diagnosis_code', data);
+    const formatErrors = state.errors.filter((e) => e === 'Invalid ICD-10 code format');
+    expect(formatErrors).toHaveLength(0);
+  });
+
+  it('diagnosis_code with invalid format fails when claim_type is medical', () => {
+    const data: FormData = { claim_type: 'medical', diagnosis_code: 'invalid' };
+    const state = checkField(schema, 'diagnosis_code', data);
+    expect(state.errors).toContain('Invalid ICD-10 code format');
+  });
+
+  it('diagnosis_code validation rule when guard skips rule for non-medical (tested via runValidationRules)', () => {
+    // checkField skips validation entirely for hidden fields, so we test the when guard
+    // directly via runValidationRules to verify the guard itself works
+    const field = schema.fields.find((f) => f.id === 'diagnosis_code')!;
+    const context = {
+      data: { claim_type: 'dental', diagnosis_code: 'invalid' },
+      answers: { claim_type: 'dental', diagnosis_code: 'invalid' },
+    };
+    const errors = runValidationRules(field.validation!.rules!, context);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('diagnosis_code validation rule when guard fires for medical', () => {
+    const field = schema.fields.find((f) => f.id === 'diagnosis_code')!;
+    const context = {
+      data: { claim_type: 'medical', diagnosis_code: 'invalid' },
+      answers: { claim_type: 'medical', diagnosis_code: 'invalid' },
+    };
+    const errors = runValidationRules(field.validation!.rules!, context);
+    expect(errors).toContain('Invalid ICD-10 code format');
+  });
+});
+
+describe('conditional required (requireWhen)', () => {
+  it('emergency_description is required when is_emergency is true', () => {
+    const data: FormData = { is_emergency: true };
+    const state = checkField(schema, 'emergency_description', data);
+    expect(state.isRequired).toBe(true);
+  });
+
+  it('emergency_description is not required when is_emergency is false', () => {
+    const data: FormData = { is_emergency: false };
+    const state = checkField(schema, 'emergency_description', data);
+    expect(state.isRequired).toBe(false);
+  });
+
+  it('other_insurer_name is required when has_other_coverage is true', () => {
+    const data: FormData = { has_other_coverage: true };
+    const state = checkField(schema, 'other_insurer_name', data);
+    expect(state.isRequired).toBe(true);
+  });
+
+  it('other_policy_number is required when has_other_coverage is true', () => {
+    const data: FormData = { has_other_coverage: true };
+    const state = checkField(schema, 'other_policy_number', data);
+    expect(state.isRequired).toBe(true);
+  });
+
+  it('pre_auth_reference is required when needs_pre_auth computes to true', () => {
+    const data: FormData = { total_amount: 600, is_emergency: false };
+    const computed = calculateData(schema, data);
+    const merged = { ...data, ...computed };
+    const state = checkField(schema, 'pre_auth_reference', merged);
+    expect(state.isRequired).toBe(true);
+  });
+});
+
+describe('default values', () => {
+  it('claim_reference has defaultValue CLM-DRAFT', () => {
+    const field = schema.fields.find((f) => f.id === 'claim_reference')!;
+    expect(field.defaultValue).toBe('CLM-DRAFT');
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests**
@@ -858,6 +867,7 @@ git commit -m "test(engine): add validation rules, requireWhen, and default valu
 ### Task 5: Exclusions, cascading clearing, and flow navigation
 
 **Files:**
+
 - Modify: `packages/adaptive-requirements-engine/src/__tests__/claims-submission.test.ts`
 
 - [ ] **Step 1: Add exclusion, clearing, and flow tests**
@@ -865,121 +875,121 @@ git commit -m "test(engine): add validation rules, requireWhen, and default valu
 Append inside the outer `describe`:
 
 ```ts
-  describe('exclusions (applyExclusions)', () => {
-    it('excludes treatment fields for wellness claims', () => {
-      const data: FormData = {
-        claim_type: 'wellness',
-        treatment_category: 'consultation',
-        provider_name: 'Some Hospital',
-        is_network_provider: true,
-      };
-      const result = applyExclusions(schema, data);
-      expect(result['treatment_category']).toBeUndefined();
-      expect(result['provider_name']).toBeUndefined();
-      expect(result['is_network_provider']).toBeUndefined();
-    });
-
-    it('excludes emergency_description when is_emergency is false', () => {
-      const data: FormData = { is_emergency: false, emergency_description: 'old text' };
-      const result = applyExclusions(schema, data);
-      expect(result['emergency_description']).toBeUndefined();
-    });
-
-    it('excludes other insurance fields when has_other_coverage is false', () => {
-      const data: FormData = {
-        has_other_coverage: false,
-        other_insurer_name: 'OldInsurer',
-        other_policy_number: 'POL-123',
-      };
-      const result = applyExclusions(schema, data);
-      expect(result['other_insurer_name']).toBeUndefined();
-      expect(result['other_policy_number']).toBeUndefined();
-    });
+describe('exclusions (applyExclusions)', () => {
+  it('excludes treatment fields for wellness claims', () => {
+    const data: FormData = {
+      claim_type: 'wellness',
+      treatment_category: 'consultation',
+      provider_name: 'Some Hospital',
+      is_network_provider: true,
+    };
+    const result = applyExclusions(schema, data);
+    expect(result['treatment_category']).toBeUndefined();
+    expect(result['provider_name']).toBeUndefined();
+    expect(result['is_network_provider']).toBeUndefined();
   });
 
-  describe('cascading clearing (clearHiddenFieldValues)', () => {
-    it('clears treatment fields when switching from medical to wellness', () => {
-      const data: FormData = {
-        claim_type: 'wellness',
-        treatment_category: 'consultation',
-        provider_name: 'Hospital',
-        is_network_provider: true,
-        provider_reference: 'NW-123',
-        diagnosis_code: 'J06.9',
-        prescription_ref: 'RX-456',
-      };
-      const result = clearHiddenFieldValues(schema, data);
-      expect(result['treatment_category']).toBeUndefined();
-      expect(result['provider_name']).toBeUndefined();
-      expect(result['is_network_provider']).toBeUndefined();
-      expect(result['diagnosis_code']).toBeUndefined();
-      expect(result['prescription_ref']).toBeUndefined();
-      // provider_reference cascades: is_network_provider cleared → provider_reference hidden
-      expect(result['provider_reference']).toBeUndefined();
-    });
-
-    it('clears provider_reference when is_network_provider changes to false', () => {
-      const data: FormData = {
-        claim_type: 'dental',
-        is_network_provider: false,
-        provider_reference: 'NW-789',
-      };
-      const result = clearHiddenFieldValues(schema, data);
-      expect(result['provider_reference']).toBeUndefined();
-    });
-
-    it('preserves non-hidden field values', () => {
-      const result = clearHiddenFieldValues(schema, medicalClaimData);
-      expect(result['claim_type']).toBe('medical');
-      expect(result['incident_date']).toBe('2026-01-15');
-      expect(result['total_amount']).toBe(250);
-    });
+  it('excludes emergency_description when is_emergency is false', () => {
+    const data: FormData = { is_emergency: false, emergency_description: 'old text' };
+    const result = applyExclusions(schema, data);
+    expect(result['emergency_description']).toBeUndefined();
   });
 
-  describe('flow navigation', () => {
-    const flow = schema.flow!;
-
-    it('getInitialStepId returns claim_info', () => {
-      expect(getInitialStepId(flow)).toBe('claim_info');
-    });
-
-    it('getNextStepId from claim_info with medical goes to treatment_details', () => {
-      const next = getNextStepId(flow, 'claim_info', medicalClaimData);
-      expect(next).toBe('treatment_details');
-    });
-
-    it('getNextStepId from claim_info with wellness goes to financials (goto rule)', () => {
-      const next = getNextStepId(flow, 'claim_info', wellnessClaimData);
-      expect(next).toBe('financials');
-    });
-
-    it('getNextStepId from treatment_details with wellness skips to financials (empty-step-skip)', () => {
-      const next = getNextStepId(flow, 'treatment_details', wellnessClaimData, {
-        requirements: schema,
-      });
-      expect(next).toBe('financials');
-    });
-
-    it('getPreviousStepId from financials returns treatment_details (sequential)', () => {
-      expect(getPreviousStepId(flow, 'financials')).toBe('treatment_details');
-    });
-
-    it('getPreviousStepId from claim_info returns undefined', () => {
-      expect(getPreviousStepId(flow, 'claim_info')).toBeUndefined();
-    });
-
-    it('stepHasVisibleFields for treatment_details with wellness is false', () => {
-      expect(stepHasVisibleFields(schema, 'treatment_details', wellnessClaimData)).toBe(false);
-    });
-
-    it('stepHasVisibleFields for treatment_details with medical is true', () => {
-      expect(stepHasVisibleFields(schema, 'treatment_details', medicalClaimData)).toBe(true);
-    });
-
-    it('stepHasVisibleFields for financials is always true', () => {
-      expect(stepHasVisibleFields(schema, 'financials', emptyFormData)).toBe(true);
-    });
+  it('excludes other insurance fields when has_other_coverage is false', () => {
+    const data: FormData = {
+      has_other_coverage: false,
+      other_insurer_name: 'OldInsurer',
+      other_policy_number: 'POL-123',
+    };
+    const result = applyExclusions(schema, data);
+    expect(result['other_insurer_name']).toBeUndefined();
+    expect(result['other_policy_number']).toBeUndefined();
   });
+});
+
+describe('cascading clearing (clearHiddenFieldValues)', () => {
+  it('clears treatment fields when switching from medical to wellness', () => {
+    const data: FormData = {
+      claim_type: 'wellness',
+      treatment_category: 'consultation',
+      provider_name: 'Hospital',
+      is_network_provider: true,
+      provider_reference: 'NW-123',
+      diagnosis_code: 'J06.9',
+      prescription_ref: 'RX-456',
+    };
+    const result = clearHiddenFieldValues(schema, data);
+    expect(result['treatment_category']).toBeUndefined();
+    expect(result['provider_name']).toBeUndefined();
+    expect(result['is_network_provider']).toBeUndefined();
+    expect(result['diagnosis_code']).toBeUndefined();
+    expect(result['prescription_ref']).toBeUndefined();
+    // provider_reference cascades: is_network_provider cleared → provider_reference hidden
+    expect(result['provider_reference']).toBeUndefined();
+  });
+
+  it('clears provider_reference when is_network_provider changes to false', () => {
+    const data: FormData = {
+      claim_type: 'dental',
+      is_network_provider: false,
+      provider_reference: 'NW-789',
+    };
+    const result = clearHiddenFieldValues(schema, data);
+    expect(result['provider_reference']).toBeUndefined();
+  });
+
+  it('preserves non-hidden field values', () => {
+    const result = clearHiddenFieldValues(schema, medicalClaimData);
+    expect(result['claim_type']).toBe('medical');
+    expect(result['incident_date']).toBe('2026-01-15');
+    expect(result['total_amount']).toBe(250);
+  });
+});
+
+describe('flow navigation', () => {
+  const flow = schema.flow!;
+
+  it('getInitialStepId returns claim_info', () => {
+    expect(getInitialStepId(flow)).toBe('claim_info');
+  });
+
+  it('getNextStepId from claim_info with medical goes to treatment_details', () => {
+    const next = getNextStepId(flow, 'claim_info', medicalClaimData);
+    expect(next).toBe('treatment_details');
+  });
+
+  it('getNextStepId from claim_info with wellness goes to financials (goto rule)', () => {
+    const next = getNextStepId(flow, 'claim_info', wellnessClaimData);
+    expect(next).toBe('financials');
+  });
+
+  it('getNextStepId from treatment_details with wellness skips to financials (empty-step-skip)', () => {
+    const next = getNextStepId(flow, 'treatment_details', wellnessClaimData, {
+      requirements: schema,
+    });
+    expect(next).toBe('financials');
+  });
+
+  it('getPreviousStepId from financials returns treatment_details (sequential)', () => {
+    expect(getPreviousStepId(flow, 'financials')).toBe('treatment_details');
+  });
+
+  it('getPreviousStepId from claim_info returns undefined', () => {
+    expect(getPreviousStepId(flow, 'claim_info')).toBeUndefined();
+  });
+
+  it('stepHasVisibleFields for treatment_details with wellness is false', () => {
+    expect(stepHasVisibleFields(schema, 'treatment_details', wellnessClaimData)).toBe(false);
+  });
+
+  it('stepHasVisibleFields for treatment_details with medical is true', () => {
+    expect(stepHasVisibleFields(schema, 'treatment_details', medicalClaimData)).toBe(true);
+  });
+
+  it('stepHasVisibleFields for financials is always true', () => {
+    expect(stepHasVisibleFields(schema, 'financials', emptyFormData)).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests**
@@ -997,6 +1007,7 @@ git commit -m "test(engine): add exclusion, cascading clearing, and flow navigat
 ### Task 6: Async validation tests
 
 **Files:**
+
 - Modify: `packages/adaptive-requirements-engine/src/__tests__/claims-submission.test.ts`
 
 - [ ] **Step 1: Add async validation tests**
@@ -1004,103 +1015,109 @@ git commit -m "test(engine): add exclusion, cascading clearing, and flow navigat
 Append inside the outer `describe`:
 
 ```ts
-  describe('async validation (checkFieldAsync)', () => {
-    it('provider_reference passes when async validator returns null', async () => {
-      const { options } = createEngineOptionsWithAsync();
-      const state = await checkFieldAsync(
-        schema,
-        'provider_reference',
-        { ...dentalWithNetworkData, provider_reference: 'NW-123' },
-        options,
-      );
-      expect(state.errors).toHaveLength(0);
-    });
-
-    it('provider_reference fails when async validator returns error', async () => {
-      const { options, mocks } = createEngineOptionsWithAsync();
-      mocks.checkProviderReference.mockResolvedValue('Reference not found');
-      const state = await checkFieldAsync(
-        schema,
-        'provider_reference',
-        { ...dentalWithNetworkData, provider_reference: 'NW-BAD' },
-        options,
-      );
-      // ref.message override takes precedence
-      expect(state.errors).toContain('Provider reference not found in network');
-    });
-
-    it('diagnosis_code passes when async validator returns null', async () => {
-      const { options } = createEngineOptionsWithAsync();
-      const data: FormData = { claim_type: 'medical', diagnosis_code: 'J06.9' };
-      const state = await checkFieldAsync(schema, 'diagnosis_code', data, options);
-      expect(state.errors.filter((e) => e === 'ICD-10 code not recognised')).toHaveLength(0);
-    });
-
-    it('diagnosis_code fails with message override when async validator returns error', async () => {
-      const { options, mocks } = createEngineOptionsWithAsync();
-      mocks.checkIcd10Code.mockResolvedValue('Unknown code');
-      const data: FormData = { claim_type: 'medical', diagnosis_code: 'Z99.9' };
-      const state = await checkFieldAsync(schema, 'diagnosis_code', data, options);
-      // ref.message overrides the function return
-      expect(state.errors).toContain('ICD-10 code not recognised');
-    });
-
-    it('skips async validation for hidden fields', async () => {
-      const { options, mocks } = createEngineOptionsWithAsync();
-      // diagnosis_code is hidden when claim_type is dental
-      const data: FormData = { claim_type: 'dental', diagnosis_code: 'invalid' };
-      const state = await checkFieldAsync(schema, 'diagnosis_code', data, options);
-      expect(mocks.checkIcd10Code).not.toHaveBeenCalled();
-      expect(state.isVisible).toBe(false);
-    });
-
-    it('respects async validator when guard (tested via runAsyncValidators directly)', async () => {
-      // checkFieldAsync short-circuits on hidden fields, so test the when guard directly
-      const { mocks } = createEngineOptionsWithAsync();
-      const field = schema.fields.find((f) => f.id === 'provider_reference')!;
-      const refs = field.validation!.asyncValidators!;
-      // wellness claim_type: when guard { "!=": ["claim_type", "wellness"] } should suppress
-      const context = { data: { claim_type: 'wellness', provider_reference: 'NW-123' }, answers: { claim_type: 'wellness', provider_reference: 'NW-123' } };
-      const errors = await runAsyncValidators('NW-123', refs, context, mocks.registry);
-      expect(errors).toHaveLength(0);
-      expect(mocks.checkProviderReference).not.toHaveBeenCalled();
-    });
-
-    it('async validator when guard allows execution for non-wellness', async () => {
-      const { mocks } = createEngineOptionsWithAsync();
-      mocks.checkProviderReference.mockResolvedValue('Not found');
-      const field = schema.fields.find((f) => f.id === 'provider_reference')!;
-      const refs = field.validation!.asyncValidators!;
-      const context = { data: { claim_type: 'dental', provider_reference: 'NW-BAD' }, answers: { claim_type: 'dental', provider_reference: 'NW-BAD' } };
-      const errors = await runAsyncValidators('NW-BAD', refs, context, mocks.registry);
-      expect(errors).toContain('Provider reference not found in network');
-      expect(mocks.checkProviderReference).toHaveBeenCalled();
-    });
-
-    it('respects AbortSignal cancellation', async () => {
-      const { options, mocks } = createEngineOptionsWithAsync();
-      mocks.checkProviderReference.mockImplementation(
-        (_v, _p, _c, signal) =>
-          new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve('error'), 100);
-            signal?.addEventListener('abort', () => {
-              clearTimeout(timeout);
-              resolve(null);
-            });
-          }),
-      );
-      const controller = new AbortController();
-      controller.abort();
-      const state = await checkFieldAsync(
-        schema,
-        'provider_reference',
-        dentalWithNetworkData,
-        options,
-        controller.signal,
-      );
-      expect(state.errors.filter((e) => e === 'Provider reference not found in network')).toHaveLength(0);
-    });
+describe('async validation (checkFieldAsync)', () => {
+  it('provider_reference passes when async validator returns null', async () => {
+    const { options } = createEngineOptionsWithAsync();
+    const state = await checkFieldAsync(
+      schema,
+      'provider_reference',
+      { ...dentalWithNetworkData, provider_reference: 'NW-123' },
+      options,
+    );
+    expect(state.errors).toHaveLength(0);
   });
+
+  it('provider_reference fails when async validator returns error', async () => {
+    const { options, mocks } = createEngineOptionsWithAsync();
+    mocks.checkProviderReference.mockResolvedValue('Reference not found');
+    const state = await checkFieldAsync(
+      schema,
+      'provider_reference',
+      { ...dentalWithNetworkData, provider_reference: 'NW-BAD' },
+      options,
+    );
+    // ref.message override takes precedence
+    expect(state.errors).toContain('Provider reference not found in network');
+  });
+
+  it('diagnosis_code passes when async validator returns null', async () => {
+    const { options } = createEngineOptionsWithAsync();
+    const data: FormData = { claim_type: 'medical', diagnosis_code: 'J06.9' };
+    const state = await checkFieldAsync(schema, 'diagnosis_code', data, options);
+    expect(state.errors.filter((e) => e === 'ICD-10 code not recognised')).toHaveLength(0);
+  });
+
+  it('diagnosis_code fails with message override when async validator returns error', async () => {
+    const { options, mocks } = createEngineOptionsWithAsync();
+    mocks.checkIcd10Code.mockResolvedValue('Unknown code');
+    const data: FormData = { claim_type: 'medical', diagnosis_code: 'Z99.9' };
+    const state = await checkFieldAsync(schema, 'diagnosis_code', data, options);
+    // ref.message overrides the function return
+    expect(state.errors).toContain('ICD-10 code not recognised');
+  });
+
+  it('skips async validation for hidden fields', async () => {
+    const { options, mocks } = createEngineOptionsWithAsync();
+    // diagnosis_code is hidden when claim_type is dental
+    const data: FormData = { claim_type: 'dental', diagnosis_code: 'invalid' };
+    const state = await checkFieldAsync(schema, 'diagnosis_code', data, options);
+    expect(mocks.checkIcd10Code).not.toHaveBeenCalled();
+    expect(state.isVisible).toBe(false);
+  });
+
+  it('respects async validator when guard (tested via runAsyncValidators directly)', async () => {
+    // checkFieldAsync short-circuits on hidden fields, so test the when guard directly
+    const { mocks } = createEngineOptionsWithAsync();
+    const field = schema.fields.find((f) => f.id === 'provider_reference')!;
+    const refs = field.validation!.asyncValidators!;
+    // wellness claim_type: when guard { "!=": ["claim_type", "wellness"] } should suppress
+    const context = {
+      data: { claim_type: 'wellness', provider_reference: 'NW-123' },
+      answers: { claim_type: 'wellness', provider_reference: 'NW-123' },
+    };
+    const errors = await runAsyncValidators('NW-123', refs, context, mocks.registry);
+    expect(errors).toHaveLength(0);
+    expect(mocks.checkProviderReference).not.toHaveBeenCalled();
+  });
+
+  it('async validator when guard allows execution for non-wellness', async () => {
+    const { mocks } = createEngineOptionsWithAsync();
+    mocks.checkProviderReference.mockResolvedValue('Not found');
+    const field = schema.fields.find((f) => f.id === 'provider_reference')!;
+    const refs = field.validation!.asyncValidators!;
+    const context = {
+      data: { claim_type: 'dental', provider_reference: 'NW-BAD' },
+      answers: { claim_type: 'dental', provider_reference: 'NW-BAD' },
+    };
+    const errors = await runAsyncValidators('NW-BAD', refs, context, mocks.registry);
+    expect(errors).toContain('Provider reference not found in network');
+    expect(mocks.checkProviderReference).toHaveBeenCalled();
+  });
+
+  it('respects AbortSignal cancellation', async () => {
+    const { options, mocks } = createEngineOptionsWithAsync();
+    mocks.checkProviderReference.mockImplementation(
+      (_v, _p, _c, signal) =>
+        new Promise((resolve) => {
+          const timeout = setTimeout(() => resolve('error'), 100);
+          signal?.addEventListener('abort', () => {
+            clearTimeout(timeout);
+            resolve(null);
+          });
+        }),
+    );
+    const controller = new AbortController();
+    controller.abort();
+    const state = await checkFieldAsync(
+      schema,
+      'provider_reference',
+      dentalWithNetworkData,
+      options,
+      controller.signal,
+    );
+    expect(state.errors.filter((e) => e === 'Provider reference not found in network')).toHaveLength(0);
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests**
@@ -1127,6 +1144,7 @@ git commit -m "test(engine): add async validation tests for claims schema"
 ### Task 7: Create form test file with test components and initial render tests
 
 **Files:**
+
 - Create: `packages/adaptive-form/src/react/__tests__/claims-submission.test.tsx`
 
 - [ ] **Step 1: Write form test file with component setup and initial render tests**
@@ -1152,7 +1170,17 @@ afterEach(cleanup);
 
 // --- Test components for each field type ---
 
-function TestInput({ field, value, onChange, onBlur, errors, isVisible, isValidating, label, options }: FieldInputProps) {
+function TestInput({
+  field,
+  value,
+  onChange,
+  onBlur,
+  errors,
+  isVisible,
+  isValidating,
+  label,
+  options,
+}: FieldInputProps) {
   if (!isVisible) return null;
   return (
     <div data-testid={`field-${field.id}`}>
@@ -1330,6 +1358,7 @@ git commit -m "test(adaptive-form): add claims form test file with initial rende
 ### Task 8: Conditional field rendering and step navigation tests
 
 **Files:**
+
 - Modify: `packages/adaptive-form/src/react/__tests__/claims-submission.test.tsx`
 
 - [ ] **Step 1: Add conditional rendering and step navigation tests**
@@ -1337,91 +1366,73 @@ git commit -m "test(adaptive-form): add claims form test file with initial rende
 Append inside the outer `describe('claims submission form')`:
 
 ```tsx
-  describe('conditional field rendering', () => {
-    it('shows emergency_description when is_emergency is checked', () => {
-      render(<ControlledForm requirements={schema} components={testComponents} />);
-      const checkbox = screen.getByTestId('input-is_emergency');
-      fireEvent.click(checkbox);
-      expect(screen.getByTestId('field-emergency_description')).toBeTruthy();
-    });
-
-    it('hides emergency_description when is_emergency is unchecked', () => {
-      render(<ControlledForm requirements={schema} components={testComponents} />);
-      const checkbox = screen.getByTestId('input-is_emergency');
-      // Check then uncheck
-      fireEvent.click(checkbox);
-      expect(screen.getByTestId('field-emergency_description')).toBeTruthy();
-      fireEvent.click(checkbox);
-      expect(screen.queryByTestId('field-emergency_description')).toBeNull();
-    });
+describe('conditional field rendering', () => {
+  it('shows emergency_description when is_emergency is checked', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} />);
+    const checkbox = screen.getByTestId('input-is_emergency');
+    fireEvent.click(checkbox);
+    expect(screen.getByTestId('field-emergency_description')).toBeTruthy();
   });
 
-  describe('step navigation', () => {
-    it('navigates forward through medical path steps', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={medicalClaimData}
-        />,
-      );
-
-      // Step 1: claim_info
-      expect(screen.getByTestId('field-claim_type')).toBeTruthy();
-
-      // Navigate to step 2
-      fireEvent.click(screen.getByText('Next'));
-      expect(screen.getByTestId('field-treatment_category')).toBeTruthy();
-      expect(screen.getByTestId('field-provider_name')).toBeTruthy();
-
-      // Navigate to step 3
-      fireEvent.click(screen.getByText('Next'));
-      expect(screen.getByTestId('field-total_amount')).toBeTruthy();
-      expect(screen.getByTestId('field-currency')).toBeTruthy();
-
-      // Navigate to step 4
-      fireEvent.click(screen.getByText('Next'));
-      expect(screen.getByTestId('field-declaration_accepted')).toBeTruthy();
-      expect(screen.getByTestId('field-additional_notes')).toBeTruthy();
-    });
-
-    it('wellness path skips treatment_details step', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={wellnessClaimData}
-        />,
-      );
-
-      // Step 1
-      expect(screen.getByTestId('field-claim_type')).toBeTruthy();
-
-      // Navigate — should skip to financials
-      fireEvent.click(screen.getByText('Next'));
-      expect(screen.getByTestId('field-total_amount')).toBeTruthy();
-      // treatment_details fields should not be present
-      expect(screen.queryByTestId('field-treatment_category')).toBeNull();
-    });
-
-    it('previous button navigates back', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={medicalClaimData}
-        />,
-      );
-
-      // Go to step 2
-      fireEvent.click(screen.getByText('Next'));
-      expect(screen.getByTestId('field-treatment_category')).toBeTruthy();
-
-      // Go back
-      fireEvent.click(screen.getByText('Previous'));
-      expect(screen.getByTestId('field-claim_type')).toBeTruthy();
-    });
+  it('hides emergency_description when is_emergency is unchecked', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} />);
+    const checkbox = screen.getByTestId('input-is_emergency');
+    // Check then uncheck
+    fireEvent.click(checkbox);
+    expect(screen.getByTestId('field-emergency_description')).toBeTruthy();
+    fireEvent.click(checkbox);
+    expect(screen.queryByTestId('field-emergency_description')).toBeNull();
   });
+});
+
+describe('step navigation', () => {
+  it('navigates forward through medical path steps', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} initialData={medicalClaimData} />);
+
+    // Step 1: claim_info
+    expect(screen.getByTestId('field-claim_type')).toBeTruthy();
+
+    // Navigate to step 2
+    fireEvent.click(screen.getByText('Next'));
+    expect(screen.getByTestId('field-treatment_category')).toBeTruthy();
+    expect(screen.getByTestId('field-provider_name')).toBeTruthy();
+
+    // Navigate to step 3
+    fireEvent.click(screen.getByText('Next'));
+    expect(screen.getByTestId('field-total_amount')).toBeTruthy();
+    expect(screen.getByTestId('field-currency')).toBeTruthy();
+
+    // Navigate to step 4
+    fireEvent.click(screen.getByText('Next'));
+    expect(screen.getByTestId('field-declaration_accepted')).toBeTruthy();
+    expect(screen.getByTestId('field-additional_notes')).toBeTruthy();
+  });
+
+  it('wellness path skips treatment_details step', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} initialData={wellnessClaimData} />);
+
+    // Step 1
+    expect(screen.getByTestId('field-claim_type')).toBeTruthy();
+
+    // Navigate — should skip to financials
+    fireEvent.click(screen.getByText('Next'));
+    expect(screen.getByTestId('field-total_amount')).toBeTruthy();
+    // treatment_details fields should not be present
+    expect(screen.queryByTestId('field-treatment_category')).toBeNull();
+  });
+
+  it('previous button navigates back', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} initialData={medicalClaimData} />);
+
+    // Go to step 2
+    fireEvent.click(screen.getByText('Next'));
+    expect(screen.getByTestId('field-treatment_category')).toBeTruthy();
+
+    // Go back
+    fireEvent.click(screen.getByText('Previous'));
+    expect(screen.getByTestId('field-claim_type')).toBeTruthy();
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests**
@@ -1439,6 +1450,7 @@ git commit -m "test(adaptive-form): add conditional rendering and step navigatio
 ### Task 9: Computed fields UI, touched-field errors, and error clearing
 
 **Files:**
+
 - Modify: `packages/adaptive-form/src/react/__tests__/claims-submission.test.tsx`
 
 - [ ] **Step 1: Add computed field UI and error display tests**
@@ -1446,135 +1458,123 @@ git commit -m "test(adaptive-form): add conditional rendering and step navigatio
 Append inside the outer `describe`:
 
 ```tsx
-  describe('dataset-filtered options', () => {
-    it('treatment_category shows 5 medical options when claim_type is medical', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={{ claim_type: 'medical' }}
-        />,
-      );
+describe('dataset-filtered options', () => {
+  it('treatment_category shows 5 medical options when claim_type is medical', () => {
+    render(
+      <ControlledForm requirements={schema} components={testComponents} initialData={{ claim_type: 'medical' }} />,
+    );
 
-      // Navigate to step 2 (treatment_details)
-      fireEvent.click(screen.getByText('Next'));
+    // Navigate to step 2 (treatment_details)
+    fireEvent.click(screen.getByText('Next'));
 
-      const select = screen.getByTestId('input-treatment_category');
-      // Options include the placeholder "Select..." plus 5 medical options
-      const options = select.querySelectorAll('option');
-      expect(options).toHaveLength(6); // 1 placeholder + 5 medical
-    });
-
-    it('treatment_category shows 3 dental options when claim_type is dental', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={{ claim_type: 'dental' }}
-        />,
-      );
-
-      fireEvent.click(screen.getByText('Next'));
-
-      const select = screen.getByTestId('input-treatment_category');
-      const options = select.querySelectorAll('option');
-      expect(options).toHaveLength(4); // 1 placeholder + 3 dental
-    });
+    const select = screen.getByTestId('input-treatment_category');
+    // Options include the placeholder "Select..." plus 5 medical options
+    const options = select.querySelectorAll('option');
+    expect(options).toHaveLength(6); // 1 placeholder + 5 medical
   });
 
-  describe('computed field effects on UI', () => {
-    it('pre_auth_reference appears when total_amount exceeds 500', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={{ ...medicalClaimData, total_amount: 600 }}
-        />,
-      );
+  it('treatment_category shows 3 dental options when claim_type is dental', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} initialData={{ claim_type: 'dental' }} />);
 
-      // Navigate to financials step
-      fireEvent.click(screen.getByText('Next')); // step 2
-      fireEvent.click(screen.getByText('Next')); // step 3
+    fireEvent.click(screen.getByText('Next'));
 
-      expect(screen.getByTestId('field-pre_auth_reference')).toBeTruthy();
-    });
+    const select = screen.getByTestId('input-treatment_category');
+    const options = select.querySelectorAll('option');
+    expect(options).toHaveLength(4); // 1 placeholder + 3 dental
+  });
+});
 
-    it('pre_auth_reference hidden when total_amount is 100', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={{ ...medicalClaimData, total_amount: 100 }}
-        />,
-      );
+describe('computed field effects on UI', () => {
+  it('pre_auth_reference appears when total_amount exceeds 500', () => {
+    render(
+      <ControlledForm
+        requirements={schema}
+        components={testComponents}
+        initialData={{ ...medicalClaimData, total_amount: 600 }}
+      />,
+    );
 
-      // Navigate to financials step
-      fireEvent.click(screen.getByText('Next')); // step 2
-      fireEvent.click(screen.getByText('Next')); // step 3
+    // Navigate to financials step
+    fireEvent.click(screen.getByText('Next')); // step 2
+    fireEvent.click(screen.getByText('Next')); // step 3
 
-      expect(screen.queryByTestId('field-pre_auth_reference')).toBeNull();
-    });
-
-    it('pre_auth_reference appears when is_emergency is true regardless of amount', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={{ ...medicalClaimData, total_amount: 50, is_emergency: true, emergency_description: 'Urgent' }}
-        />,
-      );
-
-      // Navigate to financials step
-      fireEvent.click(screen.getByText('Next')); // step 2
-      fireEvent.click(screen.getByText('Next')); // step 3
-
-      expect(screen.getByTestId('field-pre_auth_reference')).toBeTruthy();
-    });
+    expect(screen.getByTestId('field-pre_auth_reference')).toBeTruthy();
   });
 
-  describe('touched-field error display', () => {
-    it('shows error after blurring incident_date with future date', () => {
-      render(<ControlledForm requirements={schema} components={testComponents} />);
+  it('pre_auth_reference hidden when total_amount is 100', () => {
+    render(
+      <ControlledForm
+        requirements={schema}
+        components={testComponents}
+        initialData={{ ...medicalClaimData, total_amount: 100 }}
+      />,
+    );
 
-      const dateInput = screen.getByTestId('input-incident_date');
-      fireEvent.change(dateInput, { target: { value: '2099-12-31' } });
-      fireEvent.blur(dateInput);
+    // Navigate to financials step
+    fireEvent.click(screen.getByText('Next')); // step 2
+    fireEvent.click(screen.getByText('Next')); // step 3
 
-      expect(screen.getByTestId('error-incident_date')).toBeTruthy();
-      expect(screen.getByTestId('error-incident_date').textContent).toContain(
-        'Date cannot be in the future',
-      );
-    });
-
-    it('clears error after fixing invalid date', () => {
-      render(<ControlledForm requirements={schema} components={testComponents} />);
-
-      const dateInput = screen.getByTestId('input-incident_date');
-      // Enter invalid date
-      fireEvent.change(dateInput, { target: { value: '2099-12-31' } });
-      fireEvent.blur(dateInput);
-      expect(screen.getByTestId('error-incident_date')).toBeTruthy();
-
-      // Fix to valid date
-      fireEvent.change(dateInput, { target: { value: '2020-01-01' } });
-      // After onChange, date error should clear (required may still show if field rules differ)
-      const errorEl = screen.queryByTestId('error-incident_date');
-      if (errorEl) {
-        expect(errorEl.textContent).not.toContain('Date cannot be in the future');
-      }
-    });
-
-    it('shows required error only after touch', () => {
-      render(<ControlledForm requirements={schema} components={testComponents} />);
-      // Before interaction: no errors
-      expect(screen.queryByTestId('error-claim_type')).toBeNull();
-
-      // Blur without selecting
-      const radio = screen.getByTestId('field-claim_type');
-      fireEvent.blur(radio.querySelector('input')!);
-      expect(screen.getByTestId('error-claim_type')).toBeTruthy();
-    });
+    expect(screen.queryByTestId('field-pre_auth_reference')).toBeNull();
   });
+
+  it('pre_auth_reference appears when is_emergency is true regardless of amount', () => {
+    render(
+      <ControlledForm
+        requirements={schema}
+        components={testComponents}
+        initialData={{ ...medicalClaimData, total_amount: 50, is_emergency: true, emergency_description: 'Urgent' }}
+      />,
+    );
+
+    // Navigate to financials step
+    fireEvent.click(screen.getByText('Next')); // step 2
+    fireEvent.click(screen.getByText('Next')); // step 3
+
+    expect(screen.getByTestId('field-pre_auth_reference')).toBeTruthy();
+  });
+});
+
+describe('touched-field error display', () => {
+  it('shows error after blurring incident_date with future date', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} />);
+
+    const dateInput = screen.getByTestId('input-incident_date');
+    fireEvent.change(dateInput, { target: { value: '2099-12-31' } });
+    fireEvent.blur(dateInput);
+
+    expect(screen.getByTestId('error-incident_date')).toBeTruthy();
+    expect(screen.getByTestId('error-incident_date').textContent).toContain('Date cannot be in the future');
+  });
+
+  it('clears error after fixing invalid date', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} />);
+
+    const dateInput = screen.getByTestId('input-incident_date');
+    // Enter invalid date
+    fireEvent.change(dateInput, { target: { value: '2099-12-31' } });
+    fireEvent.blur(dateInput);
+    expect(screen.getByTestId('error-incident_date')).toBeTruthy();
+
+    // Fix to valid date
+    fireEvent.change(dateInput, { target: { value: '2020-01-01' } });
+    // After onChange, date error should clear (required may still show if field rules differ)
+    const errorEl = screen.queryByTestId('error-incident_date');
+    if (errorEl) {
+      expect(errorEl.textContent).not.toContain('Date cannot be in the future');
+    }
+  });
+
+  it('shows required error only after touch', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} />);
+    // Before interaction: no errors
+    expect(screen.queryByTestId('error-claim_type')).toBeNull();
+
+    // Blur without selecting
+    const radio = screen.getByTestId('field-claim_type');
+    fireEvent.blur(radio.querySelector('input')!);
+    expect(screen.getByTestId('error-claim_type')).toBeTruthy();
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests**
@@ -1592,6 +1592,7 @@ git commit -m "test(adaptive-form): add computed field UI and error display test
 ### Task 10: Async validation UI and full user flow tests
 
 **Files:**
+
 - Modify: `packages/adaptive-form/src/react/__tests__/claims-submission.test.tsx`
 
 - [ ] **Step 1: Add async validation UI tests**
@@ -1612,46 +1613,42 @@ vi.mock(import('@kotaio/adaptive-requirements-engine'), async (importOriginal) =
 Then append inside the outer `describe`:
 
 ```tsx
-  describe('async validation UI', () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-      mockRunAsyncValidators.mockResolvedValue([]);
+describe('async validation UI', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    mockRunAsyncValidators.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    mockRunAsyncValidators.mockReset();
+  });
+
+  it('shows validating state then async error after blur', async () => {
+    mockRunAsyncValidators.mockResolvedValue(['Provider reference not found in network']);
+
+    render(
+      <ControlledForm requirements={schema} components={testComponents} initialData={{ ...dentalWithNetworkData }} />,
+    );
+
+    // Navigate to step 2 (treatment_details)
+    fireEvent.click(screen.getByText('Next'));
+
+    const refInput = screen.getByTestId('input-provider_reference');
+    fireEvent.change(refInput, { target: { value: 'NW-BAD' } });
+    fireEvent.blur(refInput);
+
+    // Advance debounce timer
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
 
-    afterEach(() => {
-      vi.useRealTimers();
-      mockRunAsyncValidators.mockReset();
-    });
-
-    it('shows validating state then async error after blur', async () => {
-      mockRunAsyncValidators.mockResolvedValue(['Provider reference not found in network']);
-
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={{ ...dentalWithNetworkData }}
-        />,
-      );
-
-      // Navigate to step 2 (treatment_details)
-      fireEvent.click(screen.getByText('Next'));
-
-      const refInput = screen.getByTestId('input-provider_reference');
-      fireEvent.change(refInput, { target: { value: 'NW-BAD' } });
-      fireEvent.blur(refInput);
-
-      // Advance debounce timer
-      await act(async () => {
-        vi.advanceTimersByTime(300);
-      });
-
-      // Wait for async result
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
+    // Wait for async result
+    await act(async () => {
+      await vi.runAllTimersAsync();
     });
   });
+});
 ```
 
 - [ ] **Step 2: Add full user flow tests**
@@ -1659,56 +1656,44 @@ Then append inside the outer `describe`:
 Append inside the outer `describe`:
 
 ```tsx
-  describe('full user flow — medical happy path', () => {
-    it('completes all steps without errors', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={medicalClaimData}
-        />,
-      );
+describe('full user flow — medical happy path', () => {
+  it('completes all steps without errors', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} initialData={medicalClaimData} />);
 
-      // Step 1: claim_info — all fields pre-filled
-      expect(screen.queryByRole('alert')).toBeNull();
-      fireEvent.click(screen.getByText('Next'));
+    // Step 1: claim_info — all fields pre-filled
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(screen.getByText('Next'));
 
-      // Step 2: treatment_details
-      expect(screen.getByTestId('field-treatment_category')).toBeTruthy();
-      expect(screen.queryByRole('alert')).toBeNull();
-      fireEvent.click(screen.getByText('Next'));
+    // Step 2: treatment_details
+    expect(screen.getByTestId('field-treatment_category')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(screen.getByText('Next'));
 
-      // Step 3: financials
-      expect(screen.getByTestId('field-total_amount')).toBeTruthy();
-      expect(screen.queryByRole('alert')).toBeNull();
-      fireEvent.click(screen.getByText('Next'));
+    // Step 3: financials
+    expect(screen.getByTestId('field-total_amount')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(screen.getByText('Next'));
 
-      // Step 4: documentation
-      expect(screen.getByTestId('field-declaration_accepted')).toBeTruthy();
-      expect(screen.queryByRole('alert')).toBeNull();
-    });
+    // Step 4: documentation
+    expect(screen.getByTestId('field-declaration_accepted')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
+});
 
-  describe('full user flow — wellness shortcut', () => {
-    it('skips treatment step and completes', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={wellnessClaimData}
-        />,
-      );
+describe('full user flow — wellness shortcut', () => {
+  it('skips treatment step and completes', () => {
+    render(<ControlledForm requirements={schema} components={testComponents} initialData={wellnessClaimData} />);
 
-      // Step 1 → financials (skip treatment)
-      fireEvent.click(screen.getByText('Next'));
-      expect(screen.getByTestId('field-total_amount')).toBeTruthy();
-      expect(screen.queryByTestId('field-treatment_category')).toBeNull();
+    // Step 1 → financials (skip treatment)
+    fireEvent.click(screen.getByText('Next'));
+    expect(screen.getByTestId('field-total_amount')).toBeTruthy();
+    expect(screen.queryByTestId('field-treatment_category')).toBeNull();
 
-      // financials → documentation
-      fireEvent.click(screen.getByText('Next'));
-      expect(screen.getByTestId('field-declaration_accepted')).toBeTruthy();
-    });
+    // financials → documentation
+    fireEvent.click(screen.getByText('Next'));
+    expect(screen.getByTestId('field-declaration_accepted')).toBeTruthy();
   });
+});
 ```
 
 - [ ] **Step 3: Run tests**

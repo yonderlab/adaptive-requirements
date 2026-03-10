@@ -21,6 +21,10 @@
       "types": "./dist/index.d.ts",
       "development": "./src/index.ts",
       "default": "./dist/index.js"
+    },
+    "./test-fixtures/claims-submission": {
+      "types": "./src/__fixtures__/claims-submission.ts",
+      "default": "./src/__fixtures__/claims-submission.ts"
     }
   },
   "publishConfig": {
