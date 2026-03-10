@@ -4,13 +4,15 @@
 
 PR #14 moved validation to data-driven JSON Logic rules, removing built-in validators. The claims submission schema exercises nearly every engine feature (cascading visibility, dataset filtering, computed fields, flow navigation, conditional required, validation rules, async validators). We use it as a shared fixture to harden testing across both the engine and React form layers.
 
+Note: existing `engine.test.ts` has thorough unit-level coverage of individual engine functions with minimal inline fixtures. These integration tests layer realistic-schema coverage on top — they do not replace unit tests.
+
 ## Fixture
 
 **File:** `packages/adaptive-requirements-engine/src/__fixtures__/claims-submission.ts`
 
 Exports:
 
-- `claimsSubmissionSchema` — typed `RequirementsObject` with 23 fields, 4 datasets, 4-step flow with conditional navigation. Async validator refs on `provider_reference` (in-network lookup) and `diagnosis_code` (ICD-10 validation).
+- `claimsSubmissionSchema` — typed `RequirementsObject` with 23 fields, 4 datasets, 4-step flow with conditional navigation. Async validator refs on `provider_reference` (in-network lookup, with `when` guard: only runs when claim_type is not wellness) and `diagnosis_code` (ICD-10 validation). `claim_reference` field has `defaultValue: "CLM-DRAFT"`. Includes a `ValidationRule.when` guard on `diagnosis_code` validation (only validates format when claim_type is medical).
 - `emptyFormData` — all fields undefined
 - `medicalClaimData` — medical claim, all required fields filled
 - `wellnessClaimData` — wellness claim (triggers step skip, hides treatment fields)
@@ -63,19 +65,38 @@ Integration tests running engine functions against the full schema.
 - needs_pre_auth=true (via compute) → pre_auth_reference required
 
 ### Exclusions (`applyExclusions`)
-- Wellness claim → treatment fields excluded (values undefined)
-- Hidden field values cleared after claim type change
+
+The claims schema uses `excludeWhen` on fields that have corresponding `visibleWhen` (treatment_category, provider_name, is_network_provider, provider_reference, diagnosis_code, prescription_ref, emergency_description, pre_auth_reference, other_insurer_name, other_policy_number). `excludeWhen` sets field values to undefined; `visibleWhen` controls rendering. Both are present on the same fields to ensure values are cleaned from submission data.
+
+- Wellness claim → treatment fields excluded via `excludeWhen` (values set to undefined)
+- is_emergency=false → emergency_description excluded
+- has_other_coverage=false → other_insurer_name and other_policy_number excluded
 
 ### Cascading clearing (`clearHiddenFieldValues`)
-- claim_type medical→wellness → clears treatment_category, provider_name, is_network_provider, provider_reference, diagnosis_code, prescription_ref
+
+Distinct from exclusions: `clearHiddenFieldValues` clears values where `visibleWhen` evaluates falsy. Tests cascading (clearing field A causes field B to become hidden).
+
+- claim_type medical→wellness → clears treatment_category, provider_name, is_network_provider; then cascades to clear provider_reference (depends on is_network_provider)
 - is_network_provider true→false → clears provider_reference
 
 ### Flow navigation
 - claim_info + medical → next is treatment_details
-- claim_info + wellness → next is financials (skips treatment_details)
-- getPreviousStepId from financials → treatment_details
+- claim_info + wellness → next is financials (skips treatment_details via `goto` navigation rule)
+- getPreviousStepId from financials → treatment_details (note: `getPreviousStepId` is purely sequential, always returns prior step in array regardless of data — the React layer handles skip-back UX)
 - getInitialStepId → claim_info
 - stepHasVisibleFields for treatment_details with wellness → false
+- getNextStepId from treatment_details with wellness → financials (empty-step-skip: treatment_details has no visible fields, engine skips it)
+
+### Default values
+- claim_reference field has defaultValue "CLM-DRAFT" — verify it appears in form data
+
+### Validation rule `when` guards
+- diagnosis_code has a validation rule with `when: { "==": [{ "var": "claim_type" }, "medical"] }` — rule fires for medical, skipped for other claim types
+- provider_reference async validator has `when` guard: skipped when claim_type is wellness
+
+### Async validator `when` guards and message overrides
+- provider_reference async validator with `when` guard evaluating false → validator skipped
+- diagnosis_code async validator with `message` override → override shown instead of function return
 
 ### Async validation (`checkFieldAsync`)
 - provider_reference valid ref → no errors
@@ -124,6 +145,8 @@ Uses minimal render functions per field type (following existing `testComponents
 - Blur total_amount with -5 → error shown
 - Required fields show errors only after touch/blur
 - emergency_description required error after check emergency + blur empty
+- Fix invalid input (change future date to past) → error clears
+- Fix negative amount to positive → error clears
 
 ### Async validation UI
 - Blur provider_reference with invalid value → isValidating → error appears
