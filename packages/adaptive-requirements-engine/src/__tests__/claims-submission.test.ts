@@ -1,7 +1,16 @@
+/* eslint-disable import/no-relative-parent-imports */
 import type { FormData } from '../types';
 
 import { describe, expect, it } from 'vitest';
 
+import {
+  claimsSubmissionSchema as schema,
+  createEngineOptionsWithAsync,
+  dentalWithNetworkData,
+  emptyFormData,
+  medicalClaimData,
+  wellnessClaimData,
+} from '../__fixtures__/claims-submission';
 import {
   applyExclusions,
   calculateData,
@@ -17,82 +26,73 @@ import {
   stepHasVisibleFields,
 } from '../engine';
 import { validateRequirementsObject } from '../validate';
-import {
-  claimsSubmissionSchema as schema,
-  createEngineOptionsWithAsync,
-  dentalWithNetworkData,
-  emergencyClaimData,
-  emptyFormData,
-  medicalClaimData,
-  wellnessClaimData,
-} from '../__fixtures__/claims-submission';
 
 describe('claims submission schema', () => {
   describe('schema validation', () => {
     it('passes structural validation', () => {
       const result = validateRequirementsObject(schema);
-      expect(result.success).toBe(true);
+      expect(result.success).toBeTruthy();
     });
   });
 
   describe('field visibility cascades', () => {
     it('shows treatment fields for medical claims', () => {
       const data: FormData = { claim_type: 'medical' };
-      expect(checkField(schema, 'treatment_category', data).isVisible).toBe(true);
-      expect(checkField(schema, 'provider_name', data).isVisible).toBe(true);
-      expect(checkField(schema, 'is_network_provider', data).isVisible).toBe(true);
-      expect(checkField(schema, 'diagnosis_code', data).isVisible).toBe(true);
+      expect(checkField(schema, 'treatment_category', data).isVisible).toBeTruthy();
+      expect(checkField(schema, 'provider_name', data).isVisible).toBeTruthy();
+      expect(checkField(schema, 'is_network_provider', data).isVisible).toBeTruthy();
+      expect(checkField(schema, 'diagnosis_code', data).isVisible).toBeTruthy();
     });
 
     it('hides treatment fields for wellness claims', () => {
       const data: FormData = { claim_type: 'wellness' };
-      expect(checkField(schema, 'treatment_category', data).isVisible).toBe(false);
-      expect(checkField(schema, 'provider_name', data).isVisible).toBe(false);
-      expect(checkField(schema, 'is_network_provider', data).isVisible).toBe(false);
-      expect(checkField(schema, 'diagnosis_code', data).isVisible).toBe(false);
-      expect(checkField(schema, 'prescription_ref', data).isVisible).toBe(false);
+      expect(checkField(schema, 'treatment_category', data).isVisible).toBeFalsy();
+      expect(checkField(schema, 'provider_name', data).isVisible).toBeFalsy();
+      expect(checkField(schema, 'is_network_provider', data).isVisible).toBeFalsy();
+      expect(checkField(schema, 'diagnosis_code', data).isVisible).toBeFalsy();
+      expect(checkField(schema, 'prescription_ref', data).isVisible).toBeFalsy();
     });
 
     it('hides prescription_ref for medical emergency claims', () => {
       const data: FormData = { claim_type: 'medical', is_emergency: true };
-      expect(checkField(schema, 'prescription_ref', data).isVisible).toBe(false);
+      expect(checkField(schema, 'prescription_ref', data).isVisible).toBeFalsy();
     });
 
     it('shows prescription_ref for non-emergency medical claims', () => {
       const data: FormData = { claim_type: 'medical', is_emergency: false };
-      expect(checkField(schema, 'prescription_ref', data).isVisible).toBe(true);
+      expect(checkField(schema, 'prescription_ref', data).isVisible).toBeTruthy();
     });
 
     it('shows provider_reference when in-network and not wellness', () => {
       const data: FormData = { claim_type: 'dental', is_network_provider: true };
-      expect(checkField(schema, 'provider_reference', data).isVisible).toBe(true);
+      expect(checkField(schema, 'provider_reference', data).isVisible).toBeTruthy();
     });
 
     it('hides provider_reference when not in-network', () => {
       const data: FormData = { claim_type: 'dental', is_network_provider: false };
-      expect(checkField(schema, 'provider_reference', data).isVisible).toBe(false);
+      expect(checkField(schema, 'provider_reference', data).isVisible).toBeFalsy();
     });
 
     it('shows emergency_description when is_emergency is true', () => {
       const data: FormData = { is_emergency: true };
-      expect(checkField(schema, 'emergency_description', data).isVisible).toBe(true);
+      expect(checkField(schema, 'emergency_description', data).isVisible).toBeTruthy();
     });
 
     it('hides emergency_description when is_emergency is false', () => {
       const data: FormData = { is_emergency: false };
-      expect(checkField(schema, 'emergency_description', data).isVisible).toBe(false);
+      expect(checkField(schema, 'emergency_description', data).isVisible).toBeFalsy();
     });
 
     it('shows other insurance fields when has_other_coverage is true', () => {
       const data: FormData = { has_other_coverage: true };
-      expect(checkField(schema, 'other_insurer_name', data).isVisible).toBe(true);
-      expect(checkField(schema, 'other_policy_number', data).isVisible).toBe(true);
+      expect(checkField(schema, 'other_insurer_name', data).isVisible).toBeTruthy();
+      expect(checkField(schema, 'other_policy_number', data).isVisible).toBeTruthy();
     });
 
     it('hides other insurance fields when has_other_coverage is false', () => {
       const data: FormData = { has_other_coverage: false };
-      expect(checkField(schema, 'other_insurer_name', data).isVisible).toBe(false);
-      expect(checkField(schema, 'other_policy_number', data).isVisible).toBe(false);
+      expect(checkField(schema, 'other_insurer_name', data).isVisible).toBeFalsy();
+      expect(checkField(schema, 'other_policy_number', data).isVisible).toBeFalsy();
     });
   });
 
@@ -102,8 +102,12 @@ describe('claims submission schema', () => {
       const context = { data: { claim_type: 'medical' }, answers: { claim_type: 'medical' } };
       const options = resolveFieldOptions(field, schema.datasets, context);
       expect(options).toHaveLength(5);
-      expect(options!.map((o) => o.value)).toEqual([
-        'consultation', 'surgery', 'diagnostic', 'physiotherapy', 'prescription',
+      expect(options!.map((o) => o.value)).toStrictEqual([
+        'consultation',
+        'surgery',
+        'diagnostic',
+        'physiotherapy',
+        'prescription',
       ]);
     });
 
@@ -112,9 +116,7 @@ describe('claims submission schema', () => {
       const context = { data: { claim_type: 'dental' }, answers: { claim_type: 'dental' } };
       const options = resolveFieldOptions(field, schema.datasets, context);
       expect(options).toHaveLength(3);
-      expect(options!.map((o) => o.value)).toEqual([
-        'dental_checkup', 'dental_procedure', 'orthodontics',
-      ]);
+      expect(options!.map((o) => o.value)).toStrictEqual(['dental_checkup', 'dental_procedure', 'orthodontics']);
     });
 
     it('returns optical treatment options when claim_type is optical', () => {
@@ -122,32 +124,32 @@ describe('claims submission schema', () => {
       const context = { data: { claim_type: 'optical' }, answers: { claim_type: 'optical' } };
       const options = resolveFieldOptions(field, schema.datasets, context);
       expect(options).toHaveLength(3);
-      expect(options!.map((o) => o.value)).toEqual(['eye_exam', 'lenses', 'laser_surgery']);
+      expect(options!.map((o) => o.value)).toStrictEqual(['eye_exam', 'lenses', 'laser_surgery']);
     });
 
     it('resolves boolean yes_no dataset for has_other_coverage', () => {
       const field = schema.fields.find((f) => f.id === 'has_other_coverage')!;
       const options = resolveFieldOptions(field, schema.datasets);
       expect(options).toHaveLength(2);
-      expect(options![0]!.value).toBe(true);
-      expect(options![1]!.value).toBe(false);
+      expect(options![0]!.value).toBeTruthy();
+      expect(options![1]!.value).toBeFalsy();
     });
   });
 
   describe('computed fields', () => {
     it('needs_pre_auth is true when total_amount > 500', () => {
       const computed = calculateData(schema, { total_amount: 600, is_emergency: false });
-      expect(computed['needs_pre_auth']).toBe(true);
+      expect(computed['needs_pre_auth']).toBeTruthy();
     });
 
     it('needs_pre_auth is true when is_emergency is true', () => {
       const computed = calculateData(schema, { total_amount: 100, is_emergency: true });
-      expect(computed['needs_pre_auth']).toBe(true);
+      expect(computed['needs_pre_auth']).toBeTruthy();
     });
 
     it('needs_pre_auth is false when amount <= 500 and not emergency', () => {
       const computed = calculateData(schema, { total_amount: 200, is_emergency: false });
-      expect(computed['needs_pre_auth']).toBe(false);
+      expect(computed['needs_pre_auth']).toBeFalsy();
     });
 
     it('reimbursement_estimate is 90 for in-network emergency', () => {
@@ -177,8 +179,8 @@ describe('claims submission schema', () => {
       const computed = calculateData(schema, data);
       const merged = { ...data, ...computed };
       const state = checkField(schema, 'pre_auth_reference', merged);
-      expect(state.isVisible).toBe(true);
-      expect(state.isRequired).toBe(true);
+      expect(state.isVisible).toBeTruthy();
+      expect(state.isRequired).toBeTruthy();
     });
 
     it('pre_auth_reference is hidden when amount <= 500 and not emergency', () => {
@@ -186,7 +188,7 @@ describe('claims submission schema', () => {
       const computed = calculateData(schema, data);
       const merged = { ...data, ...computed };
       const state = checkField(schema, 'pre_auth_reference', merged);
-      expect(state.isVisible).toBe(false);
+      expect(state.isVisible).toBeFalsy();
     });
   });
 
@@ -232,14 +234,20 @@ describe('claims submission schema', () => {
 
     it('diagnosis_code validation rule when guard skips rule for non-medical (tested via runValidationRules)', () => {
       const field = schema.fields.find((f) => f.id === 'diagnosis_code')!;
-      const context = { data: { claim_type: 'dental', diagnosis_code: 'invalid' }, answers: { claim_type: 'dental', diagnosis_code: 'invalid' } };
+      const context = {
+        data: { claim_type: 'dental', diagnosis_code: 'invalid' },
+        answers: { claim_type: 'dental', diagnosis_code: 'invalid' },
+      };
       const errors = runValidationRules(field.validation!.rules!, context);
       expect(errors).toHaveLength(0);
     });
 
     it('diagnosis_code validation rule when guard fires for medical', () => {
       const field = schema.fields.find((f) => f.id === 'diagnosis_code')!;
-      const context = { data: { claim_type: 'medical', diagnosis_code: 'invalid' }, answers: { claim_type: 'medical', diagnosis_code: 'invalid' } };
+      const context = {
+        data: { claim_type: 'medical', diagnosis_code: 'invalid' },
+        answers: { claim_type: 'medical', diagnosis_code: 'invalid' },
+      };
       const errors = runValidationRules(field.validation!.rules!, context);
       expect(errors).toContain('Invalid ICD-10 code format');
     });
@@ -249,25 +257,25 @@ describe('claims submission schema', () => {
     it('emergency_description is required when is_emergency is true', () => {
       const data: FormData = { is_emergency: true };
       const state = checkField(schema, 'emergency_description', data);
-      expect(state.isRequired).toBe(true);
+      expect(state.isRequired).toBeTruthy();
     });
 
     it('emergency_description is not required when is_emergency is false', () => {
       const data: FormData = { is_emergency: false };
       const state = checkField(schema, 'emergency_description', data);
-      expect(state.isRequired).toBe(false);
+      expect(state.isRequired).toBeFalsy();
     });
 
     it('other_insurer_name is required when has_other_coverage is true', () => {
       const data: FormData = { has_other_coverage: true };
       const state = checkField(schema, 'other_insurer_name', data);
-      expect(state.isRequired).toBe(true);
+      expect(state.isRequired).toBeTruthy();
     });
 
     it('other_policy_number is required when has_other_coverage is true', () => {
       const data: FormData = { has_other_coverage: true };
       const state = checkField(schema, 'other_policy_number', data);
-      expect(state.isRequired).toBe(true);
+      expect(state.isRequired).toBeTruthy();
     });
 
     it('pre_auth_reference is required when needs_pre_auth computes to true', () => {
@@ -275,7 +283,7 @@ describe('claims submission schema', () => {
       const computed = calculateData(schema, data);
       const merged = { ...data, ...computed };
       const state = checkField(schema, 'pre_auth_reference', merged);
-      expect(state.isRequired).toBe(true);
+      expect(state.isRequired).toBeTruthy();
     });
   });
 
@@ -390,15 +398,15 @@ describe('claims submission schema', () => {
     });
 
     it('stepHasVisibleFields for treatment_details with wellness is false', () => {
-      expect(stepHasVisibleFields(schema, 'treatment_details', wellnessClaimData)).toBe(false);
+      expect(stepHasVisibleFields(schema, 'treatment_details', wellnessClaimData)).toBeFalsy();
     });
 
     it('stepHasVisibleFields for treatment_details with medical is true', () => {
-      expect(stepHasVisibleFields(schema, 'treatment_details', medicalClaimData)).toBe(true);
+      expect(stepHasVisibleFields(schema, 'treatment_details', medicalClaimData)).toBeTruthy();
     });
 
     it('stepHasVisibleFields for financials is always true', () => {
-      expect(stepHasVisibleFields(schema, 'financials', emptyFormData)).toBe(true);
+      expect(stepHasVisibleFields(schema, 'financials', emptyFormData)).toBeTruthy();
     });
   });
 
@@ -449,7 +457,7 @@ describe('claims submission schema', () => {
       const data: FormData = { claim_type: 'dental', diagnosis_code: 'invalid' };
       const state = await checkFieldAsync(schema, 'diagnosis_code', data, options);
       expect(mocks.checkIcd10Code).not.toHaveBeenCalled();
-      expect(state.isVisible).toBe(false);
+      expect(state.isVisible).toBeFalsy();
     });
 
     it('respects async validator when guard (tested via runAsyncValidators directly)', async () => {
@@ -458,7 +466,10 @@ describe('claims submission schema', () => {
       const field = schema.fields.find((f) => f.id === 'provider_reference')!;
       const refs = field.validation!.asyncValidators!;
       // wellness claim_type: when guard { "!=": ["claim_type", "wellness"] } should suppress
-      const context = { data: { claim_type: 'wellness', provider_reference: 'NW-123' }, answers: { claim_type: 'wellness', provider_reference: 'NW-123' } };
+      const context = {
+        data: { claim_type: 'wellness', provider_reference: 'NW-123' },
+        answers: { claim_type: 'wellness', provider_reference: 'NW-123' },
+      };
       const errors = await runAsyncValidators('NW-123', refs, context, mocks.registry);
       expect(errors).toHaveLength(0);
       expect(mocks.checkProviderReference).not.toHaveBeenCalled();
@@ -469,24 +480,37 @@ describe('claims submission schema', () => {
       mocks.checkProviderReference.mockResolvedValue('Not found');
       const field = schema.fields.find((f) => f.id === 'provider_reference')!;
       const refs = field.validation!.asyncValidators!;
-      const context = { data: { claim_type: 'dental', provider_reference: 'NW-BAD' }, answers: { claim_type: 'dental', provider_reference: 'NW-BAD' } };
+      const context = {
+        data: { claim_type: 'dental', provider_reference: 'NW-BAD' },
+        answers: { claim_type: 'dental', provider_reference: 'NW-BAD' },
+      };
       const errors = await runAsyncValidators('NW-BAD', refs, context, mocks.registry);
       expect(errors).toContain('Provider reference not found in network');
-      expect(mocks.checkProviderReference).toHaveBeenCalled();
+      expect(mocks.checkProviderReference).toHaveBeenCalledWith(
+        'NW-BAD',
+        { networkOnly: true },
+        expect.objectContaining({
+          data: expect.objectContaining({ claim_type: 'dental' }),
+        }),
+        undefined,
+      );
     });
 
     it('respects AbortSignal cancellation', async () => {
       const { options, mocks } = createEngineOptionsWithAsync();
-      mocks.checkProviderReference.mockImplementation(
-        (_v, _p, _c, signal) =>
-          new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve('error'), 100);
-            signal?.addEventListener('abort', () => {
-              clearTimeout(timeout);
-              resolve(null);
-            });
-          }),
-      );
+      mocks.checkProviderReference.mockImplementation((_v, _p, _c, signal) => {
+        if (signal?.aborted) {
+          return Promise.resolve(null);
+        }
+        return new Promise((resolve) => {
+          // eslint-disable-next-line promise/avoid-new
+          const timeout = setTimeout(() => resolve('error'), 100);
+          signal?.addEventListener('abort', () => {
+            clearTimeout(timeout);
+            resolve(null); // eslint-disable-line promise/no-multiple-resolved
+          });
+        });
+      });
       const controller = new AbortController();
       controller.abort();
       const state = await checkFieldAsync(

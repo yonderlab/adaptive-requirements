@@ -1,3 +1,4 @@
+/* eslint-disable import/no-relative-parent-imports */
 import type { AsyncValidatorFn, EngineOptions } from '../engine';
 import type { FormData, RequirementsObject } from '../types';
 
@@ -228,10 +229,7 @@ export const claimsSubmissionSchema: RequirementsObject = {
       label: { default: 'Pre-authorisation required' },
       readOnly: true,
       compute: {
-        or: [
-          { '>': [{ var: 'answers.total_amount' }, 500] },
-          { '==': [{ var: 'answers.is_emergency' }, true] },
-        ],
+        or: [{ '>': [{ var: 'answers.total_amount' }, 500] }, { '==': [{ var: 'answers.is_emergency' }, true] }],
       },
     },
     {
@@ -301,7 +299,7 @@ export const claimsSubmissionSchema: RequirementsObject = {
       description: 'Upload receipts, invoices or medical reports (PDF or image, max 5 MB each)',
       fileConfig: {
         accept: ['.pdf', 'image/*'],
-        maxSize: 5242880,
+        maxSize: 5_242_880,
         multiple: true,
         maxFiles: 5,
       },

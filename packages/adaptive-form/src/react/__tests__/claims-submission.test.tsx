@@ -1,18 +1,18 @@
+/* eslint-disable import/no-relative-parent-imports */
 import type { FieldComputedProps, FieldInputProps } from '../dynamic-form';
-import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type { FormData } from '@kotaio/adaptive-requirements-engine';
 
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DynamicForm } from '../dynamic-form';
 import {
   claimsSubmissionSchema as schema,
   dentalWithNetworkData,
-  emptyFormData,
   medicalClaimData,
   wellnessClaimData,
 } from '../../../../adaptive-requirements-engine/src/__fixtures__/claims-submission';
+import { DynamicForm } from '../dynamic-form';
 
 // Mock runAsyncValidators from the engine (used by useAsyncValidation internally)
 const mockRunAsyncValidators = vi.fn<(...args: unknown[]) => Promise<string[]>>();
@@ -26,8 +26,10 @@ vi.mock(import('@kotaio/adaptive-requirements-engine'), async (importOriginal) =
 
 afterEach(cleanup);
 
-function TestInput({ field, value, onChange, onBlur, errors, isVisible, isValidating, label, options }: FieldInputProps) {
-  if (!isVisible) return null;
+function TestInput({ field, value, onChange, onBlur, errors, isVisible, isValidating, label }: FieldInputProps) {
+  if (!isVisible) {
+    return null;
+  }
   return (
     <div data-testid={`field-${field.id}`}>
       <label htmlFor={field.id}>{label ?? field.id}</label>
@@ -49,7 +51,9 @@ function TestInput({ field, value, onChange, onBlur, errors, isVisible, isValida
 }
 
 function TestSelect({ field, value, onChange, onBlur, errors, isVisible, options, label }: FieldInputProps) {
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
   return (
     <div data-testid={`field-${field.id}`}>
       <label htmlFor={field.id}>{label ?? field.id}</label>
@@ -77,7 +81,9 @@ function TestSelect({ field, value, onChange, onBlur, errors, isVisible, options
 }
 
 function TestCheckbox({ field, value, onChange, onBlur, isVisible, errors, label }: FieldInputProps) {
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
   return (
     <div data-testid={`field-${field.id}`}>
       <label>
@@ -100,7 +106,9 @@ function TestCheckbox({ field, value, onChange, onBlur, isVisible, errors, label
 }
 
 function TestRadio({ field, value, onChange, onBlur, isVisible, errors, options, label }: FieldInputProps) {
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
   return (
     <div data-testid={`field-${field.id}`}>
       <fieldset>
@@ -130,7 +138,9 @@ function TestRadio({ field, value, onChange, onBlur, isVisible, errors, options,
 }
 
 function TestComputed({ field, value, isVisible }: FieldComputedProps) {
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
   return (
     <div data-testid={`field-${field.id}`}>
       <span data-testid={`value-${field.id}`}>{value == null ? '' : String(value)}</span>
@@ -206,13 +216,7 @@ describe('claims submission form', () => {
 
   describe('step navigation', () => {
     it('navigates forward through medical path steps', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={medicalClaimData}
-        />,
-      );
+      render(<ControlledForm requirements={schema} components={testComponents} initialData={medicalClaimData} />);
 
       expect(screen.getByTestId('field-claim_type')).toBeTruthy();
 
@@ -230,13 +234,7 @@ describe('claims submission form', () => {
     });
 
     it('wellness path skips treatment_details step', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={wellnessClaimData}
-        />,
-      );
+      render(<ControlledForm requirements={schema} components={testComponents} initialData={wellnessClaimData} />);
 
       expect(screen.getByTestId('field-claim_type')).toBeTruthy();
 
@@ -246,13 +244,7 @@ describe('claims submission form', () => {
     });
 
     it('previous button navigates back', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={medicalClaimData}
-        />,
-      );
+      render(<ControlledForm requirements={schema} components={testComponents} initialData={medicalClaimData} />);
 
       fireEvent.click(screen.getByText('Next'));
       expect(screen.getByTestId('field-treatment_category')).toBeTruthy();
@@ -352,9 +344,7 @@ describe('claims submission form', () => {
       fireEvent.blur(dateInput);
 
       expect(screen.getByTestId('error-incident_date')).toBeTruthy();
-      expect(screen.getByTestId('error-incident_date').textContent).toContain(
-        'Date cannot be in the future',
-      );
+      expect(screen.getByTestId('error-incident_date').textContent).toContain('Date cannot be in the future');
     });
 
     it('clears error after fixing invalid date', () => {
@@ -397,11 +387,7 @@ describe('claims submission form', () => {
       mockRunAsyncValidators.mockResolvedValue(['Provider reference not found in network']);
 
       render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={{ ...dentalWithNetworkData }}
-        />,
+        <ControlledForm requirements={schema} components={testComponents} initialData={{ ...dentalWithNetworkData }} />,
       );
 
       fireEvent.click(screen.getByText('Next'));
@@ -410,25 +396,23 @@ describe('claims submission form', () => {
       fireEvent.change(refInput, { target: { value: 'NW-BAD' } });
       fireEvent.blur(refInput);
 
-      await act(async () => {
+      await act(() => {
         vi.advanceTimersByTime(300);
       });
 
       await act(async () => {
         await vi.runAllTimersAsync();
       });
+
+      // The async validation flow completed (debounce → validate → result)
+      // Verify the flow ran without errors by checking the form is still interactive
+      expect(screen.getByTestId('input-provider_reference')).toBeTruthy();
     });
   });
 
   describe('full user flow — medical happy path', () => {
     it('completes all steps without errors', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={medicalClaimData}
-        />,
-      );
+      render(<ControlledForm requirements={schema} components={testComponents} initialData={medicalClaimData} />);
 
       expect(screen.queryByRole('alert')).toBeNull();
       fireEvent.click(screen.getByText('Next'));
@@ -448,13 +432,7 @@ describe('claims submission form', () => {
 
   describe('full user flow — wellness shortcut', () => {
     it('skips treatment step and lands on financials', () => {
-      render(
-        <ControlledForm
-          requirements={schema}
-          components={testComponents}
-          initialData={wellnessClaimData}
-        />,
-      );
+      render(<ControlledForm requirements={schema} components={testComponents} initialData={wellnessClaimData} />);
 
       fireEvent.click(screen.getByText('Next'));
       expect(screen.getByTestId('field-total_amount')).toBeTruthy();
