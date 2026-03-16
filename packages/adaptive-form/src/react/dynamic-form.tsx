@@ -250,6 +250,13 @@ export function DynamicForm<TFieldId extends string = string>({
   if (!requirements) {
     throw new Error('DynamicForm requires a "requirements" prop, or must be rendered inside an AdaptiveFormProvider.');
   }
+  if (isDev && requirementsProp && ctx && requirementsProp !== ctx.requirements) {
+    console.warn(
+      'DynamicForm: a "requirements" prop was passed while inside an AdaptiveFormProvider with different requirements. ' +
+        'The prop takes precedence, but step state is managed by the provider. This may cause inconsistencies. ' +
+        'Remove the prop to use the provider\'s requirements, or remove the provider.',
+    );
+  }
 
   const { flow } = requirements;
 
@@ -432,6 +439,9 @@ export function DynamicForm<TFieldId extends string = string>({
     }
     return flow.steps.map((step) => {
       const stepIsValid = step.fields.every((fieldId) => {
+        if (!idToField.has(fieldId)) {
+          return true;
+        }
         const state = getFieldState(fieldId as TFieldId);
         if (!state.isVisible) {
           return true;
@@ -452,7 +462,7 @@ export function DynamicForm<TFieldId extends string = string>({
         isVisited: visitedSteps.has(step.id),
       };
     });
-  }, [flow, currentStepId, visitedSteps, getFieldState, asyncState]);
+  }, [flow, currentStepId, visitedSteps, getFieldState, asyncState, idToField]);
 
   const stepInfo: StepInfo | null = useMemo(() => {
     if (!flow) {

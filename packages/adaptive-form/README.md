@@ -259,6 +259,7 @@ To render all steps as sections on a single page (no navigation), set `showAllSt
 Wrap `DynamicForm` in an `AdaptiveFormProvider` to expose step information to sibling components (e.g. a progress stepper or breadcrumbs) via the `useFormInfo()` hook.
 
 ```tsx
+import { useState } from 'react';
 import { AdaptiveFormProvider, DynamicForm, useFormInfo } from '@kotaio/adaptive-form/react';
 
 function ProgressStepper() {

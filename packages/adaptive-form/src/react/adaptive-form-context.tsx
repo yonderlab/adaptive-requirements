@@ -10,7 +10,7 @@ export interface StepDetail {
   id: string;
   title?: string;
   isCurrent: boolean;
-  /** True when all visible fields in this step pass sync validation */
+  /** True when all visible fields in this step pass validation (sync + async) */
   isValid: boolean;
   /** True when the user has navigated to this step */
   isVisited: boolean;
