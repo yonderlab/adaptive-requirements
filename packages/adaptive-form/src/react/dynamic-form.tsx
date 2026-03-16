@@ -254,7 +254,7 @@ export function DynamicForm<TFieldId extends string = string>({
     console.warn(
       'DynamicForm: a "requirements" prop was passed while inside an AdaptiveFormProvider with different requirements. ' +
         'The prop takes precedence, but step state is managed by the provider. This may cause inconsistencies. ' +
-        'Remove the prop to use the provider\'s requirements, or remove the provider.',
+        "Remove the prop to use the provider's requirements, or remove the provider.",
     );
   }
 
