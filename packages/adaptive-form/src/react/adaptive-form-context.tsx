@@ -1,7 +1,7 @@
 import type { RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { getInitialStepId, resolveLabel } from '@kotaio/adaptive-requirements-engine';
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * Read-only detail for a single step in the flow.
@@ -88,6 +88,37 @@ export function AdaptiveFormProvider({
       })),
     };
   });
+
+  // Reset all step state when requirements changes (e.g. switching schemas)
+  const prevFlowRef = useRef(flow);
+  useEffect(() => {
+    if (prevFlowRef.current === flow) {
+      return;
+    }
+    prevFlowRef.current = flow;
+    const newInitialId = flow ? getInitialStepId(flow) : '';
+    setCurrentStepId(newInitialId);
+    setVisitedSteps(new Set(newInitialId ? [newInitialId] : []));
+    if (!flow) {
+      setStepInfo({ currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] });
+    } else {
+      setStepInfo({
+        currentStepId: newInitialId,
+        currentStepIndex: Math.max(
+          flow.steps.findIndex((s) => s.id === newInitialId),
+          0,
+        ),
+        totalSteps: flow.steps.length,
+        steps: flow.steps.map((step) => ({
+          id: step.id,
+          title: resolveLabel(step.title),
+          isCurrent: step.id === newInitialId,
+          isValid: false,
+          isVisited: step.id === newInitialId,
+        })),
+      });
+    }
+  }, [flow]);
 
   const markStepVisited = useCallback((id: string) => {
     setVisitedSteps((prev) => {

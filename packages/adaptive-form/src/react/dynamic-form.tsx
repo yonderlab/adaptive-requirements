@@ -16,6 +16,7 @@ import {
   getInitialStepId,
   getNextStepId,
   getPreviousStepId,
+  resolveLabel,
 } from '@kotaio/adaptive-requirements-engine';
 import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -277,10 +278,15 @@ export function DynamicForm<TFieldId extends string = string>({
   const markStepVisited = ctx ? ctx.markStepVisited : internalMarkStepVisited;
 
   // Correct the provider's initial step — the provider can't skip empty steps because
-  // it doesn't have access to formData. On mount, compute the correct initial step and
-  // push it to context if it differs.
+  // it doesn't have access to formData. On mount (or when requirements changes),
+  // compute the correct initial step and push it to context if it differs.
   const hasCorrectedInitialStep = useRef(false);
+  const prevRequirementsRef = useRef(requirements);
   useEffect(() => {
+    if (prevRequirementsRef.current !== requirements) {
+      prevRequirementsRef.current = requirements;
+      hasCorrectedInitialStep.current = false;
+    }
     if (!ctx || !flow || hasCorrectedInitialStep.current) {
       return;
     }
@@ -437,8 +443,7 @@ export function DynamicForm<TFieldId extends string = string>({
         const asyncErrors = asyncFieldState?.errors ?? [];
         return state.errors.length === 0 && asyncErrors.length === 0;
       });
-      const title =
-        step.title !== undefined ? (typeof step.title === 'string' ? step.title : step.title.default) : undefined;
+      const title = resolveLabel(step.title);
       return {
         id: step.id,
         title,
