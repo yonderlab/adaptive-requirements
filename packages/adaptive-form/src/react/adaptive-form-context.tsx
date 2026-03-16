@@ -89,7 +89,7 @@ export function AdaptiveFormProvider({
     };
   });
 
-  // Reset all step state when requirements changes (e.g. switching schemas)
+  // Reset all step state when the flow reference changes (e.g. switching schemas)
   const prevFlowRef = useRef(flow);
   useEffect(() => {
     if (prevFlowRef.current === flow) {
