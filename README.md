@@ -96,7 +96,6 @@ import { AdaptiveFormProvider, DynamicForm, useFormInfo } from '@kotaio/adaptive
 
 function ProgressStepper() {
   const stepInfo = useFormInfo();
-  if (!stepInfo) return null;
 
   return (
     <nav>
@@ -112,7 +111,7 @@ function ProgressStepper() {
 // Wrap both in AdaptiveFormProvider
 <AdaptiveFormProvider requirements={requirements}>
   <ProgressStepper />
-  <DynamicForm requirements={requirements} value={data} onChange={setData} components={...} />
+  <DynamicForm value={data} onChange={setData} components={...} />
 </AdaptiveFormProvider>
 ```
 

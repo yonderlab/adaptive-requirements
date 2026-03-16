@@ -6,13 +6,14 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## Key Files
 
-| File                      | Purpose                                                                    |
-| ------------------------- | -------------------------------------------------------------------------- |
-| `index.ts`                | Public API: exports `DynamicForm`, `useAsyncValidation`, `FieldInputProps` |
-| `use-requirements.ts`     | `useRequirements`, `useFieldState`, `useCalculatedData` hooks              |
-| `use-async-validation.ts` | `useAsyncValidation` hook — debounce, abort, per-field state               |
-| `use-phone-home.ts`       | Version check hook (triggers on mount)                                     |
-| `dynamic-form.tsx`        | `DynamicForm` component                                                    |
+| File                        | Purpose                                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `index.ts`                  | Public API: exports `DynamicForm`, `AdaptiveFormProvider`, `useFormInfo`, `useAsyncValidation`, types |
+| `adaptive-form-context.tsx` | `AdaptiveFormProvider`, `useFormInfo` hook, `StepInfo`/`StepDetail` types, internal context           |
+| `use-requirements.ts`       | `useRequirements`, `useFieldState`, `useCalculatedData` hooks                                         |
+| `use-async-validation.ts`   | `useAsyncValidation` hook — debounce, abort, per-field state                                          |
+| `use-phone-home.ts`         | Version check hook (triggers on mount)                                                                |
+| `dynamic-form.tsx`          | `DynamicForm` component                                                                               |
 
 ## Hooks
 
@@ -22,6 +23,15 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 | `useFieldState(requirements, fieldId, data, options?)` | Single field state (minimizes re-renders)                   |
 | `useCalculatedData(requirements, data)`                | Computed field values only                                  |
 | `useAsyncValidation(options)`                          | Async validation: debounce, abort, per-field state          |
+| `useFormInfo()`                                        | Read-only step info from context (requires provider)        |
+
+## AdaptiveFormProvider + useFormInfo
+
+Optional provider that enables sibling components to read step navigation state. Provider owns `requirements` and step state; `DynamicForm` reads `requirements` from context when inside a provider (the prop becomes optional). `DynamicForm` pushes computed `StepInfo` into context via `useEffect`.
+
+- `useFormInfo()` returns `StepInfo` (non-null) — the provider eagerly computes an initial value from `requirements.flow`
+- `DynamicForm` corrects the provider's initial step on mount (provider lacks `formData` to skip empty steps)
+- Without the provider, `DynamicForm` manages step state internally (full backward compatibility)
 
 ## DynamicForm Component
 

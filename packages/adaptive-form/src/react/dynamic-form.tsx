@@ -100,8 +100,12 @@ export interface StepNavigationProps {
  * Props for DynamicForm component
  */
 export interface DynamicFormProps<TFieldId extends string = string> {
-  /** Requirements object defining fields and their behavior (optionally with flow for step-based forms) */
-  requirements: RequirementsObject<TFieldId>;
+  /**
+   * Requirements object defining fields and their behavior (optionally with flow for step-based forms).
+   * Optional when inside an `AdaptiveFormProvider` — the provider's requirements are used automatically.
+   * Required when used standalone (without a provider).
+   */
+  requirements?: RequirementsObject<TFieldId>;
 
   /**
    * Initial form data for uncontrolled mode.
@@ -216,7 +220,7 @@ export interface DynamicFormProps<TFieldId extends string = string> {
  * ```
  */
 export function DynamicForm<TFieldId extends string = string>({
-  requirements,
+  requirements: requirementsProp,
   defaultValue = {},
   value: controlledValue,
   onChange,
@@ -237,10 +241,16 @@ export function DynamicForm<TFieldId extends string = string>({
   const isControlled = controlledValue !== undefined;
   const formData = isControlled ? controlledValue : internalValue;
 
-  const { flow } = requirements;
-
   // Context integration — use provider's step state when available, else internal
   const ctx = useContext(AdaptiveFormContext);
+
+  // Resolve requirements: prop takes precedence, then context, then error
+  const requirements = (requirementsProp ?? ctx?.requirements) as RequirementsObject<TFieldId>;
+  if (!requirements) {
+    throw new Error('DynamicForm requires a "requirements" prop, or must be rendered inside an AdaptiveFormProvider.');
+  }
+
+  const { flow } = requirements;
 
   const [internalStepId, setInternalStepId] = useState<string>(() =>
     flow ? getInitialStepId(flow, { requirements, formData }) : '',
@@ -269,12 +279,12 @@ export function DynamicForm<TFieldId extends string = string>({
   // Correct the provider's initial step — the provider can't skip empty steps because
   // it doesn't have access to formData. On mount, compute the correct initial step and
   // push it to context if it differs.
-  const hasCorrectdInitialStep = useRef(false);
+  const hasCorrectedInitialStep = useRef(false);
   useEffect(() => {
-    if (!ctx || !flow || hasCorrectdInitialStep.current) {
+    if (!ctx || !flow || hasCorrectedInitialStep.current) {
       return;
     }
-    hasCorrectdInitialStep.current = true;
+    hasCorrectedInitialStep.current = true;
     const correctStepId = getInitialStepId(flow, { requirements, formData });
     if (correctStepId && correctStepId !== ctx.currentStepId) {
       ctx.setCurrentStepId(correctStepId);
@@ -454,7 +464,7 @@ export function DynamicForm<TFieldId extends string = string>({
     };
   }, [flow, currentStepId, stepDetails]);
 
-  // Push StepInfo to context when provider exists
+  // Push computed StepInfo to context when provider exists
   useEffect(() => {
     if (ctx && stepInfo) {
       ctx._setStepInfo(stepInfo);

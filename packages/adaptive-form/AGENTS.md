@@ -12,17 +12,18 @@ React integration layer and browser utilities: `DynamicForm` component, hooks, f
 
 ## Key Files
 
-| File                                    | Purpose                                                                    |
-| --------------------------------------- | -------------------------------------------------------------------------- |
-| `src/core/phone-home.ts`                | Version check ("phone home") utility — browser-only, no React dep          |
-| `src/core/validate-api.ts`              | Async validation API client and `builtInAsyncValidators` registry          |
-| `src/react/index.ts`                    | Public API: exports `DynamicForm`, `useAsyncValidation`, `FieldInputProps` |
-| `src/react/use-requirements.ts`         | React hooks (internal): `useRequirements`, `useFieldState`                 |
-| `src/react/use-async-validation.ts`     | React hook: `useAsyncValidation` — debounce, abort, async state            |
-| `src/react/use-phone-home.ts`           | React hook (internal): triggers version check on mount                     |
-| `src/react/dynamic-form.tsx`            | `DynamicForm` component with pluggable field rendering                     |
-| `src/react/adapters/react-hook-form.ts` | React Hook Form state bridge adapter                                       |
-| `src/react/adapters/formik.ts`          | Formik state bridge adapter                                                |
+| File                                    | Purpose                                                                                               |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `src/core/phone-home.ts`                | Version check ("phone home") utility — browser-only, no React dep                                     |
+| `src/core/validate-api.ts`              | Async validation API client and `builtInAsyncValidators` registry                                     |
+| `src/react/index.ts`                    | Public API: exports `DynamicForm`, `AdaptiveFormProvider`, `useFormInfo`, `useAsyncValidation`, types |
+| `src/react/adaptive-form-context.tsx`   | `AdaptiveFormProvider`, `useFormInfo` hook, `StepInfo`/`StepDetail` types, internal context           |
+| `src/react/use-requirements.ts`         | React hooks (internal): `useRequirements`, `useFieldState`                                            |
+| `src/react/use-async-validation.ts`     | React hook: `useAsyncValidation` — debounce, abort, async state                                       |
+| `src/react/use-phone-home.ts`           | React hook (internal): triggers version check on mount                                                |
+| `src/react/dynamic-form.tsx`            | `DynamicForm` component with pluggable field rendering                                                |
+| `src/react/adapters/react-hook-form.ts` | React Hook Form state bridge adapter                                                                  |
+| `src/react/adapters/formik.ts`          | Formik state bridge adapter                                                                           |
 
 ## Architecture
 

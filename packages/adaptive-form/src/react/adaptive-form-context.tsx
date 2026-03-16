@@ -1,6 +1,6 @@
 import type { RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
-import { getInitialStepId } from '@kotaio/adaptive-requirements-engine';
+import { getInitialStepId, resolveLabel } from '@kotaio/adaptive-requirements-engine';
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
 /**
@@ -30,11 +30,12 @@ export interface StepInfo {
  * Internal context value — not part of the public API.
  */
 export interface AdaptiveFormContextValue {
+  requirements: RequirementsObject;
   currentStepId: string;
   setCurrentStepId: (id: string) => void;
   visitedSteps: ReadonlySet<string>;
   markStepVisited: (id: string) => void;
-  stepInfo: StepInfo | null;
+  stepInfo: StepInfo;
   _setStepInfo: (info: StepInfo) => void;
 }
 
@@ -49,7 +50,7 @@ export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null
  * ```tsx
  * <AdaptiveFormProvider requirements={requirements}>
  *   <ProgressStepper />
- *   <DynamicForm requirements={requirements} components={...} />
+ *   <DynamicForm components={...} />
  * </AdaptiveFormProvider>
  * ```
  */
@@ -66,7 +67,27 @@ export function AdaptiveFormProvider({
 
   const [visitedSteps, setVisitedSteps] = useState<Set<string>>(() => new Set(currentStepId ? [currentStepId] : []));
 
-  const [stepInfo, setStepInfo] = useState<StepInfo | null>(null);
+  const [stepInfo, setStepInfo] = useState<StepInfo>(() => {
+    if (!flow) {
+      return { currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] };
+    }
+    const initialId = getInitialStepId(flow);
+    return {
+      currentStepId: initialId,
+      currentStepIndex: Math.max(
+        flow.steps.findIndex((s) => s.id === initialId),
+        0,
+      ),
+      totalSteps: flow.steps.length,
+      steps: flow.steps.map((step) => ({
+        id: step.id,
+        title: resolveLabel(step.title),
+        isCurrent: step.id === initialId,
+        isValid: false,
+        isVisited: step.id === initialId,
+      })),
+    };
+  });
 
   const markStepVisited = useCallback((id: string) => {
     setVisitedSteps((prev) => {
@@ -81,6 +102,7 @@ export function AdaptiveFormProvider({
 
   const value = useMemo<AdaptiveFormContextValue>(
     () => ({
+      requirements,
       currentStepId,
       setCurrentStepId,
       visitedSteps,
@@ -88,7 +110,7 @@ export function AdaptiveFormProvider({
       stepInfo,
       _setStepInfo: setStepInfo,
     }),
-    [currentStepId, visitedSteps, markStepVisited, stepInfo],
+    [requirements, currentStepId, visitedSteps, markStepVisited, stepInfo],
   );
 
   return <AdaptiveFormContext.Provider value={value}>{children}</AdaptiveFormContext.Provider>;
@@ -98,9 +120,10 @@ export function AdaptiveFormProvider({
  * Returns read-only step information for the current form flow.
  * Must be used within an `AdaptiveFormProvider`.
  *
- * Returns `null` on the very first render before DynamicForm has computed step info.
+ * Always returns a `StepInfo` object — validity and visited state are refined
+ * once `DynamicForm` mounts and pushes computed state into context.
  */
-export function useFormInfo(): StepInfo | null {
+export function useFormInfo(): StepInfo {
   const ctx = useContext(AdaptiveFormContext);
   if (!ctx) {
     throw new Error('useFormInfo must be used within an AdaptiveFormProvider');

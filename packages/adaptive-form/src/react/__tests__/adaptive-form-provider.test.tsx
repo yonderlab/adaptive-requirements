@@ -54,9 +54,6 @@ const testComponents = {
 /** Sibling component that reads step info from context */
 function StepInfoDisplay() {
   const stepInfo = useFormInfo();
-  if (!stepInfo) {
-    return <div data-testid="step-info">loading</div>;
-  }
   return (
     <div data-testid="step-info">
       <span data-testid="current-step-id">{stepInfo.currentStepId}</span>
@@ -87,7 +84,7 @@ function ControlledFormWithProvider({
   return (
     <AdaptiveFormProvider requirements={requirements}>
       <StepInfoDisplay />
-      <DynamicForm requirements={requirements} value={data} onChange={setData} components={testComponents} />
+      <DynamicForm value={data} onChange={setData} components={testComponents} />
     </AdaptiveFormProvider>
   );
 }

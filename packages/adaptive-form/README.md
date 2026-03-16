@@ -263,7 +263,6 @@ import { AdaptiveFormProvider, DynamicForm, useFormInfo } from '@kotaio/adaptive
 
 function ProgressStepper() {
   const stepInfo = useFormInfo();
-  if (!stepInfo) return null;
 
   return (
     <nav>
@@ -283,15 +282,15 @@ function MyForm({ requirements }) {
   return (
     <AdaptiveFormProvider requirements={requirements}>
       <ProgressStepper />
-      <DynamicForm requirements={requirements} value={formData} onChange={setFormData} components={myComponents} />
+      <DynamicForm value={formData} onChange={setFormData} components={myComponents} />
     </AdaptiveFormProvider>
   );
 }
 ```
 
-The provider is optional — `DynamicForm` works exactly the same without it. When the provider is present, `DynamicForm` pushes step state into context so siblings can read it.
+The provider is optional — `DynamicForm` works exactly the same without it. When the provider is present, `DynamicForm` reads `requirements` from context automatically (no need to pass it as a prop) and pushes step state into context so siblings can read it.
 
-`useFormInfo()` returns a `StepInfo` object (or `null` on the very first render):
+`useFormInfo()` returns a `StepInfo` object:
 
 | Property           | Type                        | Description                  |
 | ------------------ | --------------------------- | ---------------------------- |
