@@ -301,7 +301,9 @@ export function DynamicForm<TFieldId extends string = string>({
     const correctStepId = getInitialStepId(flow, { requirements, formData });
     if (correctStepId && correctStepId !== ctx.currentStepId) {
       ctx.setCurrentStepId(correctStepId);
-      ctx.markStepVisited(correctStepId);
+      // Replace visited steps entirely so the skipped provider initial step
+      // doesn't remain marked as visited.
+      ctx.replaceVisitedSteps(new Set([correctStepId]));
     }
   }, [ctx, flow, requirements, formData]);
 

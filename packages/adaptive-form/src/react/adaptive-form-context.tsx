@@ -35,6 +35,7 @@ export interface AdaptiveFormContextValue {
   setCurrentStepId: (id: string) => void;
   visitedSteps: ReadonlySet<string>;
   markStepVisited: (id: string) => void;
+  replaceVisitedSteps: (ids: Set<string>) => void;
   stepInfo: StepInfo;
   _setStepInfo: (info: StepInfo) => void;
 }
@@ -131,6 +132,10 @@ export function AdaptiveFormProvider({
     });
   }, []);
 
+  const replaceVisitedSteps = useCallback((ids: Set<string>) => {
+    setVisitedSteps(ids);
+  }, []);
+
   const value = useMemo<AdaptiveFormContextValue>(
     () => ({
       requirements,
@@ -138,10 +143,11 @@ export function AdaptiveFormProvider({
       setCurrentStepId,
       visitedSteps,
       markStepVisited,
+      replaceVisitedSteps,
       stepInfo,
       _setStepInfo: setStepInfo,
     }),
-    [requirements, currentStepId, visitedSteps, markStepVisited, stepInfo],
+    [requirements, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
   );
 
   return <AdaptiveFormContext.Provider value={value}>{children}</AdaptiveFormContext.Provider>;
