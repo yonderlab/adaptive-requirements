@@ -1,3 +1,4 @@
+import type { StepDetail, StepInfo } from './adaptive-form-context';
 import type {
   Field,
   FieldMapping,
@@ -16,10 +17,11 @@ import {
   getNextStepId,
   getPreviousStepId,
 } from '@kotaio/adaptive-requirements-engine';
-import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-parent-imports
 import { builtInAsyncValidators } from '../core/validate-api';
+import { AdaptiveFormContext } from './adaptive-form-context';
 import { isEmptyValue } from './is-empty-value';
 import { useAsyncValidation } from './use-async-validation';
 import { usePhoneHome } from './use-phone-home';
@@ -90,6 +92,8 @@ export interface StepNavigationProps {
   stepTitle?: string;
   currentStepIndex: number;
   totalSteps: number;
+  /** Read-only details for all steps in the flow (id, title, validity, visited state) */
+  steps: readonly StepDetail[];
 }
 
 /**
@@ -234,9 +238,33 @@ export function DynamicForm<TFieldId extends string = string>({
   const formData = isControlled ? controlledValue : internalValue;
 
   const { flow } = requirements;
-  const [currentStepId, setCurrentStepId] = useState<string>(() =>
+
+  // Context integration — use provider's step state when available, else internal
+  const ctx = useContext(AdaptiveFormContext);
+
+  const [internalStepId, setInternalStepId] = useState<string>(() =>
     flow ? getInitialStepId(flow, { requirements, formData }) : '',
   );
+  const [internalVisitedSteps, setInternalVisitedSteps] = useState<Set<string>>(() => {
+    const id = flow ? getInitialStepId(flow, { requirements, formData }) : '';
+    return new Set(id ? [id] : []);
+  });
+
+  const internalMarkStepVisited = useCallback((id: string) => {
+    setInternalVisitedSteps((prev) => {
+      if (prev.has(id)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  const currentStepId = ctx ? ctx.currentStepId : internalStepId;
+  const setCurrentStepId = ctx ? ctx.setCurrentStepId : setInternalStepId;
+  const visitedSteps = ctx ? ctx.visitedSteps : internalVisitedSteps;
+  const markStepVisited = ctx ? ctx.markStepVisited : internalMarkStepVisited;
 
   // Touched field tracking — errors are only shown for fields the user has interacted with
   const [touchedFields, setTouchedFields] = useState<Set<string>>(() => new Set());
@@ -365,6 +393,58 @@ export function DynamicForm<TFieldId extends string = string>({
   const canGoNext = nextStepId !== undefined && currentStepIsValid;
   const canGoPrevious = previousStepId !== undefined;
 
+  // Compute step details for StepInfo and StepNavigationProps
+  const stepDetails: readonly StepDetail[] = useMemo(() => {
+    if (!flow) {
+      return [];
+    }
+    return flow.steps.map((step) => {
+      const stepIsValid = step.fields.every((fieldId) => {
+        const state = getFieldState(fieldId as TFieldId);
+        if (!state.isVisible) {
+          return true;
+        }
+        const asyncFieldState = asyncState[fieldId];
+        if (asyncFieldState?.isValidating) {
+          return false;
+        }
+        const asyncErrors = asyncFieldState?.errors ?? [];
+        return state.errors.length === 0 && asyncErrors.length === 0;
+      });
+      const title =
+        step.title !== undefined ? (typeof step.title === 'string' ? step.title : step.title.default) : undefined;
+      return {
+        id: step.id,
+        title,
+        isCurrent: step.id === currentStepId,
+        isValid: stepIsValid,
+        isVisited: visitedSteps.has(step.id),
+      };
+    });
+  }, [flow, currentStepId, visitedSteps, getFieldState, asyncState]);
+
+  const stepInfo: StepInfo | null = useMemo(() => {
+    if (!flow) {
+      return null;
+    }
+    return {
+      currentStepId,
+      currentStepIndex: Math.max(
+        flow.steps.findIndex((s) => s.id === currentStepId),
+        0,
+      ),
+      totalSteps: flow.steps.length,
+      steps: stepDetails,
+    };
+  }, [flow, currentStepId, stepDetails]);
+
+  // Push StepInfo to context when provider exists
+  useEffect(() => {
+    if (ctx && stepInfo) {
+      ctx._setStepInfo(stepInfo);
+    }
+  }, [ctx, stepInfo]);
+
   const handleNext = useCallback(() => {
     if (!currentStepIsValid) {
       // Reveal errors for all visible fields in current step
@@ -374,14 +454,24 @@ export function DynamicForm<TFieldId extends string = string>({
     }
     if (nextStepId) {
       setCurrentStepId(nextStepId);
+      markStepVisited(nextStepId);
     }
-  }, [nextStepId, currentStepIsValid, currentStepFields, getFieldState, markFieldsTouched]);
+  }, [
+    nextStepId,
+    currentStepIsValid,
+    currentStepFields,
+    getFieldState,
+    markFieldsTouched,
+    setCurrentStepId,
+    markStepVisited,
+  ]);
 
   const handlePrevious = useCallback(() => {
     if (previousStepId) {
       setCurrentStepId(previousStepId);
+      markStepVisited(previousStepId);
     }
-  }, [previousStepId]);
+  }, [previousStepId, setCurrentStepId, markStepVisited]);
 
   const handleFieldChange = useCallback(
     (fieldId: string, newValue: FieldValue) => {
@@ -563,6 +653,7 @@ export function DynamicForm<TFieldId extends string = string>({
             stepTitle,
             currentStepIndex: Math.max(currentStepIndex, 0),
             totalSteps,
+            steps: stepDetails,
           })
         ) : (
           <div className="mt-6 flex gap-3">

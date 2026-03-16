@@ -87,6 +87,35 @@ function RequirementsForm({ requirementId }) {
 }
 ```
 
+### Accessing step information
+
+For multi-step schemas, wrap `DynamicForm` in an `AdaptiveFormProvider` to expose step info to sibling components (progress steppers, breadcrumbs):
+
+```tsx
+import { AdaptiveFormProvider, DynamicForm, useFormInfo } from '@kotaio/adaptive-form/react';
+
+function ProgressStepper() {
+  const stepInfo = useFormInfo();
+  if (!stepInfo) return null;
+
+  return (
+    <nav>
+      {stepInfo.steps.map((step) => (
+        <span key={step.id} data-active={step.isCurrent}>
+          {step.title} {step.isValid && '✓'}
+        </span>
+      ))}
+    </nav>
+  );
+}
+
+// Wrap both in AdaptiveFormProvider
+<AdaptiveFormProvider requirements={requirements}>
+  <ProgressStepper />
+  <DynamicForm requirements={requirements} value={data} onChange={setData} components={...} />
+</AdaptiveFormProvider>
+```
+
 See the [form package README](./packages/adaptive-form/) for component implementation details, controlled mode, multi-step forms, and form library adapters.
 
 ## License

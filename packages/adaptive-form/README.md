@@ -254,6 +254,64 @@ To render all steps as sections on a single page (no navigation), set `showAllSt
 <DynamicForm requirements={requirements} defaultValue={{}} showAllSteps components={myComponents} />
 ```
 
+### Accessing step information from outside DynamicForm
+
+Wrap `DynamicForm` in an `AdaptiveFormProvider` to expose step information to sibling components (e.g. a progress stepper or breadcrumbs) via the `useFormInfo()` hook.
+
+```tsx
+import { AdaptiveFormProvider, DynamicForm, useFormInfo } from '@kotaio/adaptive-form/react';
+
+function ProgressStepper() {
+  const stepInfo = useFormInfo();
+  if (!stepInfo) return null;
+
+  return (
+    <nav>
+      {stepInfo.steps.map((step) => (
+        <span key={step.id} data-active={step.isCurrent} data-visited={step.isVisited}>
+          {step.title}
+          {step.isValid && ' ✓'}
+        </span>
+      ))}
+    </nav>
+  );
+}
+
+function MyForm({ requirements }) {
+  const [formData, setFormData] = useState({});
+
+  return (
+    <AdaptiveFormProvider requirements={requirements}>
+      <ProgressStepper />
+      <DynamicForm requirements={requirements} value={formData} onChange={setFormData} components={myComponents} />
+    </AdaptiveFormProvider>
+  );
+}
+```
+
+The provider is optional — `DynamicForm` works exactly the same without it. When the provider is present, `DynamicForm` pushes step state into context so siblings can read it.
+
+`useFormInfo()` returns a `StepInfo` object (or `null` on the very first render):
+
+| Property           | Type                        | Description                  |
+| ------------------ | --------------------------- | ---------------------------- |
+| `currentStepId`    | `string`                    | ID of the active step        |
+| `currentStepIndex` | `number`                    | 0-based index of active step |
+| `totalSteps`       | `number`                    | Total number of steps        |
+| `steps`            | `ReadonlyArray<StepDetail>` | Details for every step       |
+
+Each `StepDetail` contains:
+
+| Property    | Type                  | Description                                     |
+| ----------- | --------------------- | ----------------------------------------------- |
+| `id`        | `string`              | Step ID                                         |
+| `title`     | `string \| undefined` | Step title (after localization)                 |
+| `isCurrent` | `boolean`             | Whether this is the active step                 |
+| `isValid`   | `boolean`             | All visible fields in this step pass validation |
+| `isVisited` | `boolean`             | Whether the user has navigated to this step     |
+
+Step information is also available via `renderStepNavigation` — the callback now receives a `steps` array with the same `StepDetail` objects, alongside the existing navigation props.
+
 ## Field mapping
 
 When your application's field names differ from the schema's, use the `mapping` prop to translate between them:
