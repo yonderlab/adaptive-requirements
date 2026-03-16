@@ -218,6 +218,12 @@ describe('adaptiveFormProvider + useFormInfo', () => {
       fireEvent.click(screen.getByText('Next'));
       expect(screen.getByTestId('field-treatment_category')).toBeTruthy();
     });
+
+    it('throws when requirements is missing and no provider is present', () => {
+      expect(() => {
+        render(<DynamicForm components={testComponents} />);
+      }).toThrow('DynamicForm requires a "requirements" prop');
+    });
   });
 
   describe('renderStepNavigation receives steps', () => {

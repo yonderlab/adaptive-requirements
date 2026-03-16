@@ -98,9 +98,20 @@ export interface StepNavigationProps {
 }
 
 /**
- * Shared props for DynamicForm (independent of how requirements are provided).
+ * Props for DynamicForm component.
+ *
+ * `requirements` is optional — when inside an `AdaptiveFormProvider`, it is read from context.
+ * When used standalone, `requirements` must be provided. A dev-mode warning is emitted if
+ * `requirements` is passed while inside a provider with different requirements.
  */
-interface DynamicFormBaseProps<TFieldId extends string = string> {
+export interface DynamicFormProps<TFieldId extends string = string> {
+  /**
+   * Requirements object defining fields and their behavior (optionally with flow for step-based forms).
+   * Optional when inside an `AdaptiveFormProvider` — the provider's requirements are used automatically.
+   * Required when used standalone (without a provider).
+   */
+  requirements?: RequirementsObject<TFieldId>;
+
   /**
    * Initial form data for uncontrolled mode.
    * Use this when you want DynamicForm to manage its own state internally.
@@ -180,33 +191,6 @@ interface DynamicFormBaseProps<TFieldId extends string = string> {
 }
 
 /**
- * Standalone usage — `requirements` is required.
- */
-interface DynamicFormStandaloneProps<TFieldId extends string = string> extends DynamicFormBaseProps<TFieldId> {
-  requirements: RequirementsObject<TFieldId>;
-}
-
-/**
- * Provider usage — `requirements` must not be passed (comes from `AdaptiveFormProvider`).
- */
-interface DynamicFormProviderProps<TFieldId extends string = string> extends DynamicFormBaseProps<TFieldId> {
-  requirements?: never;
-}
-
-/**
- * Props for DynamicForm component.
- *
- * - **Standalone:** Pass `requirements` directly.
- * - **With provider:** Omit `requirements` — it comes from `AdaptiveFormProvider`.
- *
- * Passing `requirements` while inside a provider is a type error to prevent
- * mismatches between the provider's step state and the form's field state.
- */
-export type DynamicFormProps<TFieldId extends string = string> =
-  | DynamicFormStandaloneProps<TFieldId>
-  | DynamicFormProviderProps<TFieldId>;
-
-/**
  * DynamicForm - Renders form fields based on a requirements object
  *
  * Supports two modes:
@@ -265,11 +249,17 @@ export function DynamicForm<TFieldId extends string = string>({
   // Context integration — use provider's step state when available, else internal
   const ctx = useContext(AdaptiveFormContext);
 
-  // Resolve requirements: standalone prop or provider context (discriminated union
-  // prevents both being supplied simultaneously at the type level).
+  // Resolve requirements: prop takes precedence, then context, then error
   const requirements = (requirementsProp ?? ctx?.requirements) as RequirementsObject<TFieldId>;
   if (!requirements) {
     throw new Error('DynamicForm requires a "requirements" prop, or must be rendered inside an AdaptiveFormProvider.');
+  }
+  if (isDev && requirementsProp && ctx && requirementsProp !== ctx.requirements) {
+    console.warn(
+      'DynamicForm: a "requirements" prop was passed while inside an AdaptiveFormProvider with different requirements. ' +
+        'The prop takes precedence, but step state is managed by the provider. This may cause inconsistencies. ' +
+        "Remove the prop to use the provider's requirements, or remove the provider.",
+    );
   }
 
   const { flow } = requirements;
