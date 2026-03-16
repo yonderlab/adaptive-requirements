@@ -266,6 +266,22 @@ export function DynamicForm<TFieldId extends string = string>({
   const visitedSteps = ctx ? ctx.visitedSteps : internalVisitedSteps;
   const markStepVisited = ctx ? ctx.markStepVisited : internalMarkStepVisited;
 
+  // Correct the provider's initial step — the provider can't skip empty steps because
+  // it doesn't have access to formData. On mount, compute the correct initial step and
+  // push it to context if it differs.
+  const hasCorrectdInitialStep = useRef(false);
+  useEffect(() => {
+    if (!ctx || !flow || hasCorrectdInitialStep.current) {
+      return;
+    }
+    hasCorrectdInitialStep.current = true;
+    const correctStepId = getInitialStepId(flow, { requirements, formData });
+    if (correctStepId && correctStepId !== ctx.currentStepId) {
+      ctx.setCurrentStepId(correctStepId);
+      ctx.markStepVisited(correctStepId);
+    }
+  }, [ctx, flow, requirements, formData]);
+
   // Touched field tracking — errors are only shown for fields the user has interacted with
   const [touchedFields, setTouchedFields] = useState<Set<string>>(() => new Set());
 
