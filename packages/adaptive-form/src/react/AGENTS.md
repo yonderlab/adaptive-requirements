@@ -9,7 +9,7 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 | File                        | Purpose                                                                                               |
 | --------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `index.ts`                  | Public API: exports `DynamicForm`, `AdaptiveFormProvider`, `useFormInfo`, `useAsyncValidation`, types |
-| `adaptive-form-context.tsx` | `AdaptiveFormProvider`, `useFormInfo` hook, `StepperInfo`/`StepDetail` types, internal context           |
+| `adaptive-form-context.tsx` | `AdaptiveFormProvider`, `useFormInfo` hook, `StepperInfo`/`StepDetail` types, internal context        |
 | `use-requirements.ts`       | `useRequirements`, `useFieldState`, `useCalculatedData` hooks                                         |
 | `use-async-validation.ts`   | `useAsyncValidation` hook — debounce, abort, per-field state                                          |
 | `use-phone-home.ts`         | Version check hook (triggers on mount)                                                                |

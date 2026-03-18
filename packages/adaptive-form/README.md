@@ -313,12 +313,12 @@ function MyForm({ requirements }) {
 
 Each `StepDetail` contains:
 
-| Property    | Type                  | Description                                     |
-| ----------- | --------------------- | ----------------------------------------------- |
-| `id`        | `string`              | Step ID                                         |
-| `title`     | `string \| undefined` | Step title (after localization)                 |
-| `isCurrent` | `boolean`             | Whether this is the active step                 |
-| `isValid`   | `boolean`             | All visible fields in this step pass validation |
+| Property         | Type                  | Description                                     |
+| ---------------- | --------------------- | ----------------------------------------------- |
+| `id`             | `string`              | Step ID                                         |
+| `title`          | `string \| undefined` | Step title (after localization)                 |
+| `isCurrent`      | `boolean`             | Whether this is the active step                 |
+| `isValid`        | `boolean`             | All visible fields in this step pass validation |
 | `hasBeenVisited` | `boolean`             | Whether the user has navigated to this step     |
 
 Step information is also available via `renderStepNavigation` — the callback now receives a `steps` array with the same `StepDetail` objects, alongside the existing navigation props.
