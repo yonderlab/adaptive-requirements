@@ -7,23 +7,23 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
  * Read-only detail for a single step in the flow.
  */
 export interface StepDetail {
-  id: string;
-  title?: string;
-  isCurrent: boolean;
+  readonly id: string;
+  readonly title?: string;
+  readonly isCurrent: boolean;
   /** True when all visible fields in this step pass validation (sync + async) */
-  isValid: boolean;
+  readonly isValid: boolean;
   /** True when the user has navigated to this step */
-  isVisited: boolean;
+  readonly hasBeenVisited: boolean;
 }
 
 /**
  * Aggregated step information for the current form flow.
  */
-export interface StepInfo {
-  currentStepId: string;
-  currentStepIndex: number;
-  totalSteps: number;
-  steps: readonly StepDetail[];
+export interface StepperInfo {
+  readonly currentStepId: string;
+  readonly currentStepIndex: number;
+  readonly totalSteps: number;
+  readonly steps: readonly StepDetail[];
 }
 
 /**
@@ -36,8 +36,8 @@ export interface AdaptiveFormContextValue {
   visitedSteps: ReadonlySet<string>;
   markStepVisited: (id: string) => void;
   replaceVisitedSteps: (ids: Set<string>) => void;
-  stepInfo: StepInfo;
-  _setStepInfo: (info: StepInfo) => void;
+  stepInfo: StepperInfo;
+  _setStepperInfo: (info: StepperInfo) => void;
 }
 
 export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null>(null);
@@ -67,7 +67,7 @@ export function AdaptiveFormProvider({
 
   const [visitedSteps, setVisitedSteps] = useState<Set<string>>(() => new Set(currentStepId ? [currentStepId] : []));
 
-  const [stepInfo, setStepInfo] = useState<StepInfo>(() => {
+  const [stepInfo, setStepperInfo] = useState<StepperInfo>(() => {
     if (!flow) {
       return { currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] };
     }
@@ -84,7 +84,7 @@ export function AdaptiveFormProvider({
         title: resolveLabel(step.title),
         isCurrent: step.id === initialId,
         isValid: false,
-        isVisited: step.id === initialId,
+        hasBeenVisited: step.id === initialId,
       })),
     };
   });
@@ -100,9 +100,9 @@ export function AdaptiveFormProvider({
     setCurrentStepId(newInitialId);
     setVisitedSteps(new Set(newInitialId ? [newInitialId] : []));
     if (!flow) {
-      setStepInfo({ currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] });
+      setStepperInfo({ currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] });
     } else {
-      setStepInfo({
+      setStepperInfo({
         currentStepId: newInitialId,
         currentStepIndex: Math.max(
           flow.steps.findIndex((s) => s.id === newInitialId),
@@ -114,7 +114,7 @@ export function AdaptiveFormProvider({
           title: resolveLabel(step.title),
           isCurrent: step.id === newInitialId,
           isValid: false,
-          isVisited: step.id === newInitialId,
+          hasBeenVisited: step.id === newInitialId,
         })),
       });
     }
@@ -144,7 +144,7 @@ export function AdaptiveFormProvider({
       markStepVisited,
       replaceVisitedSteps,
       stepInfo,
-      _setStepInfo: setStepInfo,
+      _setStepperInfo: setStepperInfo,
     }),
     [requirements, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
   );
@@ -156,10 +156,10 @@ export function AdaptiveFormProvider({
  * Returns read-only step information for the current form flow.
  * Must be used within an `AdaptiveFormProvider`.
  *
- * Always returns a `StepInfo` object — validity and visited state are refined
+ * Always returns a `StepperInfo` object — validity and visited state are refined
  * once `DynamicForm` mounts and pushes computed state into context.
  */
-export function useFormInfo(): StepInfo {
+export function useFormInfo(): StepperInfo {
   const ctx = useContext(AdaptiveFormContext);
   if (!ctx) {
     throw new Error('useFormInfo must be used within an AdaptiveFormProvider');

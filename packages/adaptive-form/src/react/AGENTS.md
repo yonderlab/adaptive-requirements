@@ -9,7 +9,7 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 | File                        | Purpose                                                                                               |
 | --------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `index.ts`                  | Public API: exports `DynamicForm`, `AdaptiveFormProvider`, `useFormInfo`, `useAsyncValidation`, types |
-| `adaptive-form-context.tsx` | `AdaptiveFormProvider`, `useFormInfo` hook, `StepInfo`/`StepDetail` types, internal context           |
+| `adaptive-form-context.tsx` | `AdaptiveFormProvider`, `useFormInfo` hook, `StepperInfo`/`StepDetail` types, internal context           |
 | `use-requirements.ts`       | `useRequirements`, `useFieldState`, `useCalculatedData` hooks                                         |
 | `use-async-validation.ts`   | `useAsyncValidation` hook — debounce, abort, per-field state                                          |
 | `use-phone-home.ts`         | Version check hook (triggers on mount)                                                                |
@@ -27,9 +27,9 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## AdaptiveFormProvider + useFormInfo
 
-Required provider that owns `requirements` and step state. `DynamicForm` must be rendered inside an `AdaptiveFormProvider` — it reads `requirements` from context and pushes computed `StepInfo` back via `useEffect`.
+Required provider that owns `requirements` and step state. `DynamicForm` must be rendered inside an `AdaptiveFormProvider` — it reads `requirements` from context and pushes computed `StepperInfo` back via `useEffect`.
 
-- `useFormInfo()` returns `StepInfo` (non-null) — the provider eagerly computes an initial value from `requirements.flow`
+- `useFormInfo()` returns `StepperInfo` (non-null) — the provider eagerly computes an initial value from `requirements.flow`
 - `DynamicForm` corrects the provider's initial step on mount (provider lacks `formData` to skip empty steps)
 
 ## DynamicForm Component

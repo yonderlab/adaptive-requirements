@@ -1,4 +1,4 @@
-import type { StepDetail, StepInfo } from './adaptive-form-context';
+import type { StepDetail, StepperInfo } from './adaptive-form-context';
 import type {
   Field,
   FieldMapping,
@@ -390,7 +390,7 @@ export function DynamicForm<TFieldId extends string = string>({
   const canGoNext = nextStepId !== undefined && currentStepIsValid;
   const canGoPrevious = previousStepId !== undefined;
 
-  // Compute step details for StepInfo and StepNavigationProps
+  // Compute step details for StepperInfo and StepNavigationProps
   const stepDetails: readonly StepDetail[] = useMemo(() => {
     if (!flow) {
       return [];
@@ -417,12 +417,12 @@ export function DynamicForm<TFieldId extends string = string>({
         title,
         isCurrent: step.id === currentStepId,
         isValid: stepIsValid,
-        isVisited: visitedSteps.has(step.id),
+        hasBeenVisited: visitedSteps.has(step.id),
       };
     });
   }, [flow, currentStepId, visitedSteps, getFieldState, asyncState, idToField]);
 
-  const stepInfo: StepInfo | null = useMemo(() => {
+  const stepInfo: StepperInfo | null = useMemo(() => {
     if (!flow) {
       return null;
     }
@@ -437,10 +437,10 @@ export function DynamicForm<TFieldId extends string = string>({
     };
   }, [flow, currentStepId, stepDetails]);
 
-  // Push computed StepInfo to context when provider exists
+  // Push computed StepperInfo to context when provider exists
   useEffect(() => {
     if (ctx && stepInfo) {
-      ctx._setStepInfo(stepInfo);
+      ctx._setStepperInfo(stepInfo);
     }
   }, [ctx, stepInfo]);
 

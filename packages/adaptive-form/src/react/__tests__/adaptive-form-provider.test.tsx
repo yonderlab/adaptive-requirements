@@ -1,5 +1,5 @@
 /* eslint-disable import/no-relative-parent-imports */
-import type { StepInfo } from '../adaptive-form-context';
+import type { StepperInfo } from '../adaptive-form-context';
 import type { FieldInputProps } from '../dynamic-form';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
@@ -52,7 +52,7 @@ const testComponents = {
 };
 
 /** Sibling component that reads step info from context */
-function StepInfoDisplay() {
+function StepperInfoDisplay() {
   const stepInfo = useFormInfo();
   return (
     <div data-testid="step-info">
@@ -65,7 +65,7 @@ function StepInfoDisplay() {
             <span data-testid={`step-${step.id}-title`}>{step.title ?? ''}</span>
             <span data-testid={`step-${step.id}-current`}>{String(step.isCurrent)}</span>
             <span data-testid={`step-${step.id}-valid`}>{String(step.isValid)}</span>
-            <span data-testid={`step-${step.id}-visited`}>{String(step.isVisited)}</span>
+            <span data-testid={`step-${step.id}-visited`}>{String(step.hasBeenVisited)}</span>
           </li>
         ))}
       </ul>
@@ -83,7 +83,7 @@ function ControlledFormWithProvider({
   const [data, setData] = useState<FormData>(initialData);
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <StepInfoDisplay />
+      <StepperInfoDisplay />
       <DynamicForm value={data} onChange={setData} components={testComponents} />
     </AdaptiveFormProvider>
   );
@@ -101,7 +101,7 @@ describe('adaptiveFormProvider + useFormInfo', () => {
   describe('useFormInfo throws outside provider', () => {
     it('throws when used without AdaptiveFormProvider', () => {
       expect(() => {
-        render(<StepInfoDisplay />);
+        render(<StepperInfoDisplay />);
       }).toThrow('useFormInfo must be used within an AdaptiveFormProvider');
     });
   });
@@ -209,7 +209,7 @@ describe('adaptiveFormProvider + useFormInfo', () => {
 
   describe('renderStepNavigation receives steps', () => {
     it('passes steps array to renderStepNavigation callback', () => {
-      let capturedSteps: StepInfo['steps'] | undefined;
+      let capturedSteps: StepperInfo['steps'] | undefined;
 
       function ControlledFormWithRenderNav() {
         const [data, setData] = useState<FormData>(medicalClaimData);

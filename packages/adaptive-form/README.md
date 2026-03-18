@@ -279,7 +279,7 @@ function ProgressStepper() {
   return (
     <nav>
       {stepInfo.steps.map((step) => (
-        <span key={step.id} data-active={step.isCurrent} data-visited={step.isVisited}>
+        <span key={step.id} data-active={step.isCurrent} data-visited={step.hasBeenVisited}>
           {step.title}
           {step.isValid && ' ✓'}
         </span>
@@ -302,7 +302,7 @@ function MyForm({ requirements }) {
 
 `DynamicForm` must be rendered inside an `AdaptiveFormProvider`. The provider supplies `requirements` via context and enables siblings to read step state via `useFormInfo()`.
 
-`useFormInfo()` returns a `StepInfo` object:
+`useFormInfo()` returns a `StepperInfo` object:
 
 | Property           | Type                        | Description                  |
 | ------------------ | --------------------------- | ---------------------------- |
@@ -319,7 +319,7 @@ Each `StepDetail` contains:
 | `title`     | `string \| undefined` | Step title (after localization)                 |
 | `isCurrent` | `boolean`             | Whether this is the active step                 |
 | `isValid`   | `boolean`             | All visible fields in this step pass validation |
-| `isVisited` | `boolean`             | Whether the user has navigated to this step     |
+| `hasBeenVisited` | `boolean`             | Whether the user has navigated to this step     |
 
 Step information is also available via `renderStepNavigation` — the callback now receives a `steps` array with the same `StepDetail` objects, alongside the existing navigation props.
 
