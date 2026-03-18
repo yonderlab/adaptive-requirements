@@ -47,7 +47,7 @@ npm install @kotaio/adaptive-requirements-engine
 ## Quick example
 
 ```tsx
-import { AdaptiveForm } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
 
 function RequirementsForm({ requirementId }) {
   const [requirements, setRequirements] = useState(null);
@@ -61,28 +61,29 @@ function RequirementsForm({ requirementId }) {
   if (!requirements) return <p>Loading...</p>;
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        fetch(`/api/requirements/${requirementId}`, {
-          method: 'POST',
-          body: formData,
-        });
-      }}
-    >
-      <AdaptiveForm
-        requirements={requirements}
-        defaultValue={{}}
-        components={{
-          text: TextInput,
-          number: NumberInput,
-          select: SelectInput,
-          checkbox: CheckboxInput,
+    <AdaptiveFormProvider requirements={requirements}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          fetch(`/api/requirements/${requirementId}`, {
+            method: 'POST',
+            body: formData,
+          });
         }}
-      />
-      <button type="submit">Submit</button>
-    </form>
+      >
+        <AdaptiveForm
+          defaultValue={{}}
+          components={{
+            text: TextInput,
+            number: NumberInput,
+            select: SelectInput,
+            checkbox: CheckboxInput,
+          }}
+        />
+        <button type="submit">Submit</button>
+      </form>
+    </AdaptiveFormProvider>
   );
 }
 ```

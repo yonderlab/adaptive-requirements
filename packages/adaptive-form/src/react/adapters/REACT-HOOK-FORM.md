@@ -11,14 +11,18 @@ import { useReactHookFormAdapter } from '@kotaio/adaptive-form/react/adapters/re
 The adapter reads form values via `form.watch()` and writes back via `form.setValue()`. It returns `{ value, onChange }` props you pass directly to `<AdaptiveForm>`.
 
 ```tsx
-import { AdaptiveForm } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
 import { useReactHookFormAdapter } from '@kotaio/adaptive-form/react/adapters/react-hook-form';
 
 function MyForm({ requirements }) {
   const form = useFormContext();
   const { value, onChange } = useReactHookFormAdapter({ form });
 
-  return <AdaptiveForm requirements={requirements} value={value} onChange={onChange} components={myComponents} />;
+  return (
+    <AdaptiveFormProvider requirements={requirements}>
+      <AdaptiveForm value={value} onChange={onChange} components={myComponents} />
+    </AdaptiveFormProvider>
+  );
 }
 ```
 

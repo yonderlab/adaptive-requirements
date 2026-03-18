@@ -11,14 +11,18 @@ import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik';
 The adapter reads form values from `formik.values` and writes back via `formik.setFieldValue()`. It returns `{ value, onChange }` props you pass directly to `<AdaptiveForm>`.
 
 ```tsx
-import { AdaptiveForm } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
 import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik';
 
 function MyForm({ requirements }) {
   const formik = useFormikContext();
   const { value, onChange } = useFormikAdapter({ formik });
 
-  return <AdaptiveForm requirements={requirements} value={value} onChange={onChange} components={myComponents} />;
+  return (
+    <AdaptiveFormProvider requirements={requirements}>
+      <AdaptiveForm value={value} onChange={onChange} components={myComponents} />
+    </AdaptiveFormProvider>
+  );
 }
 ```
 
