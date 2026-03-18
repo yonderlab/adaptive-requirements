@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AdaptiveFormProvider } from './adaptive-form-context';
 import { DynamicForm } from './dynamic-form';
 
 afterEach(cleanup);
@@ -47,7 +48,11 @@ describe('dynamicForm touched-field error filtering', () => {
       { id: 'email', type: 'text', validation: { required: true } },
     ]);
 
-    render(<DynamicForm requirements={requirements} defaultValue={{}} components={testComponents} />);
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
 
     expect(screen.queryByTestId('error-name')).toBeNull();
     expect(screen.queryByTestId('error-email')).toBeNull();
@@ -59,7 +64,11 @@ describe('dynamicForm touched-field error filtering', () => {
       { id: 'email', type: 'text', validation: { required: true } },
     ]);
 
-    render(<DynamicForm requirements={requirements} defaultValue={{}} components={testComponents} />);
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
 
     const nameInput = screen.getByTestId('input-name');
     // Type a value then clear it to trigger required validation
@@ -75,7 +84,11 @@ describe('dynamicForm touched-field error filtering', () => {
   it('shows errors after onBlur on the blurred field', () => {
     const requirements = makeRequirements([{ id: 'name', type: 'text', validation: { required: true } }]);
 
-    render(<DynamicForm requirements={requirements} defaultValue={{}} components={testComponents} />);
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
 
     const nameInput = screen.getByTestId('input-name');
     // Focus and blur without changing value
@@ -91,7 +104,11 @@ describe('dynamicForm touched-field error filtering', () => {
       { id: 'email', type: 'text', validation: { required: true } },
     ]);
 
-    render(<DynamicForm requirements={requirements} defaultValue={{}} components={testComponents} showAllErrors />);
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{}} components={testComponents} showAllErrors />
+      </AdaptiveFormProvider>,
+    );
 
     expect(screen.getByTestId('error-name')).toBeTruthy();
     expect(screen.getByTestId('error-email')).toBeTruthy();
@@ -104,12 +121,12 @@ describe('dynamicForm touched-field error filtering', () => {
     function Wrapper() {
       const [reqs, setReqs] = useState(requirements1);
       return (
-        <>
+        <AdaptiveFormProvider requirements={reqs}>
           <button data-testid="switch" onClick={() => setReqs(requirements2)}>
             Switch
           </button>
-          <DynamicForm requirements={reqs} defaultValue={{}} components={testComponents} />
-        </>
+          <DynamicForm defaultValue={{}} components={testComponents} />
+        </AdaptiveFormProvider>
       );
     }
 
@@ -145,7 +162,11 @@ describe('dynamicForm touched-field error filtering', () => {
       </div>
     ));
 
-    render(<DynamicForm requirements={requirements} defaultValue={{}} renderField={renderField} />);
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{}} renderField={renderField} />
+      </AdaptiveFormProvider>,
+    );
 
     // Initially: raw errors present, display errors empty, not touched
     expect(screen.getByTestId('raw-errors').textContent).toBe('This field is required');
@@ -175,7 +196,11 @@ describe('dynamicForm touched-field error filtering', () => {
       },
     };
 
-    render(<DynamicForm requirements={requirements} defaultValue={{}} components={testComponents} />);
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
 
     // Initially no errors shown
     expect(screen.queryByTestId('error-name')).toBeNull();
@@ -202,12 +227,9 @@ describe('dynamicForm touched-field error filtering', () => {
     function Wrapper() {
       const [data, setData] = useState<FormData>({ toggle: 'show' });
       return (
-        <DynamicForm
-          requirements={requirements}
-          value={data}
-          onChange={(d) => setData(d)}
-          components={testComponents}
-        />
+        <AdaptiveFormProvider requirements={requirements}>
+          <DynamicForm value={data} onChange={(d) => setData(d)} components={testComponents} />
+        </AdaptiveFormProvider>
       );
     }
 
@@ -272,11 +294,9 @@ describe('dynamicForm async validation integration', () => {
     mockRunAsyncValidators.mockResolvedValue(['Email already taken']);
 
     render(
-      <DynamicForm
-        requirements={makeAsyncRequirements()}
-        defaultValue={{ email: 'test@test.com' }}
-        components={testComponents}
-      />,
+      <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
+        <DynamicForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
+      </AdaptiveFormProvider>,
     );
 
     const emailInput = screen.getByTestId('input-email');
@@ -308,11 +328,9 @@ describe('dynamicForm async validation integration', () => {
     mockRunAsyncValidators.mockResolvedValue(['Email already taken']);
 
     render(
-      <DynamicForm
-        requirements={makeAsyncRequirements()}
-        defaultValue={{ email: 'test@test.com' }}
-        components={testComponents}
-      />,
+      <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
+        <DynamicForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
+      </AdaptiveFormProvider>,
     );
 
     const emailInput = screen.getByTestId('input-email');
@@ -354,11 +372,9 @@ describe('dynamicForm async validation integration', () => {
     );
 
     render(
-      <DynamicForm
-        requirements={makeAsyncRequirements()}
-        defaultValue={{ email: 'test@test.com' }}
-        components={testComponents}
-      />,
+      <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
+        <DynamicForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
+      </AdaptiveFormProvider>,
     );
 
     const emailInput = screen.getByTestId('input-email');
@@ -399,11 +415,9 @@ describe('dynamicForm async validation integration', () => {
     ]);
 
     render(
-      <DynamicForm
-        requirements={requirements}
-        defaultValue={{ toggle: 'hide', email: 'test@test.com' }}
-        components={testComponents}
-      />,
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{ toggle: 'hide', email: 'test@test.com' }} components={testComponents} />
+      </AdaptiveFormProvider>,
     );
 
     // Email field should not be visible
@@ -430,7 +444,11 @@ describe('dynamicForm async validation integration', () => {
       </button>
     ));
 
-    render(<DynamicForm requirements={requirements} defaultValue={{ emails: [] }} renderField={renderField} />);
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{ emails: [] }} renderField={renderField} />
+      </AdaptiveFormProvider>,
+    );
 
     await act(async () => {
       fireEvent.blur(screen.getByTestId('blur-emails'));
@@ -448,12 +466,13 @@ describe('dynamicForm async validation integration', () => {
     const onValidationStateChange = vi.fn();
 
     render(
-      <DynamicForm
-        requirements={makeAsyncRequirements()}
-        defaultValue={{ email: 'test@test.com' }}
-        onValidationStateChange={onValidationStateChange}
-        components={testComponents}
-      />,
+      <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
+        <DynamicForm
+          defaultValue={{ email: 'test@test.com' }}
+          onValidationStateChange={onValidationStateChange}
+          components={testComponents}
+        />
+      </AdaptiveFormProvider>,
     );
 
     expect(onValidationStateChange).not.toHaveBeenCalled();
@@ -472,12 +491,13 @@ describe('dynamicForm async validation integration', () => {
     const onValidationStateChange = vi.fn();
 
     render(
-      <DynamicForm
-        requirements={makeAsyncRequirements()}
-        defaultValue={{ email: 'test@test.com' }}
-        onValidationStateChange={onValidationStateChange}
-        components={testComponents}
-      />,
+      <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
+        <DynamicForm
+          defaultValue={{ email: 'test@test.com' }}
+          onValidationStateChange={onValidationStateChange}
+          components={testComponents}
+        />
+      </AdaptiveFormProvider>,
     );
 
     await act(async () => {
@@ -526,7 +546,9 @@ describe('dynamicForm async validation integration', () => {
     };
 
     render(
-      <DynamicForm requirements={requirements} defaultValue={{ email: 'test@test.com' }} components={testComponents} />,
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
+      </AdaptiveFormProvider>,
     );
 
     const emailInput = screen.getByTestId('input-email');
@@ -593,7 +615,9 @@ describe('dynamicForm async validation integration', () => {
     ));
 
     render(
-      <DynamicForm requirements={requirements} defaultValue={{ email: 'test@test.com' }} renderField={renderField} />,
+      <AdaptiveFormProvider requirements={requirements}>
+        <DynamicForm defaultValue={{ email: 'test@test.com' }} renderField={renderField} />
+      </AdaptiveFormProvider>,
     );
 
     const emailInput = screen.getByTestId('input-email');

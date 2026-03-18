@@ -100,18 +100,10 @@ export interface StepNavigationProps {
 /**
  * Props for DynamicForm component.
  *
- * `requirements` is optional — when inside an `AdaptiveFormProvider`, it is read from context.
- * When used standalone, `requirements` must be provided. A dev-mode warning is emitted if
- * `requirements` is passed while inside a provider with different requirements.
+ * `DynamicForm` must be rendered inside an `AdaptiveFormProvider` which supplies
+ * the `requirements` object via context.
  */
 export interface DynamicFormProps<TFieldId extends string = string> {
-  /**
-   * Requirements object defining fields and their behavior (optionally with flow for step-based forms).
-   * Optional when inside an `AdaptiveFormProvider` — the provider's requirements are used automatically.
-   * Required when used standalone (without a provider).
-   */
-  requirements?: RequirementsObject<TFieldId>;
-
   /**
    * Initial form data for uncontrolled mode.
    * Use this when you want DynamicForm to manage its own state internally.
@@ -208,24 +200,16 @@ export interface DynamicFormProps<TFieldId extends string = string> {
  *
  * @example
  * ```tsx
- * // Uncontrolled mode (simple, recommended for most cases)
- * <DynamicForm
- *   requirements={requirements}
- *   defaultValue={{ firstName: 'John' }}
- *   components={{ text: (props) => <TextInput {...props} />, number: (props) => <NumberInput {...props} /> }}
- * />
- *
- * // With flow (step-based): requirements.flow is used automatically
- * <DynamicForm
- *   requirements={requirementsWithFlow}
- *   defaultValue={{}}
- *   renderStepNavigation={({ canGoPrevious, canGoNext, onPrevious, onNext }) => (...)}
- *   components={{ text: (props) => <TextInput {...props} /> }}
- * />
+ * // Wrap in a provider (required)
+ * <AdaptiveFormProvider requirements={requirements}>
+ *   <DynamicForm
+ *     defaultValue={{ firstName: 'John' }}
+ *     components={{ text: (props) => <TextInput {...props} />, number: (props) => <NumberInput {...props} /> }}
+ *   />
+ * </AdaptiveFormProvider>
  * ```
  */
 export function DynamicForm<TFieldId extends string = string>({
-  requirements: requirementsProp,
   defaultValue = {},
   value: controlledValue,
   onChange,
@@ -246,47 +230,15 @@ export function DynamicForm<TFieldId extends string = string>({
   const isControlled = controlledValue !== undefined;
   const formData = isControlled ? controlledValue : internalValue;
 
-  // Context integration — use provider's step state when available, else internal
   const ctx = useContext(AdaptiveFormContext);
-
-  // Resolve requirements: prop takes precedence, then context, then error
-  const requirements = (requirementsProp ?? ctx?.requirements) as RequirementsObject<TFieldId>;
-  if (!requirements) {
-    throw new Error('DynamicForm requires a "requirements" prop, or must be rendered inside an AdaptiveFormProvider.');
-  }
-  if (isDev && requirementsProp && ctx && requirementsProp !== ctx.requirements) {
-    console.warn(
-      'DynamicForm: a "requirements" prop was passed while inside an AdaptiveFormProvider with different requirements. ' +
-        'The prop takes precedence, but step state is managed by the provider. This may cause inconsistencies. ' +
-        "Remove the prop to use the provider's requirements, or remove the provider.",
-    );
+  if (!ctx) {
+    throw new Error('DynamicForm must be rendered inside an AdaptiveFormProvider.');
   }
 
+  const requirements = ctx.requirements as RequirementsObject<TFieldId>;
   const { flow } = requirements;
 
-  const [internalStepId, setInternalStepId] = useState<string>(() =>
-    flow ? getInitialStepId(flow, { requirements, formData }) : '',
-  );
-  const [internalVisitedSteps, setInternalVisitedSteps] = useState<Set<string>>(() => {
-    const id = flow ? getInitialStepId(flow, { requirements, formData }) : '';
-    return new Set(id ? [id] : []);
-  });
-
-  const internalMarkStepVisited = useCallback((id: string) => {
-    setInternalVisitedSteps((prev) => {
-      if (prev.has(id)) {
-        return prev;
-      }
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  }, []);
-
-  const currentStepId = ctx ? ctx.currentStepId : internalStepId;
-  const setCurrentStepId = ctx ? ctx.setCurrentStepId : setInternalStepId;
-  const visitedSteps = ctx ? ctx.visitedSteps : internalVisitedSteps;
-  const markStepVisited = ctx ? ctx.markStepVisited : internalMarkStepVisited;
+  const { currentStepId, setCurrentStepId, visitedSteps, markStepVisited } = ctx;
 
   // Correct the provider's initial step — the provider can't skip empty steps because
   // it doesn't have access to formData. On mount (or when requirements changes),
@@ -298,7 +250,7 @@ export function DynamicForm<TFieldId extends string = string>({
       prevRequirementsRef.current = requirements;
       hasCorrectedInitialStep.current = false;
     }
-    if (!ctx || !flow || hasCorrectedInitialStep.current) {
+    if (!flow || hasCorrectedInitialStep.current) {
       return;
     }
     hasCorrectedInitialStep.current = true;

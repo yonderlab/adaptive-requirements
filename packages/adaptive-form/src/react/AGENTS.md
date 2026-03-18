@@ -27,11 +27,10 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## AdaptiveFormProvider + useFormInfo
 
-Optional provider that enables sibling components to read step navigation state. Provider owns `requirements` and step state; `DynamicForm` reads `requirements` from context when inside a provider (the prop becomes optional). `DynamicForm` pushes computed `StepInfo` into context via `useEffect`.
+Required provider that owns `requirements` and step state. `DynamicForm` must be rendered inside an `AdaptiveFormProvider` — it reads `requirements` from context and pushes computed `StepInfo` back via `useEffect`.
 
 - `useFormInfo()` returns `StepInfo` (non-null) — the provider eagerly computes an initial value from `requirements.flow`
 - `DynamicForm` corrects the provider's initial step on mount (provider lacks `formData` to skip empty steps)
-- Without the provider, `DynamicForm` manages step state internally (full backward compatibility)
 
 ## DynamicForm Component
 

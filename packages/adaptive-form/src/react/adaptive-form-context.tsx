@@ -43,9 +43,8 @@ export interface AdaptiveFormContextValue {
 export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null>(null);
 
 /**
- * Optional provider that enables sibling components to read step information
- * via the `useFormInfo()` hook. Wrap both your stepper UI and `DynamicForm`
- * inside this provider.
+ * Required provider that supplies `requirements` to `DynamicForm` and enables
+ * sibling components to read step information via the `useFormInfo()` hook.
  *
  * @example
  * ```tsx

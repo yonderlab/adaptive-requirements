@@ -89,17 +89,6 @@ function ControlledFormWithProvider({
   );
 }
 
-function ControlledFormWithoutProvider({
-  requirements,
-  initialData = {},
-}: {
-  requirements: RequirementsObject;
-  initialData?: FormData;
-}) {
-  const [data, setData] = useState<FormData>(initialData);
-  return <DynamicForm requirements={requirements} value={data} onChange={setData} components={testComponents} />;
-}
-
 describe('adaptiveFormProvider + useFormInfo', () => {
   describe('provider renders children', () => {
     it('renders both the stepper and the form', () => {
@@ -210,19 +199,11 @@ describe('adaptiveFormProvider + useFormInfo', () => {
     });
   });
 
-  describe('backward compatibility without provider', () => {
-    it('dynamicForm works without provider', () => {
-      render(<ControlledFormWithoutProvider requirements={schema} initialData={medicalClaimData} />);
-      expect(screen.getByTestId('field-claim_type')).toBeTruthy();
-
-      fireEvent.click(screen.getByText('Next'));
-      expect(screen.getByTestId('field-treatment_category')).toBeTruthy();
-    });
-
-    it('throws when requirements is missing and no provider is present', () => {
+  describe('provider requirement', () => {
+    it('throws when rendered without an AdaptiveFormProvider', () => {
       expect(() => {
         render(<DynamicForm components={testComponents} />);
-      }).toThrow('DynamicForm requires a "requirements" prop');
+      }).toThrow('DynamicForm must be rendered inside an AdaptiveFormProvider');
     });
   });
 
@@ -233,25 +214,26 @@ describe('adaptiveFormProvider + useFormInfo', () => {
       function ControlledFormWithRenderNav() {
         const [data, setData] = useState<FormData>(medicalClaimData);
         return (
-          <DynamicForm
-            requirements={schema}
-            value={data}
-            onChange={setData}
-            components={testComponents}
-            renderStepNavigation={(props) => {
-              capturedSteps = props.steps;
-              return (
-                <div>
-                  <button type="button" onClick={props.onPrevious}>
-                    Prev
-                  </button>
-                  <button type="button" onClick={props.onNext}>
-                    Next
-                  </button>
-                </div>
-              );
-            }}
-          />
+          <AdaptiveFormProvider requirements={schema}>
+            <DynamicForm
+              value={data}
+              onChange={setData}
+              components={testComponents}
+              renderStepNavigation={(props) => {
+                capturedSteps = props.steps;
+                return (
+                  <div>
+                    <button type="button" onClick={props.onPrevious}>
+                      Prev
+                    </button>
+                    <button type="button" onClick={props.onNext}>
+                      Next
+                    </button>
+                  </div>
+                );
+              }}
+            />
+          </AdaptiveFormProvider>
         );
       }
 
