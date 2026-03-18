@@ -274,4 +274,4 @@ Key types exported for use in custom integrations:
 
 ## License
 
-Apache-2.0 — see [LICENSE](../../LICENSE) for details.
+Apache-2.0 — see [LICENSE](https://github.com/yonderlab/adaptive-requirements/blob/main/LICENSE) for details.
