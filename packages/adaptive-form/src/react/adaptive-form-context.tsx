@@ -132,7 +132,7 @@ export function AdaptiveFormProvider({
   }, []);
 
   const replaceVisitedSteps = useCallback((ids: Set<string>) => {
-    setVisitedSteps(ids);
+    setVisitedSteps(new Set(ids));
   }, []);
 
   const value = useMemo<AdaptiveFormContextValue>(
