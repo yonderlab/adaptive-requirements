@@ -1,5 +1,7 @@
 ---
-'@kotaio/adaptive-form': minor
+'@kotaio/adaptive-form': major
 ---
 
-Add `AdaptiveFormProvider` and `useFormInfo()` hook to expose step navigation state (current step, validity, visited status) to sibling components. `DynamicForm` works identically without the provider. `renderStepNavigation` callback now also receives a `steps` array.
+**BREAKING:** `DynamicForm` must now be rendered inside an `AdaptiveFormProvider`. The `requirements` prop has been removed — requirements are always supplied via the provider's context.
+
+Add `AdaptiveFormProvider` and `useFormInfo()` hook to expose step navigation state (current step, validity, visited status) to sibling components. `renderStepNavigation` callback now also receives a `steps` array.
