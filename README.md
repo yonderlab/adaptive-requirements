@@ -28,7 +28,7 @@ Schemas are opaque and can change at any time. You never need to hard-code or in
 | Package                                                                            | Description                                                                                                                                                                               |
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`@kotaio/adaptive-requirements-engine`](./packages/adaptive-requirements-engine/) | Framework-agnostic core: rule evaluation, validation, field state computation. Zero React dependencies. Use this for server-side validation, custom renderers, or non-React integrations. |
-| [`@kotaio/adaptive-form`](./packages/adaptive-form/)                               | React integration: an `AdaptiveForm` component that renders requirement schemas with pluggable UI components, multi-step flows, and form library adapters.                                 |
+| [`@kotaio/adaptive-form`](./packages/adaptive-form/)                               | React integration: an `AdaptiveForm` component that renders requirement schemas with pluggable UI components, multi-step flows, and form library adapters.                                |
 
 ## Installation
 
