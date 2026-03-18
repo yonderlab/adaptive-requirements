@@ -31,11 +31,11 @@ function defaultSerialize<T = Record<string, unknown>>(values: Partial<T>): Form
 /**
  * State bridge adapter for Formik.
  *
- * Returns `{ value, onChange }` props to pass directly to `<DynamicForm>`.
+ * Returns `{ value, onChange }` props to pass directly to `<AdaptiveForm>`.
  *
  * @example
  * ```tsx
- * import { DynamicForm } from '@kotaio/adaptive-form/react'
+ * import { AdaptiveForm } from '@kotaio/adaptive-form/react'
  * import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik'
  *
  * function MyForm({ requirements }) {
@@ -43,7 +43,7 @@ function defaultSerialize<T = Record<string, unknown>>(values: Partial<T>): Form
  *   const { value, onChange } = useFormikAdapter({ formik });
  *
  *   return (
- *     <DynamicForm
+ *     <AdaptiveForm
  *       requirements={requirements}
  *       value={value}
  *       onChange={onChange}

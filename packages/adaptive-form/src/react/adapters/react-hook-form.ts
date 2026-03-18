@@ -31,11 +31,11 @@ function defaultSerialize<T extends Record<string, unknown>>(values: Partial<T>)
 /**
  * State bridge adapter for React Hook Form.
  *
- * Returns `{ value, onChange }` props to pass directly to `<DynamicForm>`.
+ * Returns `{ value, onChange }` props to pass directly to `<AdaptiveForm>`.
  *
  * @example
  * ```tsx
- * import { DynamicForm } from '@kotaio/adaptive-form/react'
+ * import { AdaptiveForm } from '@kotaio/adaptive-form/react'
  * import { useReactHookFormAdapter } from '@kotaio/adaptive-form/react/adapters/react-hook-form'
  *
  * function MyForm({ requirements }) {
@@ -43,7 +43,7 @@ function defaultSerialize<T extends Record<string, unknown>>(values: Partial<T>)
  *   const { value, onChange } = useReactHookFormAdapter({ form });
  *
  *   return (
- *     <DynamicForm
+ *     <AdaptiveForm
  *       requirements={requirements}
  *       value={value}
  *       onChange={onChange}

@@ -68,7 +68,7 @@ function cleanupTimersAndControllers(
  * React hook for managing asynchronous field validation with debouncing and abort controller lifecycle.
  *
  * Handles per-field debounce timers, AbortController management, and state updates.
- * Designed to be composed into DynamicForm or used standalone alongside useRequirements.
+ * Designed to be composed into AdaptiveForm or used standalone alongside useRequirements.
  */
 export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsyncValidationReturn {
   const { asyncValidators, debounceMs = 300, engine } = options;

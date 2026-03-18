@@ -76,7 +76,7 @@ export interface FieldRenderProps<TFieldId extends string = string> {
   asyncErrors: string[];
   onChange: (value: FieldValue) => void;
   onBlur: () => void;
-  components?: DynamicFormProps<TFieldId>['components'];
+  components?: AdaptiveFormProps<TFieldId>['components'];
 }
 
 /**
@@ -98,22 +98,22 @@ export interface StepNavigationProps {
 }
 
 /**
- * Props for DynamicForm component.
+ * Props for AdaptiveForm component.
  *
- * `DynamicForm` must be rendered inside an `AdaptiveFormProvider` which supplies
+ * `AdaptiveForm` must be rendered inside an `AdaptiveFormProvider` which supplies
  * the `requirements` object via context.
  */
-export interface DynamicFormProps<TFieldId extends string = string> {
+export interface AdaptiveFormProps<TFieldId extends string = string> {
   /**
    * Initial form data for uncontrolled mode.
-   * Use this when you want DynamicForm to manage its own state internally.
+   * Use this when you want AdaptiveForm to manage its own state internally.
    * Values are used to initialize the form and native form submission handles the rest.
    */
   defaultValue?: FormData;
 
   /**
    * Current form data for controlled mode.
-   * When provided, DynamicForm becomes a controlled component and you must
+   * When provided, AdaptiveForm becomes a controlled component and you must
    * also provide `onChange` to update the value.
    */
   value?: FormData;
@@ -183,10 +183,10 @@ export interface DynamicFormProps<TFieldId extends string = string> {
 }
 
 /**
- * DynamicForm - Renders form fields based on a requirements object
+ * AdaptiveForm - Renders form fields based on a requirements object
  *
  * Supports two modes:
- * - **Uncontrolled** (recommended): Use `defaultValue` and let DynamicForm manage state internally.
+ * - **Uncontrolled** (recommended): Use `defaultValue` and let AdaptiveForm manage state internally.
  *   Native form submission handles data via `name` attributes on inputs.
  * - **Controlled**: Use `value` + `onChange` for full parent control over form state.
  *
@@ -202,14 +202,14 @@ export interface DynamicFormProps<TFieldId extends string = string> {
  * ```tsx
  * // Wrap in a provider (required)
  * <AdaptiveFormProvider requirements={requirements}>
- *   <DynamicForm
+ *   <AdaptiveForm
  *     defaultValue={{ firstName: 'John' }}
  *     components={{ text: (props) => <TextInput {...props} />, number: (props) => <NumberInput {...props} /> }}
  *   />
  * </AdaptiveFormProvider>
  * ```
  */
-export function DynamicForm<TFieldId extends string = string>({
+export function AdaptiveForm<TFieldId extends string = string>({
   defaultValue = {},
   value: controlledValue,
   onChange,
@@ -224,7 +224,7 @@ export function DynamicForm<TFieldId extends string = string>({
   showAllErrors = false,
   className,
   children,
-}: DynamicFormProps<TFieldId>) {
+}: AdaptiveFormProps<TFieldId>) {
   usePhoneHome();
   const [internalValue, setInternalValue] = useState<FormData>(() => defaultValue);
   const isControlled = controlledValue !== undefined;
@@ -232,7 +232,7 @@ export function DynamicForm<TFieldId extends string = string>({
 
   const ctx = useContext(AdaptiveFormContext);
   if (!ctx) {
-    throw new Error('DynamicForm must be rendered inside an AdaptiveFormProvider.');
+    throw new Error('AdaptiveForm must be rendered inside an AdaptiveFormProvider.');
   }
 
   const requirements = ctx.requirements as RequirementsObject<TFieldId>;
@@ -551,7 +551,7 @@ export function DynamicForm<TFieldId extends string = string>({
       if (!renderFn) {
         if (isDev) {
           console.warn(
-            `[DynamicForm] No render function found for field type: "${fieldType}". ` +
+            `[AdaptiveForm] No render function found for field type: "${fieldType}". ` +
               `Provide a render function via the "components" prop or use "renderField" for custom rendering.`,
           );
         }
@@ -596,7 +596,7 @@ export function DynamicForm<TFieldId extends string = string>({
   if (flow) {
     if (showAllSteps) {
       return (
-        <div className={className} role="group" aria-label="Dynamic form with steps">
+        <div className={className} role="group" aria-label="Adaptive form with steps">
           {allStepsWithFields.map(({ step, fields }) => {
             const stepTitle =
               step.title !== undefined ? (typeof step.title === 'string' ? step.title : step.title.default) : undefined;
@@ -631,7 +631,7 @@ export function DynamicForm<TFieldId extends string = string>({
         : undefined;
 
     return (
-      <div className={className} role="group" aria-label="Dynamic form with steps">
+      <div className={className} role="group" aria-label="Adaptive form with steps">
         {stepTitle != null && (
           <h2 className="text-foreground-header mb-4 text-lg font-semibold" id={`step-${currentStepId}-title`}>
             {stepTitle}
@@ -685,7 +685,7 @@ export function DynamicForm<TFieldId extends string = string>({
 
   // Flat mode: all fields
   return (
-    <div className={className} role="group" aria-label="Dynamic form fields">
+    <div className={className} role="group" aria-label="Adaptive form fields">
       {requirements.fields.map((field) => (
         <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
       ))}

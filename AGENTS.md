@@ -11,7 +11,7 @@ This monorepo contains two independently versioned/published packages:
 
 ## Architecture
 
-**Five layers:** Types (`packages/adaptive-requirements-engine/src/types.ts`) → Engine (`packages/adaptive-requirements-engine/src/engine.ts`) → Browser Utilities (`packages/adaptive-form/src/core/`) → React Hooks (`packages/adaptive-form/src/react/use-requirements.ts`) → Component (`packages/adaptive-form/src/react/dynamic-form.tsx`). The engine is framework-agnostic (pure functions, no React dependency). The `src/core/` layer contains browser-capable but framework-agnostic utilities. The hooks and component are the React integration layer.
+**Five layers:** Types (`packages/adaptive-requirements-engine/src/types.ts`) → Engine (`packages/adaptive-requirements-engine/src/engine.ts`) → Browser Utilities (`packages/adaptive-form/src/core/`) → React Hooks (`packages/adaptive-form/src/react/use-requirements.ts`) → Component (`packages/adaptive-form/src/react/adaptive-form.tsx`). The engine is framework-agnostic (pure functions, no React dependency). The `src/core/` layer contains browser-capable but framework-agnostic utilities. The hooks and component are the React integration layer.
 
 ## Commands
 

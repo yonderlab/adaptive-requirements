@@ -43,14 +43,14 @@ export interface AdaptiveFormContextValue {
 export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null>(null);
 
 /**
- * Required provider that supplies `requirements` to `DynamicForm` and enables
+ * Required provider that supplies `requirements` to `AdaptiveForm` and enables
  * sibling components to read step information via the `useFormInfo()` hook.
  *
  * @example
  * ```tsx
  * <AdaptiveFormProvider requirements={requirements}>
  *   <ProgressStepper />
- *   <DynamicForm components={...} />
+ *   <AdaptiveForm components={...} />
  * </AdaptiveFormProvider>
  * ```
  */
@@ -157,7 +157,7 @@ export function AdaptiveFormProvider({
  * Must be used within an `AdaptiveFormProvider`.
  *
  * Always returns a `StepperInfo` object — validity and visited state are refined
- * once `DynamicForm` mounts and pushes computed state into context.
+ * once `AdaptiveForm` mounts and pushes computed state into context.
  */
 export function useFormInfo(): StepperInfo {
   const ctx = useContext(AdaptiveFormContext);

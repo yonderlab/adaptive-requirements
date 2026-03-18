@@ -12,10 +12,10 @@ npm install @kotaio/adaptive-form
 
 ## Quick start
 
-Fetch a requirements schema from the API, wrap your form in an `AdaptiveFormProvider`, and render `DynamicForm`. You provide the UI components — the form handles visibility, validation, computed values, and step navigation automatically.
+Fetch a requirements schema from the API, wrap your form in an `AdaptiveFormProvider`, and render `AdaptiveForm`. You provide the UI components — the form handles visibility, validation, computed values, and step navigation automatically.
 
 ```tsx
-import { AdaptiveFormProvider, DynamicForm } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
 
 function RequirementsForm({ requirementId }) {
   const [requirements, setRequirements] = useState(null);
@@ -40,7 +40,7 @@ function RequirementsForm({ requirementId }) {
           });
         }}
       >
-        <DynamicForm
+        <AdaptiveForm
           defaultValue={{}}
           components={{
             text: (props) => <TextInput {...props} />,
@@ -58,11 +58,11 @@ function RequirementsForm({ requirementId }) {
 
 ## Uncontrolled vs controlled mode
 
-**Uncontrolled (recommended):** Pass `defaultValue` and let DynamicForm manage state internally. Use native form submission via `name` attributes on your inputs.
+**Uncontrolled (recommended):** Pass `defaultValue` and let AdaptiveForm manage state internally. Use native form submission via `name` attributes on your inputs.
 
 ```tsx
 <AdaptiveFormProvider requirements={requirements}>
-  <DynamicForm defaultValue={{}} components={myComponents} />
+  <AdaptiveForm defaultValue={{}} components={myComponents} />
 </AdaptiveFormProvider>
 ```
 
@@ -74,7 +74,7 @@ function MyForm({ requirements }) {
 
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <DynamicForm value={formData} onChange={setFormData} components={myComponents} />
+      <AdaptiveForm value={formData} onChange={setFormData} components={myComponents} />
     </AdaptiveFormProvider>
   );
 }
@@ -169,7 +169,7 @@ function ComputedDisplay({ field, value, isVisible }) {
   );
 }
 
-// Register it in your components map (types are inferred when passed inline to DynamicForm):
+// Register it in your components map (types are inferred when passed inline to AdaptiveForm):
 const components = {
   text: (props: FieldInputProps) => <TextInput {...props} />,
   computed: (props: { field: Field; value: FieldValue; isVisible: boolean }) => <ComputedDisplay {...props} />,
@@ -194,7 +194,7 @@ For complete control over how each field renders, use the `renderField` prop. It
 
 ```tsx
 <AdaptiveFormProvider requirements={requirements}>
-  <DynamicForm
+  <AdaptiveForm
     defaultValue={{}}
     components={myComponents}
     renderField={({ field, fieldState, displayErrors, onChange, onBlur }) => {
@@ -214,11 +214,11 @@ For complete control over how each field renders, use the `renderField` prop. It
 
 ## Multi-step forms
 
-When the API returns a schema with a `flow` property, DynamicForm automatically renders one step at a time with Previous/Next navigation. Steps can be conditionally skipped based on form data.
+When the API returns a schema with a `flow` property, AdaptiveForm automatically renders one step at a time with Previous/Next navigation. Steps can be conditionally skipped based on form data.
 
 ### Default navigation
 
-DynamicForm renders default Previous/Next buttons. The Next button is disabled until all visible fields in the current step pass validation.
+AdaptiveForm renders default Previous/Next buttons. The Next button is disabled until all visible fields in the current step pass validation.
 
 ### Custom navigation UI
 
@@ -226,7 +226,7 @@ Use `renderStepNavigation` for full control over the navigation UI:
 
 ```tsx
 <AdaptiveFormProvider requirements={requirements}>
-  <DynamicForm
+  <AdaptiveForm
     defaultValue={{}}
     components={myComponents}
     renderStepNavigation={({
@@ -261,17 +261,17 @@ To render all steps as sections on a single page (no navigation), set `showAllSt
 
 ```tsx
 <AdaptiveFormProvider requirements={requirements}>
-  <DynamicForm defaultValue={{}} showAllSteps components={myComponents} />
+  <AdaptiveForm defaultValue={{}} showAllSteps components={myComponents} />
 </AdaptiveFormProvider>
 ```
 
-### Accessing step information from outside DynamicForm
+### Accessing step information from outside AdaptiveForm
 
-Wrap `DynamicForm` in an `AdaptiveFormProvider` to expose step information to sibling components (e.g. a progress stepper or breadcrumbs) via the `useFormInfo()` hook.
+Wrap `AdaptiveForm` in an `AdaptiveFormProvider` to expose step information to sibling components (e.g. a progress stepper or breadcrumbs) via the `useFormInfo()` hook.
 
 ```tsx
 import { useState } from 'react';
-import { AdaptiveFormProvider, DynamicForm, useFormInfo } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm, useFormInfo } from '@kotaio/adaptive-form/react';
 
 function ProgressStepper() {
   const stepInfo = useFormInfo();
@@ -294,13 +294,13 @@ function MyForm({ requirements }) {
   return (
     <AdaptiveFormProvider requirements={requirements}>
       <ProgressStepper />
-      <DynamicForm value={formData} onChange={setFormData} components={myComponents} />
+      <AdaptiveForm value={formData} onChange={setFormData} components={myComponents} />
     </AdaptiveFormProvider>
   );
 }
 ```
 
-`DynamicForm` must be rendered inside an `AdaptiveFormProvider`. The provider supplies `requirements` via context and enables siblings to read step state via `useFormInfo()`.
+`AdaptiveForm` must be rendered inside an `AdaptiveFormProvider`. The provider supplies `requirements` via context and enables siblings to read step state via `useFormInfo()`.
 
 `useFormInfo()` returns a `StepperInfo` object:
 
@@ -329,7 +329,7 @@ When your application's field names differ from the schema's, use the `mapping` 
 
 ```tsx
 <AdaptiveFormProvider requirements={requirements}>
-  <DynamicForm
+  <AdaptiveForm
     defaultValue={{}}
     mapping={{
       fieldIdMap: {
@@ -346,7 +346,7 @@ Form data will use your field names (`firstName`) while the engine maps them to 
 
 ## Datasets and dynamic options
 
-Schemas can include datasets — reusable lists of options that fields reference. When a field uses a dataset, DynamicForm resolves the options automatically and passes them to your component via the `options` prop.
+Schemas can include datasets — reusable lists of options that fields reference. When a field uses a dataset, AdaptiveForm resolves the options automatically and passes them to your component via the `options` prop.
 
 Datasets can also include filters that narrow options based on the current form data. For example, a "plan" field might only show plans for the selected insurer. This filtering happens automatically — your select component just renders whatever `options` it receives.
 
@@ -386,12 +386,12 @@ function SelectInput({ field, value, onChange, options, isVisible, isRequired, l
 
 ## Form library adapters
 
-Adapter hooks bridge DynamicForm with popular form libraries. They return `{ value, onChange }` to pass directly to DynamicForm in controlled mode.
+Adapter hooks bridge AdaptiveForm with popular form libraries. They return `{ value, onChange }` to pass directly to AdaptiveForm in controlled mode.
 
 ### React Hook Form
 
 ```tsx
-import { AdaptiveFormProvider, DynamicForm } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
 import { useReactHookFormAdapter } from '@kotaio/adaptive-form/react/adapters/react-hook-form';
 
 function MyForm({ requirements }) {
@@ -400,7 +400,7 @@ function MyForm({ requirements }) {
 
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <DynamicForm value={value} onChange={onChange} components={myComponents} />
+      <AdaptiveForm value={value} onChange={onChange} components={myComponents} />
     </AdaptiveFormProvider>
   );
 }
@@ -411,7 +411,7 @@ The adapter accepts optional `serialize` and `deserialize` functions for custom 
 ### Formik
 
 ```tsx
-import { AdaptiveFormProvider, DynamicForm } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
 import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik';
 import { useState } from 'react';
 
@@ -422,7 +422,7 @@ function MyForm({ requirements }) {
 
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <DynamicForm
+      <AdaptiveForm
         value={value}
         onChange={onChange}
         onValidationStateChange={setIsValidating}
@@ -440,7 +440,7 @@ Same `serialize`/`deserialize` options as the React Hook Form adapter.
 
 ## Schema features
 
-These are features expressed in the schema that DynamicForm handles automatically. You don't need to implement any of this logic — it's documented here so you understand what your form will do.
+These are features expressed in the schema that AdaptiveForm handles automatically. You don't need to implement any of this logic — it's documented here so you understand what your form will do.
 
 **Conditional visibility** — Fields can appear or disappear based on the values of other fields. Hidden field values are optionally cleared (set `clearHiddenValues`).
 
@@ -458,7 +458,7 @@ These are features expressed in the schema that DynamicForm handles automaticall
 
 **Custom validators** — Schemas can reference built-in validators (date checks, ID format validation, file constraints) with custom error messages.
 
-## DynamicForm props
+## AdaptiveForm props
 
 | Prop                      | Type                                   | Default  | Description                                    |
 | ------------------------- | -------------------------------------- | -------- | ---------------------------------------------- |
