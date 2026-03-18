@@ -2,18 +2,18 @@
 
 ## Purpose & Scope
 
-React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallback` memoization, plus the `DynamicForm` component with pluggable field rendering.
+React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallback` memoization, plus the `AdaptiveForm` component with pluggable field rendering.
 
 ## Key Files
 
-| File                        | Purpose                                                                                               |
-| --------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `index.ts`                  | Public API: exports `DynamicForm`, `AdaptiveFormProvider`, `useFormInfo`, `useAsyncValidation`, types |
-| `adaptive-form-context.tsx` | `AdaptiveFormProvider`, `useFormInfo` hook, `StepperInfo`/`StepDetail` types, internal context        |
-| `use-requirements.ts`       | `useRequirements`, `useFieldState`, `useCalculatedData` hooks                                         |
-| `use-async-validation.ts`   | `useAsyncValidation` hook — debounce, abort, per-field state                                          |
-| `use-phone-home.ts`         | Version check hook (triggers on mount)                                                                |
-| `dynamic-form.tsx`          | `DynamicForm` component                                                                               |
+| File                        | Purpose                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `index.ts`                  | Public API: exports `AdaptiveForm`, `AdaptiveFormProvider`, `useFormInfo`, `useAsyncValidation`, types |
+| `adaptive-form-context.tsx` | `AdaptiveFormProvider`, `useFormInfo` hook, `StepperInfo`/`StepDetail` types, internal context         |
+| `use-requirements.ts`       | `useRequirements`, `useFieldState`, `useCalculatedData` hooks                                          |
+| `use-async-validation.ts`   | `useAsyncValidation` hook — debounce, abort, per-field state                                           |
+| `use-phone-home.ts`         | Version check hook (triggers on mount)                                                                 |
+| `adaptive-form.tsx`         | `AdaptiveForm` component                                                                               |
 
 ## Hooks
 
@@ -27,12 +27,12 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 
 ## AdaptiveFormProvider + useFormInfo
 
-Required provider that owns `requirements` and step state. `DynamicForm` must be rendered inside an `AdaptiveFormProvider` — it reads `requirements` from context and pushes computed `StepperInfo` back via `useEffect`.
+Required provider that owns `requirements` and step state. `AdaptiveForm` must be rendered inside an `AdaptiveFormProvider` — it reads `requirements` from context and pushes computed `StepperInfo` back via `useEffect`.
 
 - `useFormInfo()` returns `StepperInfo` (non-null) — the provider eagerly computes an initial value from `requirements.flow`
-- `DynamicForm` corrects the provider's initial step on mount (provider lacks `formData` to skip empty steps)
+- `AdaptiveForm` corrects the provider's initial step on mount (provider lacks `formData` to skip empty steps)
 
-## DynamicForm Component
+## AdaptiveForm Component
 
 - Pluggable component system: `components` prop maps field type strings to render functions (typed as `(props) => ReactNode` for autocomplete, rendered via JSX internally to preserve component boundaries)
 - Two rendering interfaces: `FieldInputProps` (interactive fields) and `FieldComputedProps` (display-only computed fields)
@@ -49,10 +49,10 @@ Required provider that owns `requirements` and step state. `DynamicForm` must be
 
 ## State Modes
 
-| Mode         | Props                | Behavior                                                        |
-| ------------ | -------------------- | --------------------------------------------------------------- |
-| Uncontrolled | `defaultValue`       | DynamicForm manages state internally via `useState`             |
-| Controlled   | `value` + `onChange` | Parent owns state, DynamicForm calls `onChange` on every change |
+| Mode         | Props                | Behavior                                                         |
+| ------------ | -------------------- | ---------------------------------------------------------------- |
+| Uncontrolled | `defaultValue`       | AdaptiveForm manages state internally via `useState`             |
+| Controlled   | `value` + `onChange` | Parent owns state, AdaptiveForm calls `onChange` on every change |
 
 ## On-Change Flow
 

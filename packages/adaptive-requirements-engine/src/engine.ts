@@ -342,7 +342,7 @@ function buildLogicData(context: RuleContext): Record<string, unknown> {
 }
 
 /**
- * JSONLogic evaluator for DynamicForm rules
+ * JSONLogic evaluator for AdaptiveForm rules
  * Evaluates rules against a data context
  *
  * Supports variable paths:

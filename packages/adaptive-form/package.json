@@ -1,7 +1,7 @@
 {
   "name": "@kotaio/adaptive-form",
   "version": "0.1.0",
-  "description": "A lightweight, type-safe dynamic form system for React with JSON-Logic for conditional fields, dynamic validation, and computed values",
+  "description": "A lightweight, type-safe adaptive form system for React with JSON-Logic for conditional fields, dynamic validation, and computed values",
   "license": "MIT",
   "repository": {
     "type": "git",

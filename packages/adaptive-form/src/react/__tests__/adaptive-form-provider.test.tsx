@@ -1,6 +1,6 @@
 /* eslint-disable import/no-relative-parent-imports */
+import type { FieldInputProps } from '../adaptive-form';
 import type { StepperInfo } from '../adaptive-form-context';
-import type { FieldInputProps } from '../dynamic-form';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import {
@@ -11,8 +11,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { AdaptiveForm } from '../adaptive-form';
 import { AdaptiveFormProvider, useFormInfo } from '../adaptive-form-context';
-import { DynamicForm } from '../dynamic-form';
 
 afterEach(cleanup);
 
@@ -84,7 +84,7 @@ function ControlledFormWithProvider({
   return (
     <AdaptiveFormProvider requirements={requirements}>
       <StepperInfoDisplay />
-      <DynamicForm value={data} onChange={setData} components={testComponents} />
+      <AdaptiveForm value={data} onChange={setData} components={testComponents} />
     </AdaptiveFormProvider>
   );
 }
@@ -202,8 +202,8 @@ describe('adaptiveFormProvider + useFormInfo', () => {
   describe('provider requirement', () => {
     it('throws when rendered without an AdaptiveFormProvider', () => {
       expect(() => {
-        render(<DynamicForm components={testComponents} />);
-      }).toThrow('DynamicForm must be rendered inside an AdaptiveFormProvider');
+        render(<AdaptiveForm components={testComponents} />);
+      }).toThrow('AdaptiveForm must be rendered inside an AdaptiveFormProvider');
     });
   });
 
@@ -215,7 +215,7 @@ describe('adaptiveFormProvider + useFormInfo', () => {
         const [data, setData] = useState<FormData>(medicalClaimData);
         return (
           <AdaptiveFormProvider requirements={schema}>
-            <DynamicForm
+            <AdaptiveForm
               value={data}
               onChange={setData}
               components={testComponents}

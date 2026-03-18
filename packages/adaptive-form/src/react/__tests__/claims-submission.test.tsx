@@ -1,5 +1,5 @@
 /* eslint-disable import/no-relative-parent-imports */
-import type { FieldComputedProps, FieldInputProps } from '../dynamic-form';
+import type { FieldComputedProps, FieldInputProps } from '../adaptive-form';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import {
@@ -12,8 +12,8 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AdaptiveForm } from '../adaptive-form';
 import { AdaptiveFormProvider } from '../adaptive-form-context';
-import { DynamicForm } from '../dynamic-form';
 
 // Mock runAsyncValidators from the engine (used by useAsyncValidation internally)
 const mockRunAsyncValidators = vi.fn<(...args: unknown[]) => Promise<string[]>>();
@@ -182,14 +182,14 @@ function ControlledForm({
   requirements,
   initialData = {},
   ...props
-}: Omit<React.ComponentProps<typeof DynamicForm>, 'value' | 'onChange'> & {
+}: Omit<React.ComponentProps<typeof AdaptiveForm>, 'value' | 'onChange'> & {
   requirements: RequirementsObject;
   initialData?: FormData;
 }) {
   const [data, setData] = useState<FormData>(initialData);
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <DynamicForm {...props} value={data} onChange={setData} />
+      <AdaptiveForm {...props} value={data} onChange={setData} />
     </AdaptiveFormProvider>
   );
 }

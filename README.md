@@ -6,7 +6,7 @@ Client-side companion packages for the Adaptive Requirements API. The API return
 
 ```
 ┌─────────────────┐      ┌──────────────────┐      ┌─────────────────┐
-│  Requirements   │      │     Engine        │      │   DynamicForm   │
+│  Requirements   │      │     Engine        │      │   AdaptiveForm   │
 │     API         │─────▶│  (evaluate &      │─────▶│  (render &      │
 │                 │      │   validate)       │      │   collect)      │
 └─────────────────┘      └──────────────────┘      └─────────────────┘
@@ -18,7 +18,7 @@ Client-side companion packages for the Adaptive Requirements API. The API return
 
 1. Your application fetches a requirements schema from the API
 2. The **engine** evaluates field visibility, validation, computed values, and options
-3. **DynamicForm** renders the schema using your React components and collects user input
+3. **AdaptiveForm** renders the schema using your React components and collects user input
 4. Your application submits the completed form data back to the API for server-side validation
 
 Schemas are opaque and can change at any time. You never need to hard-code or inspect their contents — just pass them through.
@@ -28,7 +28,7 @@ Schemas are opaque and can change at any time. You never need to hard-code or in
 | Package                                                                            | Description                                                                                                                                                                               |
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`@kotaio/adaptive-requirements-engine`](./packages/adaptive-requirements-engine/) | Framework-agnostic core: rule evaluation, validation, field state computation. Zero React dependencies. Use this for server-side validation, custom renderers, or non-React integrations. |
-| [`@kotaio/adaptive-form`](./packages/adaptive-form/)                               | React integration: a `DynamicForm` component that renders requirement schemas with pluggable UI components, multi-step flows, and form library adapters.                                  |
+| [`@kotaio/adaptive-form`](./packages/adaptive-form/)                               | React integration: an `AdaptiveForm` component that renders requirement schemas with pluggable UI components, multi-step flows, and form library adapters.                                |
 
 ## Installation
 
@@ -47,7 +47,7 @@ npm install @kotaio/adaptive-requirements-engine
 ## Quick example
 
 ```tsx
-import { DynamicForm } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
 
 function RequirementsForm({ requirementId }) {
   const [requirements, setRequirements] = useState(null);
@@ -61,38 +61,39 @@ function RequirementsForm({ requirementId }) {
   if (!requirements) return <p>Loading...</p>;
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        fetch(`/api/requirements/${requirementId}`, {
-          method: 'POST',
-          body: formData,
-        });
-      }}
-    >
-      <DynamicForm
-        requirements={requirements}
-        defaultValue={{}}
-        components={{
-          text: TextInput,
-          number: NumberInput,
-          select: SelectInput,
-          checkbox: CheckboxInput,
+    <AdaptiveFormProvider requirements={requirements}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          fetch(`/api/requirements/${requirementId}`, {
+            method: 'POST',
+            body: formData,
+          });
         }}
-      />
-      <button type="submit">Submit</button>
-    </form>
+      >
+        <AdaptiveForm
+          defaultValue={{}}
+          components={{
+            text: TextInput,
+            number: NumberInput,
+            select: SelectInput,
+            checkbox: CheckboxInput,
+          }}
+        />
+        <button type="submit">Submit</button>
+      </form>
+    </AdaptiveFormProvider>
   );
 }
 ```
 
 ### Accessing step information
 
-For multi-step schemas, wrap `DynamicForm` in an `AdaptiveFormProvider` to expose step info to sibling components (progress steppers, breadcrumbs):
+For multi-step schemas, wrap `AdaptiveForm` in an `AdaptiveFormProvider` to expose step info to sibling components (progress steppers, breadcrumbs):
 
 ```tsx
-import { AdaptiveFormProvider, DynamicForm, useFormInfo } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm, useFormInfo } from '@kotaio/adaptive-form/react';
 
 function ProgressStepper() {
   const stepInfo = useFormInfo();
@@ -111,7 +112,7 @@ function ProgressStepper() {
 // Wrap both in AdaptiveFormProvider
 <AdaptiveFormProvider requirements={requirements}>
   <ProgressStepper />
-  <DynamicForm value={data} onChange={setData} components={...} />
+  <AdaptiveForm value={data} onChange={setData} components={...} />
 </AdaptiveFormProvider>
 ```
 

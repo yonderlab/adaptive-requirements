@@ -1,12 +1,12 @@
-import type { FieldInputProps, FieldRenderProps } from './dynamic-form';
+import type { FieldInputProps, FieldRenderProps } from './adaptive-form';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AdaptiveForm } from './adaptive-form';
 import { AdaptiveFormProvider } from './adaptive-form-context';
-import { DynamicForm } from './dynamic-form';
 
 afterEach(cleanup);
 
@@ -41,7 +41,7 @@ function makeRequirements(fields: RequirementsObject['fields']): RequirementsObj
   return { fields };
 }
 
-describe('dynamicForm touched-field error filtering', () => {
+describe('adaptiveForm touched-field error filtering', () => {
   it('does not show errors for required fields on initial render', () => {
     const requirements = makeRequirements([
       { id: 'name', type: 'text', validation: { required: true } },
@@ -50,7 +50,7 @@ describe('dynamicForm touched-field error filtering', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{}} components={testComponents} />
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
       </AdaptiveFormProvider>,
     );
 
@@ -66,7 +66,7 @@ describe('dynamicForm touched-field error filtering', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{}} components={testComponents} />
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
       </AdaptiveFormProvider>,
     );
 
@@ -86,7 +86,7 @@ describe('dynamicForm touched-field error filtering', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{}} components={testComponents} />
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
       </AdaptiveFormProvider>,
     );
 
@@ -106,7 +106,7 @@ describe('dynamicForm touched-field error filtering', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{}} components={testComponents} showAllErrors />
+        <AdaptiveForm defaultValue={{}} components={testComponents} showAllErrors />
       </AdaptiveFormProvider>,
     );
 
@@ -125,7 +125,7 @@ describe('dynamicForm touched-field error filtering', () => {
           <button data-testid="switch" onClick={() => setReqs(requirements2)}>
             Switch
           </button>
-          <DynamicForm defaultValue={{}} components={testComponents} />
+          <AdaptiveForm defaultValue={{}} components={testComponents} />
         </AdaptiveFormProvider>
       );
     }
@@ -164,7 +164,7 @@ describe('dynamicForm touched-field error filtering', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{}} renderField={renderField} />
+        <AdaptiveForm defaultValue={{}} renderField={renderField} />
       </AdaptiveFormProvider>,
     );
 
@@ -198,7 +198,7 @@ describe('dynamicForm touched-field error filtering', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{}} components={testComponents} />
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
       </AdaptiveFormProvider>,
     );
 
@@ -228,7 +228,7 @@ describe('dynamicForm touched-field error filtering', () => {
       const [data, setData] = useState<FormData>({ toggle: 'show' });
       return (
         <AdaptiveFormProvider requirements={requirements}>
-          <DynamicForm value={data} onChange={(d) => setData(d)} components={testComponents} />
+          <AdaptiveForm value={data} onChange={(d) => setData(d)} components={testComponents} />
         </AdaptiveFormProvider>
       );
     }
@@ -280,7 +280,7 @@ function makeAsyncRequirements(): RequirementsObject {
   };
 }
 
-describe('dynamicForm async validation integration', () => {
+describe('adaptiveForm async validation integration', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockRunAsyncValidators.mockReset();
@@ -295,7 +295,7 @@ describe('dynamicForm async validation integration', () => {
 
     render(
       <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
-        <DynamicForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
+        <AdaptiveForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
       </AdaptiveFormProvider>,
     );
 
@@ -329,7 +329,7 @@ describe('dynamicForm async validation integration', () => {
 
     render(
       <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
-        <DynamicForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
+        <AdaptiveForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
       </AdaptiveFormProvider>,
     );
 
@@ -373,7 +373,7 @@ describe('dynamicForm async validation integration', () => {
 
     render(
       <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
-        <DynamicForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
+        <AdaptiveForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
       </AdaptiveFormProvider>,
     );
 
@@ -416,7 +416,7 @@ describe('dynamicForm async validation integration', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{ toggle: 'hide', email: 'test@test.com' }} components={testComponents} />
+        <AdaptiveForm defaultValue={{ toggle: 'hide', email: 'test@test.com' }} components={testComponents} />
       </AdaptiveFormProvider>,
     );
 
@@ -446,7 +446,7 @@ describe('dynamicForm async validation integration', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{ emails: [] }} renderField={renderField} />
+        <AdaptiveForm defaultValue={{ emails: [] }} renderField={renderField} />
       </AdaptiveFormProvider>,
     );
 
@@ -467,7 +467,7 @@ describe('dynamicForm async validation integration', () => {
 
     render(
       <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
-        <DynamicForm
+        <AdaptiveForm
           defaultValue={{ email: 'test@test.com' }}
           onValidationStateChange={onValidationStateChange}
           components={testComponents}
@@ -492,7 +492,7 @@ describe('dynamicForm async validation integration', () => {
 
     render(
       <AdaptiveFormProvider requirements={makeAsyncRequirements()}>
-        <DynamicForm
+        <AdaptiveForm
           defaultValue={{ email: 'test@test.com' }}
           onValidationStateChange={onValidationStateChange}
           components={testComponents}
@@ -547,7 +547,7 @@ describe('dynamicForm async validation integration', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
+        <AdaptiveForm defaultValue={{ email: 'test@test.com' }} components={testComponents} />
       </AdaptiveFormProvider>,
     );
 
@@ -616,7 +616,7 @@ describe('dynamicForm async validation integration', () => {
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
-        <DynamicForm defaultValue={{ email: 'test@test.com' }} renderField={renderField} />
+        <AdaptiveForm defaultValue={{ email: 'test@test.com' }} renderField={renderField} />
       </AdaptiveFormProvider>,
     );
 

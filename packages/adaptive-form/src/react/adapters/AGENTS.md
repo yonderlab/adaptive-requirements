@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-Bridge hooks that connect `DynamicForm` (controlled mode) with external form libraries. Each adapter reads form state from the library and writes changes back, with optional serialize/deserialize transforms.
+Bridge hooks that connect `AdaptiveForm` (controlled mode) with external form libraries. Each adapter reads form state from the library and writes changes back, with optional serialize/deserialize transforms.
 
 ## Pattern
 
@@ -10,7 +10,7 @@ All adapters follow the same shape:
 
 1. Accept a form instance (e.g., `useForm()` return, `useFormikContext()` return)
 2. Read values from the form library → serialize to engine `FormData`
-3. Return `{ value, onChange }` to pass to `<DynamicForm value={value} onChange={onChange}>`
+3. Return `{ value, onChange }` to pass to `<AdaptiveForm value={value} onChange={onChange}>`
 4. On `onChange`, deserialize values → write back via form library's API (e.g., `setValue`, `setFieldValue`)
 5. Default serialization: `Date` → `YYYY-MM-DD` string. Default deserialization: identity.
 
