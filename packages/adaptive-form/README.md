@@ -480,4 +480,4 @@ These are features expressed in the schema that AdaptiveForm handles automatical
 
 ## License
 
-MIT
+Apache-2.0 — see [LICENSE](../../LICENSE) for details.
