@@ -1,3 +1,4 @@
+import type { StepDetail, StepperInfo } from './adaptive-form-context';
 import type {
   Field,
   FieldMapping,
@@ -15,11 +16,13 @@ import {
   getInitialStepId,
   getNextStepId,
   getPreviousStepId,
+  resolveLabel,
 } from '@kotaio/adaptive-requirements-engine';
-import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-parent-imports
 import { builtInAsyncValidators } from '../core/validate-api';
+import { AdaptiveFormContext } from './adaptive-form-context';
 import { isEmptyValue } from './is-empty-value';
 import { useAsyncValidation } from './use-async-validation';
 import { usePhoneHome } from './use-phone-home';
@@ -90,15 +93,17 @@ export interface StepNavigationProps {
   stepTitle?: string;
   currentStepIndex: number;
   totalSteps: number;
+  /** Read-only details for all steps in the flow (id, title, validity, visited state) */
+  steps: readonly StepDetail[];
 }
 
 /**
- * Props for DynamicForm component
+ * Props for DynamicForm component.
+ *
+ * `DynamicForm` must be rendered inside an `AdaptiveFormProvider` which supplies
+ * the `requirements` object via context.
  */
 export interface DynamicFormProps<TFieldId extends string = string> {
-  /** Requirements object defining fields and their behavior (optionally with flow for step-based forms) */
-  requirements: RequirementsObject<TFieldId>;
-
   /**
    * Initial form data for uncontrolled mode.
    * Use this when you want DynamicForm to manage its own state internally.
@@ -195,24 +200,16 @@ export interface DynamicFormProps<TFieldId extends string = string> {
  *
  * @example
  * ```tsx
- * // Uncontrolled mode (simple, recommended for most cases)
- * <DynamicForm
- *   requirements={requirements}
- *   defaultValue={{ firstName: 'John' }}
- *   components={{ text: (props) => <TextInput {...props} />, number: (props) => <NumberInput {...props} /> }}
- * />
- *
- * // With flow (step-based): requirements.flow is used automatically
- * <DynamicForm
- *   requirements={requirementsWithFlow}
- *   defaultValue={{}}
- *   renderStepNavigation={({ canGoPrevious, canGoNext, onPrevious, onNext }) => (...)}
- *   components={{ text: (props) => <TextInput {...props} /> }}
- * />
+ * // Wrap in a provider (required)
+ * <AdaptiveFormProvider requirements={requirements}>
+ *   <DynamicForm
+ *     defaultValue={{ firstName: 'John' }}
+ *     components={{ text: (props) => <TextInput {...props} />, number: (props) => <NumberInput {...props} /> }}
+ *   />
+ * </AdaptiveFormProvider>
  * ```
  */
 export function DynamicForm<TFieldId extends string = string>({
-  requirements,
   defaultValue = {},
   value: controlledValue,
   onChange,
@@ -233,10 +230,38 @@ export function DynamicForm<TFieldId extends string = string>({
   const isControlled = controlledValue !== undefined;
   const formData = isControlled ? controlledValue : internalValue;
 
+  const ctx = useContext(AdaptiveFormContext);
+  if (!ctx) {
+    throw new Error('DynamicForm must be rendered inside an AdaptiveFormProvider.');
+  }
+
+  const requirements = ctx.requirements as RequirementsObject<TFieldId>;
   const { flow } = requirements;
-  const [currentStepId, setCurrentStepId] = useState<string>(() =>
-    flow ? getInitialStepId(flow, { requirements, formData }) : '',
-  );
+
+  const { currentStepId, setCurrentStepId, visitedSteps, markStepVisited } = ctx;
+
+  // Correct the provider's initial step — the provider can't skip empty steps because
+  // it doesn't have access to formData. On mount (or when requirements changes),
+  // compute the correct initial step and push it to context if it differs.
+  const hasCorrectedInitialStep = useRef(false);
+  const prevRequirementsRef = useRef(requirements);
+  useEffect(() => {
+    if (prevRequirementsRef.current !== requirements) {
+      prevRequirementsRef.current = requirements;
+      hasCorrectedInitialStep.current = false;
+    }
+    if (!flow || hasCorrectedInitialStep.current) {
+      return;
+    }
+    hasCorrectedInitialStep.current = true;
+    const correctStepId = getInitialStepId(flow, { requirements, formData });
+    if (correctStepId && correctStepId !== ctx.currentStepId) {
+      ctx.setCurrentStepId(correctStepId);
+      // Replace visited steps entirely so the skipped provider initial step
+      // doesn't remain marked as visited.
+      ctx.replaceVisitedSteps(new Set([correctStepId]));
+    }
+  }, [ctx, flow, requirements, formData]);
 
   // Touched field tracking — errors are only shown for fields the user has interacted with
   const [touchedFields, setTouchedFields] = useState<Set<string>>(() => new Set());
@@ -365,6 +390,60 @@ export function DynamicForm<TFieldId extends string = string>({
   const canGoNext = nextStepId !== undefined && currentStepIsValid;
   const canGoPrevious = previousStepId !== undefined;
 
+  // Compute step details for StepperInfo and StepNavigationProps
+  const stepDetails: readonly StepDetail[] = useMemo(() => {
+    if (!flow) {
+      return [];
+    }
+    return flow.steps.map((step) => {
+      const stepIsValid = step.fields.every((fieldId) => {
+        if (!idToField.has(fieldId)) {
+          return true;
+        }
+        const state = getFieldState(fieldId as TFieldId);
+        if (!state.isVisible) {
+          return true;
+        }
+        const asyncFieldState = asyncState[fieldId];
+        if (asyncFieldState?.isValidating) {
+          return false;
+        }
+        const asyncErrors = asyncFieldState?.errors ?? [];
+        return state.errors.length === 0 && asyncErrors.length === 0;
+      });
+      const title = resolveLabel(step.title);
+      return {
+        id: step.id,
+        title,
+        isCurrent: step.id === currentStepId,
+        isValid: stepIsValid,
+        hasBeenVisited: visitedSteps.has(step.id),
+      };
+    });
+  }, [flow, currentStepId, visitedSteps, getFieldState, asyncState, idToField]);
+
+  const stepInfo: StepperInfo | null = useMemo(() => {
+    if (!flow) {
+      return null;
+    }
+    return {
+      currentStepId,
+      currentStepIndex: Math.max(
+        flow.steps.findIndex((s) => s.id === currentStepId),
+        0,
+      ),
+      totalSteps: flow.steps.length,
+      steps: stepDetails,
+    };
+  }, [flow, currentStepId, stepDetails]);
+
+  // Push computed StepperInfo to context when provider exists
+  useEffect(() => {
+    if (ctx && stepInfo) {
+      ctx._setStepperInfo(stepInfo);
+    }
+  }, [ctx, stepInfo]);
+
   const handleNext = useCallback(() => {
     if (!currentStepIsValid) {
       // Reveal errors for all visible fields in current step
@@ -374,14 +453,24 @@ export function DynamicForm<TFieldId extends string = string>({
     }
     if (nextStepId) {
       setCurrentStepId(nextStepId);
+      markStepVisited(nextStepId);
     }
-  }, [nextStepId, currentStepIsValid, currentStepFields, getFieldState, markFieldsTouched]);
+  }, [
+    nextStepId,
+    currentStepIsValid,
+    currentStepFields,
+    getFieldState,
+    markFieldsTouched,
+    setCurrentStepId,
+    markStepVisited,
+  ]);
 
   const handlePrevious = useCallback(() => {
     if (previousStepId) {
       setCurrentStepId(previousStepId);
+      markStepVisited(previousStepId);
     }
-  }, [previousStepId]);
+  }, [previousStepId, setCurrentStepId, markStepVisited]);
 
   const handleFieldChange = useCallback(
     (fieldId: string, newValue: FieldValue) => {
@@ -563,6 +652,7 @@ export function DynamicForm<TFieldId extends string = string>({
             stepTitle,
             currentStepIndex: Math.max(currentStepIndex, 0),
             totalSteps,
+            steps: stepDetails,
           })
         ) : (
           <div className="mt-6 flex gap-3">
