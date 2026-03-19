@@ -28,7 +28,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -53,7 +52,7 @@ jobs:
       - name: Publish to npm (Trusted Publishing)
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
-          npm config delete //registry.npmjs.org/:_authToken
+          npm install -g npm@latest
           cd packages/adaptive-requirements-engine
           TARBALL=$(pnpm pack --pack-destination /tmp)
           npm publish "$TARBALL" --provenance --access public
