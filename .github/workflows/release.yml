@@ -52,5 +52,9 @@ jobs:
       - name: Publish to npm (Trusted Publishing)
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
-          cd packages/adaptive-requirements-engine && npm publish --provenance --access public
-          cd ../adaptive-form && npm publish --provenance --access public
+          cd packages/adaptive-requirements-engine
+          TARBALL=$(pnpm pack --pack-destination /tmp)
+          npm publish "$TARBALL" --provenance --access public
+          cd ../adaptive-form
+          TARBALL=$(pnpm pack --pack-destination /tmp)
+          npm publish "$TARBALL" --provenance --access public
