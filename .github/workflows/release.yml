@@ -53,6 +53,7 @@ jobs:
       - name: Publish to npm (Trusted Publishing)
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
+          npm config delete //registry.npmjs.org/:_authToken
           cd packages/adaptive-requirements-engine
           TARBALL=$(pnpm pack --pack-destination /tmp)
           npm publish "$TARBALL" --provenance --access public
