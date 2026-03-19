@@ -2,7 +2,7 @@
   "name": "@kotaio/adaptive-form",
   "version": "0.1.0",
   "description": "A lightweight, type-safe adaptive form system for React with JSON-Logic for conditional fields, dynamic validation, and computed values",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/yonderlab/adaptive-requirements.git",

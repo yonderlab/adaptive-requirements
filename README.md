@@ -120,4 +120,4 @@ See the [form package README](./packages/adaptive-form/) for component implement
 
 ## License
 
-MIT
+Apache-2.0 — see [LICENSE](./LICENSE) for details.
