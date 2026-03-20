@@ -426,10 +426,12 @@ export const dentalWithNetworkData: FormData = {
 
 // --- Mock async validators ---
 
-export function createMockAsyncValidators() {
-  const checkProviderReference: AsyncValidatorFn = () => Promise.resolve(null);
-  const checkIcd10Code: AsyncValidatorFn = () => Promise.resolve(null);
+// eslint-disable-next-line require-await
+const checkProviderReference: AsyncValidatorFn = async () => null;
+// eslint-disable-next-line require-await
+const checkIcd10Code: AsyncValidatorFn = async () => null;
 
+export function createMockAsyncValidators() {
   const registry: Record<string, AsyncValidatorFn> = {
     check_provider_reference: checkProviderReference,
     check_icd10_code: checkIcd10Code,

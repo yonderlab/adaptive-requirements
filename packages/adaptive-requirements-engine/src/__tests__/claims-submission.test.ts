@@ -11,21 +11,6 @@ import {
   medicalClaimData,
   wellnessClaimData,
 } from '../__fixtures__/claims-submission';
-
-function createEngineOptionsWithAsync() {
-  const checkProviderReference = vi.fn<AsyncValidatorFn>().mockResolvedValue(null);
-  const checkIcd10Code = vi.fn<AsyncValidatorFn>().mockResolvedValue(null);
-
-  const registry: Record<string, AsyncValidatorFn> = {
-    check_provider_reference: checkProviderReference,
-    check_icd10_code: checkIcd10Code,
-  };
-
-  return {
-    options: { asyncValidators: registry } satisfies EngineOptions,
-    mocks: { registry, checkProviderReference, checkIcd10Code },
-  };
-}
 import {
   applyExclusions,
   calculateData,
@@ -41,6 +26,21 @@ import {
   stepHasVisibleFields,
 } from '../engine';
 import { validateRequirementsObject } from '../validate';
+
+function createEngineOptionsWithAsync() {
+  const checkProviderReference = vi.fn<AsyncValidatorFn>().mockResolvedValue(null);
+  const checkIcd10Code = vi.fn<AsyncValidatorFn>().mockResolvedValue(null);
+
+  const registry: Record<string, AsyncValidatorFn> = {
+    check_provider_reference: checkProviderReference,
+    check_icd10_code: checkIcd10Code,
+  };
+
+  return {
+    options: { asyncValidators: registry } satisfies EngineOptions,
+    mocks: { registry, checkProviderReference, checkIcd10Code },
+  };
+}
 
 describe('claims submission schema', () => {
   describe('schema validation', () => {
