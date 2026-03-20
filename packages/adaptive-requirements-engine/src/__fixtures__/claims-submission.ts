@@ -2,8 +2,6 @@
 import type { AsyncValidatorFn, EngineOptions } from '../engine';
 import type { FormData, RequirementsObject } from '../types';
 
-import { vi } from 'vitest';
-
 export const claimsSubmissionSchema: RequirementsObject = {
   id: 'example_claims_submission',
   version: 1,
@@ -429,8 +427,8 @@ export const dentalWithNetworkData: FormData = {
 // --- Mock async validators ---
 
 export function createMockAsyncValidators() {
-  const checkProviderReference = vi.fn<AsyncValidatorFn>().mockResolvedValue(null);
-  const checkIcd10Code = vi.fn<AsyncValidatorFn>().mockResolvedValue(null);
+  const checkProviderReference: AsyncValidatorFn = () => Promise.resolve(null);
+  const checkIcd10Code: AsyncValidatorFn = () => Promise.resolve(null);
 
   const registry: Record<string, AsyncValidatorFn> = {
     check_provider_reference: checkProviderReference,

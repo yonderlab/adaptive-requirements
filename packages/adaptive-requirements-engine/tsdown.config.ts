@@ -3,6 +3,7 @@ import { defineConfig } from 'tsdown';
 export default defineConfig({
   entry: {
     index: './src/index.ts',
+    'test-fixtures/claims-submission': './src/__fixtures__/claims-submission.ts',
   },
   format: ['esm'],
   dts: true,

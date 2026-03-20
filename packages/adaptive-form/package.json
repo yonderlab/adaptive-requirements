@@ -9,8 +9,7 @@
     "directory": "packages/adaptive-form"
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "type": "module",
   "sideEffects": false,
@@ -19,17 +18,14 @@
   "exports": {
     "./react": {
       "types": "./dist/react/index.d.ts",
-      "development": "./src/react/index.ts",
       "default": "./dist/react/index.js"
     },
     "./react/adapters/react-hook-form": {
       "types": "./dist/react/adapters/react-hook-form.d.ts",
-      "development": "./src/react/adapters/react-hook-form.ts",
       "default": "./dist/react/adapters/react-hook-form.js"
     },
     "./react/adapters/formik": {
       "types": "./dist/react/adapters/formik.d.ts",
-      "development": "./src/react/adapters/formik.ts",
       "default": "./dist/react/adapters/formik.js"
     }
   },
