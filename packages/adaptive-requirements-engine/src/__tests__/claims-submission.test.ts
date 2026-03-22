@@ -1,11 +1,11 @@
 /* eslint-disable import/no-relative-parent-imports */
+import type { AsyncValidatorFn, EngineOptions } from '../engine';
 import type { FormData } from '../types';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   claimsSubmissionSchema as schema,
-  createEngineOptionsWithAsync,
   dentalWithNetworkData,
   emptyFormData,
   medicalClaimData,
@@ -26,6 +26,21 @@ import {
   stepHasVisibleFields,
 } from '../engine';
 import { validateRequirementsObject } from '../validate';
+
+function createEngineOptionsWithAsync() {
+  const checkProviderReference = vi.fn<AsyncValidatorFn>().mockResolvedValue(null);
+  const checkIcd10Code = vi.fn<AsyncValidatorFn>().mockResolvedValue(null);
+
+  const registry: Record<string, AsyncValidatorFn> = {
+    check_provider_reference: checkProviderReference,
+    check_icd10_code: checkIcd10Code,
+  };
+
+  return {
+    options: { asyncValidators: registry } satisfies EngineOptions,
+    mocks: { registry, checkProviderReference, checkIcd10Code },
+  };
+}
 
 describe('claims submission schema', () => {
   describe('schema validation', () => {
