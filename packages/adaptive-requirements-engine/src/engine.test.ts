@@ -113,12 +113,7 @@ describe(runRule, () => {
       expect(runRule({ min: [5, 10, 3] }, context)).toBe(3);
     });
 
-    it('should handle abs operator', () => {
-      const context = { data: { a: -10 } };
-      expect(runRule({ abs: { var: 'a' } }, context)).toBe(10);
-      expect(runRule({ abs: -5 }, context)).toBe(5);
-    });
-  });
+});
 
   describe('date helpers', () => {
     it('should handle today operator', () => {
@@ -126,33 +121,7 @@ describe(runRule, () => {
       expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
-    it('should handle age_from_date operator', () => {
-      // 30 years ago
-      const thirtyYearsAgo = new Date();
-      thirtyYearsAgo.setFullYear(thirtyYearsAgo.getFullYear() - 30);
-      const context = { data: { dob: thirtyYearsAgo.toISOString() } };
-      expect(runRule({ age_from_date: { var: 'dob' } }, context)).toBe(30);
-    });
-
-    it('should handle months_since operator', () => {
-      // 6 months ago
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      const context = { data: { date: sixMonthsAgo.toISOString() } };
-      const result = runRule({ months_since: { var: 'date' } }, context);
-      expect(result).toBeGreaterThanOrEqual(5);
-      expect(result).toBeLessThanOrEqual(7);
-    });
-
-    it('should handle date_diff operator', () => {
-      const from = '2020-01-01';
-      const to = '2023-01-01';
-      const context = { data: { from, to } };
-
-      expect(runRule({ date_diff: { from: { var: 'from' }, to: { var: 'to' }, unit: 'years' } }, context)).toBe(3);
-      expect(runRule({ date_diff: { from: { var: 'from' }, to: { var: 'to' }, unit: 'months' } }, context)).toBe(36);
-    });
-  });
+});
 
   describe('match operation', () => {
     it('should match a regex pattern', () => {
@@ -385,36 +354,20 @@ describe(checkField, () => {
                 rule: { '<=': [{ var: 'dob' }, { today: {} }] },
                 message: 'Date of birth must not be in the future',
               },
-              {
-                rule: { '>=': [{ age_from_date: { var: 'dob' } }, 18] },
-                message: 'Must be at least 18 years old',
-              },
-              {
-                rule: { '<=': [{ age_from_date: { var: 'dob' } }, 100] },
-                message: 'Must be at most 100 years old',
-              },
             ],
           },
         },
       ],
     };
 
-    it('should validate with age rules', () => {
-      // Too young (10 years old)
-      const tenYearsAgo = new Date();
-      tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-      const state1 = checkField(requirementsWithRules, 'dob', { dob: tenYearsAgo.toISOString() });
-      expect(state1.errors.length).toBeGreaterThan(0);
-      expect(state1.errors.some((e) => e.includes('18'))).toBeTruthy();
-
-      // Valid age (30 years old)
-      const thirtyYearsAgo = new Date();
-      thirtyYearsAgo.setFullYear(thirtyYearsAgo.getFullYear() - 30);
-      const state2 = checkField(requirementsWithRules, 'dob', { dob: thirtyYearsAgo.toISOString() });
-      expect(state2.errors).toHaveLength(0);
+    it('should validate dob not in the future', () => {
+      const pastDate = new Date();
+      pastDate.setFullYear(pastDate.getFullYear() - 10);
+      const validState = checkField(requirementsWithRules, 'dob', { dob: pastDate.toISOString() });
+      expect(validState.errors).toHaveLength(0);
     });
 
-    it('should validate dob not in the future', () => {
+    it('should return error for future dob', () => {
       const futureDate = new Date();
       futureDate.setFullYear(futureDate.getFullYear() + 1);
       const state = checkField(requirementsWithRules, 'dob', { dob: futureDate.toISOString() });
@@ -550,29 +503,6 @@ describe(calculateData, () => {
     expect(calculated['subtotal']).toBe(0);
     expect(calculated['tax']).toBe(0);
     expect(calculated['total']).toBe(0);
-  });
-
-  describe('date-based compute', () => {
-    const requirementsWithCompute: RequirementsObject = {
-      fields: [
-        { id: 'dateOfBirth', type: 'date', label: 'Date of Birth' },
-        {
-          id: 'age',
-          type: 'computed',
-          label: 'Age',
-          compute: { age_from_date: { var: 'dateOfBirth' } },
-        },
-      ],
-    };
-
-    it('should calculate age from date of birth', () => {
-      const thirtyYearsAgo = new Date();
-      thirtyYearsAgo.setFullYear(thirtyYearsAgo.getFullYear() - 30);
-      const data = { dateOfBirth: thirtyYearsAgo.toISOString() };
-      const calculated = calculateData(requirementsWithCompute, data);
-
-      expect(calculated['age']).toBe(30);
-    });
   });
 
   describe('answers.* context', () => {
@@ -1769,18 +1699,4 @@ describe('runValidationRules', () => {
     expect(errors).toStrictEqual(['End date must be after start date']);
   });
 
-  it('should support date helpers in rules', () => {
-    const rules: ValidationRule[] = [
-      {
-        rule: { '>=': [{ age_from_date: { var: 'dob' } }, 18] },
-        message: 'Must be at least 18 years old',
-      },
-    ];
-    // A date that makes someone 10 years old
-    const tenYearsAgo = new Date();
-    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-    const dob = tenYearsAgo.toISOString().split('T')[0];
-    const errors = runValidationRules(rules, { data: { dob } });
-    expect(errors).toStrictEqual(['Must be at least 18 years old']);
-  });
 });

@@ -50,14 +50,10 @@ Framework-agnostic core: types, rule engine, validation. Zero React/browser depe
 
 Custom operations registered lazily on first `runRule()` call:
 
-| Operation       | Description                                         |
-| --------------- | --------------------------------------------------- |
-| `today`         | Returns current date as `YYYY-MM-DD`                |
-| `age_from_date` | Calculates age in years from a date                 |
-| `months_since`  | Months elapsed since a date                         |
-| `date_diff`     | Difference between two dates in days/months/years   |
-| `abs`           | Absolute value                                      |
-| `match`         | Regex test: `{ "match": [value, pattern, flags?] }` |
+| Operation | Description                                         |
+| --------- | --------------------------------------------------- |
+| `today`   | Returns current date as `YYYY-MM-DD`                |
+| `match`   | Regex test: `{ "match": [value, pattern, flags?] }` |
 
 **Variable resolution:**
 
@@ -82,7 +78,7 @@ interface ValidationRule {
 }
 ```
 
-`runValidationRules(rules, context)` evaluates each rule against the form data context and returns an array of error messages for rules that evaluated to falsy. All validation logic that was previously handled by built-in validators (age_range, dob_not_in_future, spanish_tax_id, etc.) is now expressed as JSON Logic rules in requirements data, using the `match` operation for regex patterns and date helpers like `age_from_date`, `today`, etc.
+`runValidationRules(rules, context)` evaluates each rule against the form data context and returns an array of error messages for rules that evaluated to falsy. All validation logic that was previously handled by built-in validators (age_range, dob_not_in_future, spanish_tax_id, etc.) is now expressed as JSON Logic rules in requirements data, using the `match` operation for regex patterns and the `today` helper for date comparisons.
 
 ### EngineOptions.customOperations
 

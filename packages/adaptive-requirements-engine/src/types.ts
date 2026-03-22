@@ -47,12 +47,8 @@ export type Rule =
   // Math functions
   | { max: Rule[] }
   | { min: Rule[] }
-  | { abs: Rule }
   | { '%': [Rule, Rule] }
   // Date helpers
-  | { age_from_date: Rule }
-  | { months_since: Rule }
-  | { date_diff: { from: Rule; to: Rule; unit: 'days' | 'months' | 'years' } }
   | { today: Record<string, never> }
   // String operations
   | { cat: Rule[] }
