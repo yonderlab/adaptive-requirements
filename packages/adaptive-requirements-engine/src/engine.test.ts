@@ -112,16 +112,14 @@ describe(runRule, () => {
       expect(runRule({ min: [{ var: 'a' }, { var: 'b' }, { var: 'c' }] }, context)).toBe(5);
       expect(runRule({ min: [5, 10, 3] }, context)).toBe(3);
     });
-
-});
+  });
 
   describe('date helpers', () => {
     it('should handle today operator', () => {
       const result = runRule({ today: {} }, {});
       expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
-
-});
+  });
 
   describe('match operation', () => {
     it('should match a regex pattern', () => {
@@ -1698,5 +1696,4 @@ describe('runValidationRules', () => {
     const errors = runValidationRules(rules, { data: { start_date: '2025-06-01', end_date: '2025-01-01' } });
     expect(errors).toStrictEqual(['End date must be after start date']);
   });
-
 });
