@@ -86,10 +86,10 @@ The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`
 
 > **Tip:** In controlled mode, define your `components` object outside the component or memoize it with `useMemo` to keep stable references. Inline arrow functions create new component identities each render, which causes React to remount fields (losing focus and internal state).
 
-If you need an explicit annotation (e.g. for a standalone variable), `FieldInputProps` is exported for typing component renderers:
+If you need an explicit annotation (e.g. for a standalone variable), `FieldInputProps` and `FieldComputedProps` are exported for typing component renderers:
 
 ```tsx
-import type { FieldInputProps } from '@kotaio/adaptive-form/react';
+import type { FieldInputProps, FieldComputedProps } from '@kotaio/adaptive-form/react';
 ```
 
 ### `FieldInputProps`
@@ -144,9 +144,9 @@ function TextInput({ field, value, onChange, onBlur, errors, isRequired, isVisib
 }
 ```
 
-### Computed fields
+### Computed fields — `FieldComputedProps`
 
-When a field has `type: 'computed'`, its value is calculated automatically from other fields. The render function for `computed` fields receives a simpler set of props:
+When a field has `type: 'computed'`, its value is calculated automatically from other fields. The render function for `computed` fields receives `FieldComputedProps`:
 
 | Prop        | Type         | Description                          |
 | ----------- | ------------ | ------------------------------------ |
@@ -155,7 +155,7 @@ When a field has `type: 'computed'`, its value is calculated automatically from 
 | `isVisible` | `boolean`    | Whether the field should be rendered |
 
 ```tsx
-function ComputedDisplay({ field, value, isVisible }) {
+function ComputedDisplay({ field, value, isVisible }: FieldComputedProps) {
   if (!isVisible) return null;
 
   // field.label may be a string or { default: string, key?: string }
@@ -172,7 +172,7 @@ function ComputedDisplay({ field, value, isVisible }) {
 // Register it in your components map (types are inferred when passed inline to AdaptiveForm):
 const components = {
   text: (props: FieldInputProps) => <TextInput {...props} />,
-  computed: (props: { field: Field; value: FieldValue; isVisible: boolean }) => <ComputedDisplay {...props} />,
+  computed: (props: FieldComputedProps) => <ComputedDisplay {...props} />,
 };
 ```
 
