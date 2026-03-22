@@ -236,7 +236,7 @@ Schemas use [JSON Logic](https://jsonlogic.com) expressions for conditional visi
 
 **Conditional:** `?:` (ternary), `if` (if-then-else)
 
-**Math:** `+`, `-`, `*`, `/`, `%`, `max`, `min`, `abs`
+**Math:** `+`, `-`, `*`, `/`, `%`, `max`, `min`
 
 **String:** `cat` (concatenate), `substr`
 
