@@ -5,7 +5,6 @@ import type {
   FieldMapping,
   FieldState,
   FieldValue,
-  FieldValuePrimitive,
   Flow,
   FormData,
   LocalizedLabel,
@@ -70,79 +69,7 @@ export function resolveLabel(label: LocalizedLabel | undefined, _locale?: string
   return label.default;
 }
 
-/**
- * Parse a date value from string or Date
- */
-function parseDate(value: FieldValue): Date | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (value instanceof Date) {
-    return value;
-  }
-  if (typeof value === 'string' || typeof value === 'number') {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
-  return null;
-}
-
-function isFieldValuePrimitive(value: unknown): value is FieldValuePrimitive {
-  return (
-    value === null ||
-    value === undefined ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  );
-}
-
-function isFieldValue(value: unknown): value is FieldValue {
-  if (isFieldValuePrimitive(value)) {
-    return true;
-  }
-  return Array.isArray(value) && value.every(isFieldValuePrimitive);
-}
-
-/**
- * Calculate age in years from a date
- */
-function calculateAge(birthDate: Date, referenceDate: Date = new Date()): number {
-  let age = referenceDate.getFullYear() - birthDate.getFullYear();
-  const monthDiff = referenceDate.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && referenceDate.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-}
-
-/**
- * Calculate months since a date
- */
-function calculateMonthsSince(date: Date, referenceDate: Date = new Date()): number {
-  const years = referenceDate.getFullYear() - date.getFullYear();
-  const months = referenceDate.getMonth() - date.getMonth();
-  return years * 12 + months;
-}
-
-/**
- * Calculate date difference in specified units
- */
-function calculateDateDiff(from: Date, to: Date, unit: 'days' | 'months' | 'years'): number {
-  switch (unit) {
-    case 'days': {
-      return Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
-    }
-    case 'months': {
-      return calculateMonthsSince(from, to);
-    }
-    case 'years': {
-      return calculateAge(from, to);
-    }
-  }
-}
-
-const ENGINE_OPERATION_NAMES = ['today', 'age_from_date', 'months_since', 'date_diff', 'abs', 'match'] as const;
+const ENGINE_OPERATION_NAMES = ['today', 'match'] as const;
 
 const JSON_LOGIC_CORE_OPERATION_NAMES = [
   '==',
@@ -198,12 +125,6 @@ type NormalizedRuleArray = (NormalizedPrimitive | NormalizedRuleObject | Normali
 
 type NormalizedRule = NormalizedPrimitive | NormalizedRuleObject | NormalizedRuleArray;
 
-function isDateDiffObjectForm(
-  value: unknown,
-): value is { from: unknown; to: unknown; unit: 'days' | 'months' | 'years' } {
-  return typeof value === 'object' && value !== null && 'from' in value && 'to' in value && 'unit' in value;
-}
-
 function isVarRule(value: unknown): value is { var: string } {
   return typeof value === 'object' && value !== null && 'var' in value;
 }
@@ -229,15 +150,6 @@ function normalizeRule(value: unknown): NormalizedRule {
 
   if (Array.isArray(value)) {
     return value.map((item): NormalizedRule => normalizeRule(item));
-  }
-
-  if ('date_diff' in value) {
-    const dateDiffValue = (value as { date_diff?: unknown }).date_diff;
-    if (isDateDiffObjectForm(dateDiffValue)) {
-      return {
-        date_diff: [normalizeRule(dateDiffValue.from), normalizeRule(dateDiffValue.to), dateDiffValue.unit],
-      };
-    }
   }
 
   const entries = Object.entries(value as Record<string, unknown>);
@@ -270,26 +182,6 @@ function ensureBuiltInOperationsRegistered() {
   }
 
   jsonLogic.add_operation('today', () => new Date().toISOString().split('T')[0]);
-  jsonLogic.add_operation('age_from_date', (value: unknown) => {
-    const date = parseDate(isFieldValue(value) ? value : null);
-    return date ? calculateAge(date) : null;
-  });
-  jsonLogic.add_operation('months_since', (value: unknown) => {
-    const date = parseDate(isFieldValue(value) ? value : null);
-    return date ? calculateMonthsSince(date) : null;
-  });
-  jsonLogic.add_operation('date_diff', (fromValue: unknown, toValue: unknown, unit: unknown) => {
-    if (unit !== 'days' && unit !== 'months' && unit !== 'years') {
-      return null;
-    }
-    const fromDate = parseDate(isFieldValue(fromValue) ? fromValue : null);
-    const toDate = parseDate(isFieldValue(toValue) ? toValue : null);
-    if (!fromDate || !toDate) {
-      return null;
-    }
-    return calculateDateDiff(fromDate, toDate, unit);
-  });
-  jsonLogic.add_operation('abs', (value: unknown) => (typeof value === 'number' ? Math.abs(value) : null));
   jsonLogic.add_operation('match', (value: unknown, pattern: unknown, flags?: unknown) => {
     if (typeof value !== 'string' || typeof pattern !== 'string') {
       return false;

@@ -236,21 +236,18 @@ Schemas use [JSON Logic](https://jsonlogic.com) expressions for conditional visi
 
 **Conditional:** `?:` (ternary), `if` (if-then-else)
 
-**Math:** `+`, `-`, `*`, `/`, `%`, `max`, `min`, `abs`
+**Math:** `+`, `-`, `*`, `/`, `%`, `max`, `min`
 
 **String:** `cat` (concatenate), `substr`
 
-### Custom date operations
+### Custom operations
 
-The engine registers these additional operations for date handling:
+The engine registers these additional operations:
 
-| Operation                           | Description                                |
-| ----------------------------------- | ------------------------------------------ |
-| `{ today: {} }`                     | Current date as `YYYY-MM-DD`               |
-| `{ age_from_date: <date> }`         | Age in whole years from a date             |
-| `{ months_since: <date> }`          | Months elapsed since a date                |
-| `{ date_diff: { from, to, unit } }` | Difference in `days`, `months`, or `years` |
-| `{ abs: <number> }`                 | Absolute value                             |
+| Operation                             | Description                         |
+| ------------------------------------- | ----------------------------------- |
+| `{ today: {} }`                       | Current date as `YYYY-MM-DD`        |
+| `{ match: [value, pattern, flags?] }` | Regex test (returns `true`/`false`) |
 
 ## Key types
 
