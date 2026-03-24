@@ -490,8 +490,7 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
     // structurally valid ones) so cross-reference checks don't produce
     // spurious errors for fields that only have a bad type.
     const fieldIds = new Set<string>();
-    for (let i = 0; i < fields.length; i++) {
-      const f = fields[i] as unknown;
+    for (const f of fields) {
       if (isObject(f) && isString(f['id'])) {
         fieldIds.add(f['id']);
       }
