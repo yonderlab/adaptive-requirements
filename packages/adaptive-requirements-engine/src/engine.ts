@@ -109,7 +109,8 @@ const JSON_LOGIC_CORE_OPERATION_NAMES = [
   'some',
 ] as const;
 
-const RESERVED_OPERATION_NAMES = new Set<string>([...JSON_LOGIC_CORE_OPERATION_NAMES, ...ENGINE_OPERATION_NAMES]);
+/** All operation names known to the engine (json-logic-js core + engine built-ins). */
+export const RESERVED_OPERATION_NAMES = new Set<string>([...JSON_LOGIC_CORE_OPERATION_NAMES, ...ENGINE_OPERATION_NAMES]);
 
 let builtInOperationsRegistered = false;
 const registeredCustomOperations = new Map<string, (...args: unknown[]) => unknown>();

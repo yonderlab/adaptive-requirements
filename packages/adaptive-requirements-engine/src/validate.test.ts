@@ -367,6 +367,33 @@ describe('field ID cross-reference validation', () => {
     }
   });
 
+  it('rejects flow step field references when fields array is empty', () => {
+    const result = validateRequirementsObject({
+      fields: [],
+      flow: {
+        steps: [{ id: 'step1', fields: ['nonexistent'] }],
+      },
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors).toContainEqual({
+        path: 'flow.steps[0].fields[0]',
+        message: 'Step references unknown field "nonexistent"',
+      });
+    }
+  });
+
+  it('flags item.* references outside dataset filter context', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'name', type: 'text', visibleWhen: { '!!': [{ var: 'item.foo' }] } }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors[0]?.message).toContain('item.*');
+      expect(result.errors[0]?.message).toContain('optionsSource.filter');
+    }
+  });
+
   it('collects multiple cross-reference errors', () => {
     const result = validateRequirementsObject({
       fields: [
@@ -444,6 +471,16 @@ describe('computed field cycle detection', () => {
       expect(cycleError).toBeDefined();
       expect(cycleError?.path).toBe('fields[0].compute');
     }
+  });
+
+  it('accepts compute with { rule: ... } wrapper form', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        { id: 'base', type: 'number' },
+        { id: 'doubled', type: 'number', compute: { rule: { '*': [{ var: 'base' }, 2] } } },
+      ],
+    });
+    expect(result.success).toBeTruthy();
   });
 
   it('accepts computed fields referencing non-computed fields', () => {

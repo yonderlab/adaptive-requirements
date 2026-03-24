@@ -1,5 +1,7 @@
 import type { DatasetItem, RequirementsObject } from './types';
 
+import { RESERVED_OPERATION_NAMES } from './engine';
+
 /**
  * A single validation error with path and message
  */
@@ -24,54 +26,6 @@ function isString(value: unknown): value is string {
 }
 
 // ── Deep-validation helpers ─────────────────────────────────────────────
-
-/** All standard json-logic-js operators + engine built-ins (today, match). */
-const KNOWN_OPERATIONS = new Set([
-  // comparison
-  '==',
-  '===',
-  '!=',
-  '!==',
-  '>',
-  '>=',
-  '<',
-  '<=',
-  // logic / coercion
-  '!!',
-  '!',
-  'and',
-  'or',
-  'if',
-  '?:',
-  // arithmetic
-  '+',
-  '-',
-  '*',
-  '/',
-  '%',
-  'min',
-  'max',
-  // string
-  'cat',
-  'substr',
-  // array / data
-  'var',
-  'missing',
-  'missing_some',
-  'in',
-  'merge',
-  'filter',
-  'map',
-  'reduce',
-  'all',
-  'none',
-  'some',
-  // misc
-  'log',
-  // engine built-ins
-  'today',
-  'match',
-]);
 
 /** Recursively extract all `{ var: "..." }` reference strings from a JSON Logic rule. */
 function extractVarReferences(rule: unknown): string[] {
@@ -113,14 +67,17 @@ function extractVarReferences(rule: unknown): string[] {
 
 /**
  * Resolve a `var` reference string to a field ID, or `null` if the reference
- * should be skipped (item.*, empty string, nested property access).
+ * should be skipped (empty string, nested property access).
+ *
+ * `item.*` references return the special string `"item.*"` so the caller can
+ * decide whether they are valid (dataset filter) or invalid (other contexts).
  */
 function resolveFieldIdFromVar(varRef: string): string | null {
   if (varRef === '') {
     return null;
   }
   if (varRef.startsWith('item.')) {
-    return null;
+    return 'item.*';
   }
 
   let id = varRef;
@@ -128,6 +85,11 @@ function resolveFieldIdFromVar(varRef: string): string | null {
     id = id.slice(5);
   } else if (id.startsWith('answers.')) {
     id = id.slice(8);
+  }
+
+  // Empty after prefix strip (e.g. "data." or "answers.") — skip
+  if (id === '') {
+    return null;
   }
 
   // nested property access on a field (e.g. "address.city") — skip
@@ -138,7 +100,11 @@ function resolveFieldIdFromVar(varRef: string): string | null {
   return id;
 }
 
-/** Recursively extract all operator names (object keys that aren't `var`) from a JSON Logic rule. */
+/**
+ * Recursively extract all operator names from a JSON Logic rule.
+ * In JSON Logic, only single-key objects represent operations;
+ * multi-key objects are data literals and their keys are not operators.
+ */
 function extractOperators(rule: unknown): string[] {
   if (rule === null || rule === undefined || typeof rule !== 'object') {
     return [];
@@ -154,9 +120,17 @@ function extractOperators(rule: unknown): string[] {
   }
   const obj = rule as Record<string, unknown>;
   const keys = Object.keys(obj);
+  // JSON Logic operations are single-key objects; multi-key objects are data
+  if (keys.length === 1) {
+    const ops: string[] = [keys[0]!];
+    for (const op of extractOperators(obj[keys[0]!])) {
+      ops.push(op);
+    }
+    return ops;
+  }
+  // Multi-key object — not an operator, but recurse into values
   const ops: string[] = [];
   for (const key of keys) {
-    ops.push(key);
     for (const op of extractOperators(obj[key])) {
       ops.push(op);
     }
@@ -236,7 +210,12 @@ function collectFieldRules(field: Record<string, unknown>, index: number): RuleE
     entries.push({ rule: field['excludeWhen'], path: `${prefix}.excludeWhen`, isDatasetFilter: false });
   }
   if (field['compute'] !== undefined) {
-    entries.push({ rule: field['compute'], path: `${prefix}.compute`, isDatasetFilter: false });
+    // The runtime supports both { compute: <rule> } and { compute: { rule: <rule> } }
+    let computeRule: unknown = field['compute'];
+    if (isObject(computeRule) && 'rule' in computeRule) {
+      computeRule = computeRule['rule'];
+    }
+    entries.push({ rule: computeRule, path: `${prefix}.compute`, isDatasetFilter: false });
   }
 
   const validation = field['validation'];
@@ -483,9 +462,9 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
     }
   }
 
-  // ── Deep semantic checks (only for structurally valid fields) ───────
+  // ── Deep semantic checks ────────────────────────────────────────────
 
-  if (Array.isArray(fields) && validFieldIndices.length > 0) {
+  if (Array.isArray(fields)) {
     // Build field ID set from ALL fields with a valid string id (not just
     // structurally valid ones) so cross-reference checks don't produce
     // spurious errors for fields that only have a bad type.
@@ -496,35 +475,7 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
       }
     }
 
-    // Collect all rule expressions
-    const allRules: RuleEntry[] = [];
-    for (const i of validFieldIndices) {
-      const field = fields[i] as Record<string, unknown>;
-      for (const entry of collectFieldRules(field, i)) {
-        allRules.push(entry);
-      }
-    }
-
-    // Phase 1: Field ID cross-references
-    for (const entry of allRules) {
-      const varRefs = extractVarReferences(entry.rule);
-      for (const ref of varRefs) {
-        // In dataset filter context, item.* references are valid
-        if (entry.isDatasetFilter && ref.startsWith('item.')) {
-          continue;
-        }
-
-        const fieldId = resolveFieldIdFromVar(ref);
-        if (fieldId !== null && !fieldIds.has(fieldId)) {
-          errors.push({
-            path: entry.path,
-            message: `References unknown field "${fieldId}"`,
-          });
-        }
-      }
-    }
-
-    // Also cross-check flow step field references
+    // Cross-check flow step field references (always, even with empty fields)
     if (isObject(flow)) {
       const steps = flow['steps'];
       if (Array.isArray(steps)) {
@@ -550,54 +501,93 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
       }
     }
 
-    // Phase 2: Computed field cycle detection
-    const computedFieldIds = new Set<string>();
-    for (const i of validFieldIndices) {
-      const field = fields[i] as Record<string, unknown>;
-      if (field['compute'] !== undefined) {
-        computedFieldIds.add(String(field['id']));
-      }
-    }
-
-    if (computedFieldIds.size > 0) {
-      const graph = new Map<string, string[]>();
+    // Per-field rule checks require at least one structurally valid field
+    if (validFieldIndices.length > 0) {
+      // Collect all rule expressions
+      const allRules: RuleEntry[] = [];
       for (const i of validFieldIndices) {
         const field = fields[i] as Record<string, unknown>;
-        if (field['compute'] === undefined) {
-          continue;
+        for (const entry of collectFieldRules(field, i)) {
+          allRules.push(entry);
         }
-        const id = String(field['id']);
-        const deps: string[] = [];
-        for (const ref of extractVarReferences(field['compute'])) {
-          const depId = resolveFieldIdFromVar(ref);
-          if (depId !== null && computedFieldIds.has(depId)) {
-            deps.push(depId);
+      }
+
+      // Phase 1: Field ID cross-references
+      for (const entry of allRules) {
+        const varRefs = extractVarReferences(entry.rule);
+        for (const ref of varRefs) {
+          const fieldId = resolveFieldIdFromVar(ref);
+          if (fieldId === null) {
+            continue;
+          }
+          // item.* references are only valid in dataset filter context
+          if (fieldId === 'item.*') {
+            if (!entry.isDatasetFilter) {
+              errors.push({
+                path: entry.path,
+                message: `"item.*" references are only valid in optionsSource.filter context`,
+              });
+            }
+            continue;
+          }
+          if (!fieldIds.has(fieldId)) {
+            errors.push({
+              path: entry.path,
+              message: `References unknown field "${fieldId}"`,
+            });
           }
         }
-        graph.set(id, deps);
       }
 
-      const cycles = detectCycles(graph);
-      for (const cycle of cycles) {
-        const fieldIndex = validFieldIndices.find(
-          (i) => String((fields[i] as Record<string, unknown>)['id']) === cycle[0],
-        );
-        errors.push({
-          path: fieldIndex !== undefined ? `fields[${fieldIndex}].compute` : 'fields',
-          message: `Computed field cycle detected: ${cycle.join(' \u2192 ')}`,
-        });
+      // Phase 2: Computed field cycle detection
+      const computedFieldIds = new Set<string>();
+      for (const i of validFieldIndices) {
+        const field = fields[i] as Record<string, unknown>;
+        if (field['compute'] !== undefined) {
+          computedFieldIds.add(String(field['id']));
+        }
       }
-    }
 
-    // Phase 3: Unknown operation validation
-    for (const entry of allRules) {
-      const ops = extractOperators(entry.rule);
-      for (const op of ops) {
-        if (!KNOWN_OPERATIONS.has(op)) {
+      if (computedFieldIds.size > 0) {
+        const graph = new Map<string, string[]>();
+        for (const i of validFieldIndices) {
+          const field = fields[i] as Record<string, unknown>;
+          if (field['compute'] === undefined) {
+            continue;
+          }
+          const id = String(field['id']);
+          const deps: string[] = [];
+          for (const ref of extractVarReferences(field['compute'])) {
+            const depId = resolveFieldIdFromVar(ref);
+            if (depId !== null && depId !== 'item.*' && computedFieldIds.has(depId)) {
+              deps.push(depId);
+            }
+          }
+          graph.set(id, deps);
+        }
+
+        const cycles = detectCycles(graph);
+        for (const cycle of cycles) {
+          const fieldIndex = validFieldIndices.find(
+            (i) => String((fields[i] as Record<string, unknown>)['id']) === cycle[0],
+          );
           errors.push({
-            path: entry.path,
-            message: `Unknown JSON Logic operation "${op}"`,
+            path: fieldIndex !== undefined ? `fields[${fieldIndex}].compute` : 'fields',
+            message: `Computed field cycle detected: ${cycle.join(' \u2192 ')}`,
           });
+        }
+      }
+
+      // Phase 3: Unknown operation validation
+      for (const entry of allRules) {
+        const ops = extractOperators(entry.rule);
+        for (const op of ops) {
+          if (!RESERVED_OPERATION_NAMES.has(op)) {
+            errors.push({
+              path: entry.path,
+              message: `Unknown JSON Logic operation "${op}"`,
+            });
+          }
         }
       }
     }
