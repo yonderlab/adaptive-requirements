@@ -48,6 +48,7 @@ export {
   createAdapter,
 } from './engine';
 export type { RuleContext, AsyncValidatorFn, EngineOptions } from './engine';
+export { isReservedOperationName } from './operations';
 
 // Validate
 export { validateRequirementsObject, validateDatasetItems } from './validate';

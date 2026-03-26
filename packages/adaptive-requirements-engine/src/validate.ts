@@ -1,6 +1,6 @@
 import type { DatasetItem, RequirementsObject } from './types';
 
-import { RESERVED_OPERATION_NAMES } from './engine';
+import { isReservedOperationName } from './operations';
 
 /**
  * A single validation error with path and message
@@ -92,9 +92,10 @@ function resolveFieldIdFromVar(varRef: string): string | null {
     return null;
   }
 
-  // nested property access on a field (e.g. "address.city") — skip
-  if (id.includes('.')) {
-    return null;
+  // Nested property access (e.g. "address.city") — validate the base field ID
+  const dotIndex = id.indexOf('.');
+  if (dotIndex !== -1) {
+    return id.slice(0, dotIndex);
   }
 
   return id;
@@ -578,11 +579,11 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
         }
       }
 
-      // Phase 3: Unknown operation validation
+      // Phase 3: Unknown operation validation (dedupe per rule entry)
       for (const entry of allRules) {
-        const ops = extractOperators(entry.rule);
+        const ops = new Set(extractOperators(entry.rule));
         for (const op of ops) {
-          if (!RESERVED_OPERATION_NAMES.has(op)) {
+          if (!isReservedOperationName(op)) {
             errors.push({
               path: entry.path,
               message: `Unknown JSON Logic operation "${op}"`,

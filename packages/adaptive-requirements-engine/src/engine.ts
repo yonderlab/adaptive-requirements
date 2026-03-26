@@ -17,6 +17,8 @@ import type {
 
 import jsonLogic from 'json-logic-js';
 
+import { isReservedOperationName } from './operations';
+
 /**
  * Context object for rule evaluation
  * Supports multiple path prefixes: data.*, answers.*, and direct access
@@ -68,52 +70,6 @@ export function resolveLabel(label: LocalizedLabel | undefined, _locale?: string
   // In a real implementation, this would look up the key in a translation system
   return label.default;
 }
-
-const ENGINE_OPERATION_NAMES = ['today', 'match'] as const;
-
-const JSON_LOGIC_CORE_OPERATION_NAMES = [
-  '==',
-  '===',
-  '!=',
-  '!==',
-  '>',
-  '>=',
-  '<',
-  '<=',
-  '!!',
-  '!',
-  '%',
-  'log',
-  'in',
-  'cat',
-  'substr',
-  '+',
-  '*',
-  '-',
-  '/',
-  'min',
-  'max',
-  'merge',
-  'var',
-  'missing',
-  'missing_some',
-  'if',
-  '?:',
-  'and',
-  'or',
-  'filter',
-  'map',
-  'reduce',
-  'all',
-  'none',
-  'some',
-] as const;
-
-/** All operation names known to the engine (json-logic-js core + engine built-ins). */
-export const RESERVED_OPERATION_NAMES = new Set<string>([
-  ...JSON_LOGIC_CORE_OPERATION_NAMES,
-  ...ENGINE_OPERATION_NAMES,
-]);
 
 let builtInOperationsRegistered = false;
 const registeredCustomOperations = new Map<string, (...args: unknown[]) => unknown>();
@@ -206,7 +162,7 @@ function ensureBuiltInOperationsRegistered() {
  */
 function registerCustomOperations(ops: Record<string, (...args: unknown[]) => unknown>) {
   for (const [name, fn] of Object.entries(ops)) {
-    if (RESERVED_OPERATION_NAMES.has(name)) {
+    if (isReservedOperationName(name)) {
       throw new Error(`Cannot register custom JSON Logic operation "${name}": name is reserved`);
     }
 
