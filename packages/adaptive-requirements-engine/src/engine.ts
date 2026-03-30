@@ -73,6 +73,7 @@ export function resolveLabel(label: LocalizedLabel | undefined, _locale?: string
 
 let builtInOperationsRegistered = false;
 const registeredCustomOperations = new Map<string, (...args: unknown[]) => unknown>();
+const initializedFormDataCache = new WeakMap<RequirementsObject<string>, FormData>();
 
 type NormalizedPrimitive = string | number | boolean | null | undefined;
 
@@ -501,15 +502,32 @@ export function resolveFieldOptions<TFieldId extends string = string>(
 export function initializeFormData<TFieldId extends string = string>(
   requirements: RequirementsObject<TFieldId>,
 ): FormData {
-  const initialData: FormData = {};
+  const cached = initializedFormDataCache.get(requirements as RequirementsObject<string>);
+  if (cached) {
+    return { ...cached };
+  }
+
+  const cachedInitialData: FormData = {};
 
   for (const field of requirements.fields) {
     if (field.defaultValue !== undefined) {
-      initialData[field.id] = field.defaultValue;
+      const defaultValue = field.defaultValue;
+      cachedInitialData[field.id] = Array.isArray(defaultValue) ? [...defaultValue] : defaultValue;
     }
   }
 
-  return initialData;
+  initializedFormDataCache.set(requirements as RequirementsObject<string>, cachedInitialData);
+  return { ...cachedInitialData };
+}
+
+function mergeDataWithDefaults<TFieldId extends string = string>(
+  requirements: RequirementsObject<TFieldId>,
+  data: FormData,
+): FormData {
+  return {
+    ...initializeFormData(requirements),
+    ...data,
+  };
 }
 
 /**
@@ -526,10 +544,7 @@ export function checkField<TFieldId extends string = string>(
     throw new Error(`Unknown field: ${fieldId}`);
   }
 
-  const dataWithDefaults = initializeFormData(requirements);
-  for (const key of Object.keys(data)) {
-    dataWithDefaults[key] = data[key];
-  }
+  const dataWithDefaults = mergeDataWithDefaults(requirements, data);
   const context: RuleContext = { data: dataWithDefaults, answers: dataWithDefaults };
 
   // Handle hidden type - always invisible but included in data
@@ -689,7 +704,8 @@ export async function checkFieldAsync<TFieldId extends string = string>(
     return syncResult;
   }
 
-  const context: RuleContext = { data, answers: data };
+  const dataWithDefaults = mergeDataWithDefaults(requirements, data);
+  const context: RuleContext = { data: dataWithDefaults, answers: dataWithDefaults };
   const asyncErrors = await runAsyncValidators(
     fieldValue,
     asyncRefs,
@@ -719,6 +735,7 @@ export function calculateData<TFieldId extends string = string>(
   customOperations?: Record<string, (...args: unknown[]) => unknown>,
 ): FormData {
   const calculatedData: FormData = {};
+  const dataWithDefaults = mergeDataWithDefaults(requirements, inputData);
 
   for (const field of requirements.fields) {
     if (field.type === 'computed' && field.compute) {
@@ -729,8 +746,8 @@ export function calculateData<TFieldId extends string = string>(
       }
 
       const context: RuleContext = {
-        data: { ...inputData, ...calculatedData },
-        answers: { ...inputData, ...calculatedData },
+        data: { ...dataWithDefaults, ...calculatedData },
+        answers: { ...dataWithDefaults, ...calculatedData },
       };
 
       const result = runRule(computeRule, context, customOperations);

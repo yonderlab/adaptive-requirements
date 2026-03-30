@@ -1776,4 +1776,21 @@ describe('initializeFormData', () => {
       wants_marketing: false,
     });
   });
+
+  it('clones array defaults so form state cannot mutate schema defaults', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'tags', type: 'text', defaultValue: ['one', 'two'] }],
+    };
+
+    const initialData = initializeFormData(requirements);
+    const tags = initialData['tags'];
+    if (!Array.isArray(tags)) {
+      throw new TypeError('Expected tags default to be an array');
+    }
+
+    tags.push('three');
+
+    expect(requirements.fields[0]?.defaultValue).toStrictEqual(['one', 'two']);
+    expect(initialData['tags']).toStrictEqual(['one', 'two', 'three']);
+  });
 });

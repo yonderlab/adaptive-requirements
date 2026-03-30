@@ -276,6 +276,15 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
     setTouchedFields(new Set());
   }, [fieldIdKey]);
 
+  // When the schema changes, re-seed uncontrolled forms from field-level defaults
+  // only if the consumer did not provide an explicit defaultValue prop.
+  useEffect(() => {
+    if (isControlled || hasExplicitDefaultValue) {
+      return;
+    }
+    setInternalValue(initializeFormData(requirements));
+  }, [requirements, isControlled, hasExplicitDefaultValue]);
+
   const markFieldTouched = useCallback((fieldId: string) => {
     setTouchedFields((prev) => {
       if (prev.has(fieldId)) {

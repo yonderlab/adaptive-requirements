@@ -83,6 +83,32 @@ describe('adaptiveForm touched-field error filtering', () => {
     expect((screen.getByTestId('input-name') as HTMLInputElement).value).toBe('Alex');
   });
 
+  it('re-seeds uncontrolled state from schema defaults when requirements change and no defaultValue prop is provided', () => {
+    const requirements1 = makeRequirements([{ id: 'name', type: 'text', defaultValue: 'Jane' }]);
+    const requirements2 = makeRequirements([{ id: 'city', type: 'text', defaultValue: 'Dublin' }]);
+
+    function Wrapper() {
+      const [reqs, setReqs] = useState(requirements1);
+      return (
+        <AdaptiveFormProvider requirements={reqs}>
+          <button data-testid="switch" onClick={() => setReqs(requirements2)}>
+            Switch
+          </button>
+          <AdaptiveForm components={testComponents} />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    render(<Wrapper />);
+
+    expect((screen.getByTestId('input-name') as HTMLInputElement).value).toBe('Jane');
+
+    fireEvent.click(screen.getByTestId('switch'));
+
+    expect((screen.getByTestId('input-city') as HTMLInputElement).value).toBe('Dublin');
+    expect(screen.queryByTestId('input-name')).toBeNull();
+  });
+
   it('does not show errors for required fields on initial render', () => {
     const requirements = makeRequirements([
       { id: 'name', type: 'text', validation: { required: true } },
@@ -303,6 +329,7 @@ vi.mock(import('@kotaio/adaptive-requirements-engine'), async (importOriginal) =
   const actual = await importOriginal();
   return {
     ...actual,
+    initializeFormData: actual.initializeFormData,
     runAsyncValidators: (...args: unknown[]) => mockRunAsyncValidators(...args),
   };
 });
