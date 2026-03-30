@@ -87,3 +87,13 @@ Things to be aware of when preparing for open source:
 
 - `packages/adaptive-requirements-engine/AGENTS.md` — Engine types, functions, JSON Logic, validators
 - `packages/adaptive-form/AGENTS.md` — React component, hooks, adapters
+
+## Cursor Cloud specific instructions
+
+- **No external services required.** This is a pure TypeScript/React library monorepo. All tests are self-contained with mocks — no databases, Docker, or API keys needed.
+- **Node 22 + pnpm 9.9.0** are required. The environment comes pre-configured with both.
+- **Build order matters:** The engine package must build before adaptive-form (pnpm handles this automatically via `pnpm -r run build`).
+- **`pnpm dev`** starts tsdown in watch mode for both packages. Useful when iterating but not required for one-off builds.
+- **All commands run from the repo root.** See the Commands section above for the full list. Key ones: `pnpm checks` (format + lint + typecheck), `pnpm test`, `pnpm build`.
+- **Commit hooks:** Husky runs commitlint on commit messages. Use Conventional Commits format: `type(scope): description`.
+- **No GUI/browser testing needed** for this library — all testing is automated via Vitest (engine uses Node environment, adaptive-form uses jsdom).
