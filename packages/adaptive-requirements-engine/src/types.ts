@@ -255,7 +255,11 @@ export type BenefitType = 'health';
 /**
  * The operational context in which this requirement is used
  */
-export type RequirementContext = 'dependant_management_intent' | 'enrolment_intent' | 'setup_intent';
+export type RequirementContext =
+  | 'dependant_management_intent'
+  | 'enrolment_intent'
+  | 'group_policy_intent'
+  | 'setup_intent';
 
 /**
  * Requirements object containing fields, datasets, and optional flow
