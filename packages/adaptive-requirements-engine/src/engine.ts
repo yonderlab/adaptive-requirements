@@ -495,6 +495,24 @@ export function resolveFieldOptions<TFieldId extends string = string>(
 }
 
 /**
+ * Build initial form data from schema-level field defaults.
+ * Only fields with an explicit defaultValue are included.
+ */
+export function initializeFormData<TFieldId extends string = string>(
+  requirements: RequirementsObject<TFieldId>,
+): FormData {
+  const initialData: FormData = {};
+
+  for (const field of requirements.fields) {
+    if (field.defaultValue !== undefined) {
+      initialData[field.id] = field.defaultValue;
+    }
+  }
+
+  return initialData;
+}
+
+/**
  * Check field state - evaluates visibility, validation, and value
  */
 export function checkField<TFieldId extends string = string>(
@@ -508,7 +526,11 @@ export function checkField<TFieldId extends string = string>(
     throw new Error(`Unknown field: ${fieldId}`);
   }
 
-  const context: RuleContext = { data, answers: data };
+  const dataWithDefaults = initializeFormData(requirements);
+  for (const key of Object.keys(data)) {
+    dataWithDefaults[key] = data[key];
+  }
+  const context: RuleContext = { data: dataWithDefaults, answers: dataWithDefaults };
 
   // Handle hidden type - always invisible but included in data
   const isHiddenType = field.type === 'hidden';
@@ -537,7 +559,7 @@ export function checkField<TFieldId extends string = string>(
   // Validation errors
   const errors: string[] = [];
   if ((isVisible || isHiddenType) && !isExcluded) {
-    const fieldValue = data[fieldId];
+    const fieldValue = Object.hasOwn(data, fieldId) ? data[fieldId] : field.defaultValue;
     const empty =
       fieldValue === undefined ||
       fieldValue === null ||
@@ -599,8 +621,8 @@ export function checkField<TFieldId extends string = string>(
     // Always recalculate computed fields from current data
     value = runRule(computeRule, context, options?.customOperations);
   } else {
-    // For non-computed fields, use the value from data
-    value = data[fieldId];
+    // For non-computed fields, explicit form data wins, including null/empty string.
+    value = Object.hasOwn(data, fieldId) ? data[fieldId] : field.defaultValue;
   }
 
   return {

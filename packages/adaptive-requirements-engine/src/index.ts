@@ -36,6 +36,7 @@ export {
   runValidationRules,
   runAsyncValidators,
   resolveFieldOptions,
+  initializeFormData,
   checkField,
   checkFieldAsync,
   calculateData,

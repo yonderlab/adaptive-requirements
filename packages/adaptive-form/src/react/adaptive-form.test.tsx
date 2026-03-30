@@ -36,12 +36,53 @@ function TestTextInput({ field, value, onChange, onBlur, errors, isVisible, isVa
 }
 
 const testComponents = { text: (props: FieldInputProps) => <TestTextInput {...props} /> };
+const noop = () => undefined;
 
 function makeRequirements(fields: RequirementsObject['fields']): RequirementsObject {
   return { fields };
 }
 
 describe('adaptiveForm touched-field error filtering', () => {
+  it('initializes uncontrolled state from field defaultValue when defaultValue prop is omitted', () => {
+    const requirements = makeRequirements([
+      { id: 'name', type: 'text', defaultValue: 'Jane' },
+      { id: 'city', type: 'text', defaultValue: 'Dublin' },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect((screen.getByTestId('input-name') as HTMLInputElement).value).toBe('Jane');
+    expect((screen.getByTestId('input-city') as HTMLInputElement).value).toBe('Dublin');
+  });
+
+  it('prefers explicit defaultValue prop over schema field defaults', () => {
+    const requirements = makeRequirements([{ id: 'name', type: 'text', defaultValue: 'Jane' }]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm defaultValue={{ name: 'John' }} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect((screen.getByTestId('input-name') as HTMLInputElement).value).toBe('John');
+  });
+
+  it('keeps controlled values authoritative over schema field defaults', () => {
+    const requirements = makeRequirements([{ id: 'name', type: 'text', defaultValue: 'Jane' }]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm value={{ name: 'Alex' }} onChange={noop} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect((screen.getByTestId('input-name') as HTMLInputElement).value).toBe('Alex');
+  });
+
   it('does not show errors for required fields on initial render', () => {
     const requirements = makeRequirements([
       { id: 'name', type: 'text', validation: { required: true } },

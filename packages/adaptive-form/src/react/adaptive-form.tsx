@@ -16,6 +16,7 @@ import {
   getInitialStepId,
   getNextStepId,
   getPreviousStepId,
+  initializeFormData,
   resolveLabel,
 } from '@kotaio/adaptive-requirements-engine';
 import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -209,34 +210,37 @@ export interface AdaptiveFormProps<TFieldId extends string = string> {
  * </AdaptiveFormProvider>
  * ```
  */
-export function AdaptiveForm<TFieldId extends string = string>({
-  defaultValue = {},
-  value: controlledValue,
-  onChange,
-  onValidationStateChange,
-  mapping,
-  components,
-  renderField,
-  renderStepNavigation,
-  groupClassName,
-  clearHiddenValues,
-  showAllSteps = false,
-  showAllErrors = false,
-  className,
-  children,
-}: AdaptiveFormProps<TFieldId>) {
+export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFormProps<TFieldId>) {
   usePhoneHome();
-  const [internalValue, setInternalValue] = useState<FormData>(() => defaultValue);
-  const isControlled = controlledValue !== undefined;
-  const formData = isControlled ? controlledValue : internalValue;
-
   const ctx = useContext(AdaptiveFormContext);
   if (!ctx) {
     throw new Error('AdaptiveForm must be rendered inside an AdaptiveFormProvider.');
   }
 
+  const {
+    defaultValue,
+    value: controlledValue,
+    onChange,
+    onValidationStateChange,
+    mapping,
+    components,
+    renderField,
+    renderStepNavigation,
+    groupClassName,
+    clearHiddenValues,
+    showAllSteps = false,
+    showAllErrors = false,
+    className,
+    children,
+  } = props;
   const requirements = ctx.requirements as RequirementsObject<TFieldId>;
   const { flow } = requirements;
+  const hasExplicitDefaultValue = Object.hasOwn(props, 'defaultValue');
+  const [internalValue, setInternalValue] = useState<FormData>(() =>
+    hasExplicitDefaultValue ? (defaultValue ?? {}) : initializeFormData(requirements),
+  );
+  const isControlled = controlledValue !== undefined;
+  const formData = isControlled ? controlledValue : internalValue;
 
   const { currentStepId, setCurrentStepId, visitedSteps, markStepVisited } = ctx;
 
