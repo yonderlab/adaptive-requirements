@@ -574,7 +574,7 @@ export function checkField<TFieldId extends string = string>(
   // Validation errors
   const errors: string[] = [];
   if ((isVisible || isHiddenType) && !isExcluded) {
-    const fieldValue = Object.hasOwn(data, fieldId) ? data[fieldId] : field.defaultValue;
+    const fieldValue = dataWithDefaults[fieldId];
     const empty =
       fieldValue === undefined ||
       fieldValue === null ||
@@ -637,7 +637,7 @@ export function checkField<TFieldId extends string = string>(
     value = runRule(computeRule, context, options?.customOperations);
   } else {
     // For non-computed fields, explicit form data wins, including null/empty string.
-    value = Object.hasOwn(data, fieldId) ? data[fieldId] : field.defaultValue;
+    value = dataWithDefaults[fieldId];
   }
 
   return {

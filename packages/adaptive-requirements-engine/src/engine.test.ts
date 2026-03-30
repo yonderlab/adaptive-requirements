@@ -1793,4 +1793,21 @@ describe('initializeFormData', () => {
     expect(requirements.fields[0]?.defaultValue).toStrictEqual(['one', 'two']);
     expect(initialData['tags']).toStrictEqual(['one', 'two', 'three']);
   });
+
+  it('checkField returns a cloned array default when data is missing', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'tags', type: 'text', defaultValue: ['one', 'two'] }],
+    };
+
+    const state = checkField(requirements, 'tags', {});
+    const tags = state.value;
+    if (!Array.isArray(tags)) {
+      throw new TypeError('Expected checkField value to be an array');
+    }
+
+    tags.push('three');
+
+    expect(requirements.fields[0]?.defaultValue).toStrictEqual(['one', 'two']);
+    expect(state.value).toStrictEqual(['one', 'two', 'three']);
+  });
 });
