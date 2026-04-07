@@ -17,7 +17,7 @@ import type {
 import type { CountryCode } from 'libphonenumber-js/min';
 
 import jsonLogic from 'json-logic-js';
-import { isValidPhoneNumber } from 'libphonenumber-js/min';
+import { isSupportedCountry, isValidPhoneNumber } from 'libphonenumber-js/min';
 
 import { isReservedOperationName } from './operations';
 
@@ -159,9 +159,11 @@ function ensureBuiltInOperationsRegistered() {
       return false;
     }
     try {
-      return typeof countryCode === 'string'
-        ? isValidPhoneNumber(value, countryCode as CountryCode)
-        : isValidPhoneNumber(value);
+      // If a country code is provided but unsupported, fall back to E.164-only validation
+      if (typeof countryCode === 'string' && isSupportedCountry(countryCode)) {
+        return isValidPhoneNumber(value, countryCode as CountryCode);
+      }
+      return isValidPhoneNumber(value);
     } catch {
       return false;
     }

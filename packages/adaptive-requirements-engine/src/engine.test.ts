@@ -204,13 +204,14 @@ describe(runRule, () => {
       expect(runRule({ phone_valid: [{ var: 'phone' }, 'ES'] }, context)).toBeTruthy();
     });
 
-    it('should still validate E.164 numbers even with unknown country code', () => {
+    it('should fall back to E.164 validation for unsupported country code', () => {
+      // Unsupported country codes fall back to E.164-only validation
       const context = { data: { phone: '+31612345678' } };
-      // libphonenumber-js validates E.164 format regardless of country hint
       expect(runRule({ phone_valid: [{ var: 'phone' }, 'XX'] }, context)).toBeTruthy();
     });
 
-    it('should reject invalid number with unknown country code', () => {
+    it('should reject national number with unsupported country code', () => {
+      // National format cannot be validated without a supported country code
       const context = { data: { phone: '0612345678' } };
       expect(runRule({ phone_valid: [{ var: 'phone' }, 'XX'] }, context)).toBeFalsy();
     });
