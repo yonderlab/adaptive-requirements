@@ -1,5 +1,5 @@
 /** Engine-specific custom JSON Logic operations. */
-export const ENGINE_OPERATION_NAMES = ['today', 'match'] as const;
+export const ENGINE_OPERATION_NAMES = ['today', 'match', 'phone_valid'] as const;
 
 /** Standard json-logic-js core operations. */
 export const JSON_LOGIC_CORE_OPERATION_NAMES = [

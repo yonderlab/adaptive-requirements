@@ -14,8 +14,10 @@ import type {
   RuleResult,
   ValidationRule,
 } from './types';
+import type { CountryCode } from 'libphonenumber-js/min';
 
 import jsonLogic from 'json-logic-js';
+import { isValidPhoneNumber } from 'libphonenumber-js/min';
 
 import { isReservedOperationName } from './operations';
 
@@ -148,6 +150,18 @@ function ensureBuiltInOperationsRegistered() {
     }
     try {
       return new RegExp(pattern, typeof flags === 'string' ? flags : undefined).test(value);
+    } catch {
+      return false;
+    }
+  });
+  jsonLogic.add_operation('phone_valid', (value: unknown, countryCode?: unknown) => {
+    if (typeof value !== 'string' || value === '') {
+      return false;
+    }
+    try {
+      return typeof countryCode === 'string'
+        ? isValidPhoneNumber(value, countryCode as CountryCode)
+        : isValidPhoneNumber(value);
     } catch {
       return false;
     }

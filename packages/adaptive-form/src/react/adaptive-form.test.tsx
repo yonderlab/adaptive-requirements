@@ -253,6 +253,120 @@ describe('adaptiveForm touched-field error filtering', () => {
   });
 });
 
+describe('phone number validation with phone_valid rule', () => {
+  const phoneRequirements = makeRequirements([
+    {
+      id: 'phone',
+      type: 'text',
+      validation: {
+        required: true,
+        rules: [
+          {
+            rule: { phone_valid: [{ var: 'phone' }, 'NL'] },
+            message: 'Please enter a valid Dutch phone number',
+          },
+        ],
+      },
+    },
+  ]);
+
+  it('does not show phone validation errors on initial render', () => {
+    render(
+      <AdaptiveFormProvider requirements={phoneRequirements}>
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.queryByTestId('error-phone')).toBeNull();
+  });
+
+  it('shows error for invalid phone number after blur', () => {
+    render(
+      <AdaptiveFormProvider requirements={phoneRequirements}>
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    const phoneInput = screen.getByTestId('input-phone');
+    fireEvent.change(phoneInput, { target: { value: '+31999' } });
+    fireEvent.blur(phoneInput);
+
+    expect(screen.getByTestId('error-phone')).toBeTruthy();
+    expect(screen.getByTestId('error-phone').textContent).toBe('Please enter a valid Dutch phone number');
+  });
+
+  it('shows no error for a valid Dutch phone number', () => {
+    render(
+      <AdaptiveFormProvider requirements={phoneRequirements}>
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    const phoneInput = screen.getByTestId('input-phone');
+    fireEvent.change(phoneInput, { target: { value: '+31612345678' } });
+    fireEvent.blur(phoneInput);
+
+    expect(screen.queryByTestId('error-phone')).toBeNull();
+  });
+
+  it('shows required error when phone is cleared after input', () => {
+    render(
+      <AdaptiveFormProvider requirements={phoneRequirements}>
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    const phoneInput = screen.getByTestId('input-phone');
+    fireEvent.change(phoneInput, { target: { value: '+31612345678' } });
+    fireEvent.change(phoneInput, { target: { value: '' } });
+
+    expect(screen.getByTestId('error-phone')).toBeTruthy();
+    expect(screen.getByTestId('error-phone').textContent).toBe('This field is required');
+  });
+
+  it('validates phone with dynamic country code from another field', () => {
+    const dynamicRequirements = makeRequirements([
+      { id: 'country_code', type: 'text' },
+      {
+        id: 'phone',
+        type: 'text',
+        validation: {
+          rules: [
+            {
+              rule: { phone_valid: [{ var: 'phone' }, { var: 'country_code' }] },
+              message: 'Invalid phone number for selected country',
+            },
+          ],
+        },
+      },
+    ]);
+
+    function Wrapper() {
+      const [data, setData] = useState<FormData>({ country_code: 'DE', phone: '' });
+      return (
+        <AdaptiveFormProvider requirements={dynamicRequirements}>
+          <AdaptiveForm value={data} onChange={(d) => setData(d)} components={testComponents} />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    render(<Wrapper />);
+
+    const phoneInput = screen.getByTestId('input-phone');
+
+    // Enter a valid German number in national format
+    fireEvent.change(phoneInput, { target: { value: '015112345678' } });
+    fireEvent.blur(phoneInput);
+    expect(screen.queryByTestId('error-phone')).toBeNull();
+
+    // Enter a clearly invalid phone number
+    fireEvent.change(phoneInput, { target: { value: 'not-a-number' } });
+    fireEvent.blur(phoneInput);
+    expect(screen.getByTestId('error-phone')).toBeTruthy();
+    expect(screen.getByTestId('error-phone').textContent).toBe('Invalid phone number for selected country');
+  });
+});
+
 // --- Async validation integration tests ---
 /* eslint-disable require-await */
 

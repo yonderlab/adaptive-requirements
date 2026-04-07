@@ -37,7 +37,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "json-logic-js": "2.0.5"
+    "json-logic-js": "2.0.5",
+    "libphonenumber-js": "^1.11.20"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.8",

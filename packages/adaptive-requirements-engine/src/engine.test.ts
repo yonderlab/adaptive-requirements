@@ -148,6 +148,86 @@ describe(runRule, () => {
     });
   });
 
+  describe('phone_valid operation', () => {
+    it('should validate a Dutch mobile number with country code', () => {
+      const context = { data: { phone: '+31612345678' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'NL'] }, context)).toBeTruthy();
+    });
+
+    it('should validate a national format number with country code', () => {
+      const context = { data: { phone: '0612345678' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'NL'] }, context)).toBeTruthy();
+    });
+
+    it('should validate an E.164 number without country code', () => {
+      const context = { data: { phone: '+31612345678' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }] }, context)).toBeTruthy();
+    });
+
+    it('should reject an invalid number', () => {
+      const context = { data: { phone: '+31999' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'NL'] }, context)).toBeFalsy();
+    });
+
+    it('should reject a national number without country code', () => {
+      const context = { data: { phone: '0612345678' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }] }, context)).toBeFalsy();
+    });
+
+    it('should return false for non-string value', () => {
+      const context = { data: { phone: 12_345 } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'NL'] }, context)).toBeFalsy();
+    });
+
+    it('should return false for empty string', () => {
+      const context = { data: { phone: '' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'NL'] }, context)).toBeFalsy();
+    });
+
+    it('should return false for undefined value', () => {
+      const context = { data: {} };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'NL'] }, context)).toBeFalsy();
+    });
+
+    it('should validate German phone numbers', () => {
+      const context = { data: { phone: '+4915112345678' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'DE'] }, context)).toBeTruthy();
+    });
+
+    it('should validate Irish phone numbers', () => {
+      const context = { data: { phone: '+353861234567' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'IE'] }, context)).toBeTruthy();
+    });
+
+    it('should validate Spanish phone numbers', () => {
+      const context = { data: { phone: '+34612345678' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'ES'] }, context)).toBeTruthy();
+    });
+
+    it('should still validate E.164 numbers even with unknown country code', () => {
+      const context = { data: { phone: '+31612345678' } };
+      // libphonenumber-js validates E.164 format regardless of country hint
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'XX'] }, context)).toBeTruthy();
+    });
+
+    it('should reject invalid number with unknown country code', () => {
+      const context = { data: { phone: '0612345678' } };
+      expect(runRule({ phone_valid: [{ var: 'phone' }, 'XX'] }, context)).toBeFalsy();
+    });
+
+    it('should work with runValidationRules', () => {
+      const rules: ValidationRule[] = [
+        {
+          rule: { phone_valid: [{ var: 'phone' }, 'NL'] },
+          message: 'Invalid phone number',
+        },
+      ];
+      const context = { data: { phone: '+31999' } };
+      const errors = runValidationRules(rules, context);
+      expect(errors).toStrictEqual(['Invalid phone number']);
+    });
+  });
+
   describe('string operations', () => {
     it('should handle cat operator', () => {
       const context = { data: { first: 'John', last: 'Doe' } };
