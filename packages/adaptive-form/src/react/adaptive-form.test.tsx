@@ -660,7 +660,7 @@ function TestNotice({ field, isVisible }: FieldComputedProps) {
 }
 
 describe('notice field types', () => {
-  it('renders a notice field when excludeWhen is not set', () => {
+  it('renders a notice field when visibleWhen is not set', () => {
     const requirements = makeRequirements([
       { id: 'danger_msg', type: 'notice_danger', label: { default: 'Enrolment closed' } },
     ]);
