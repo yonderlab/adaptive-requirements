@@ -1,4 +1,4 @@
-import type { StepDetail, StepperInfo } from "./adaptive-form-context";
+import type { StepDetail, StepperInfo } from './adaptive-form-context';
 import type {
   Field,
   FieldMapping,
@@ -8,7 +8,7 @@ import type {
   FormData,
   RequirementsObject,
   ResolvedFieldOption,
-} from "@kotaio/adaptive-requirements-engine";
+} from '@kotaio/adaptive-requirements-engine';
 
 import {
   applyExclusions,
@@ -18,27 +18,18 @@ import {
   getPreviousStepId,
   initializeFormData,
   resolveLabel,
-} from "@kotaio/adaptive-requirements-engine";
-import React, {
-  Fragment,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+} from '@kotaio/adaptive-requirements-engine';
+import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-parent-imports
-import { builtInAsyncValidators } from "../core/validate-api";
-import { AdaptiveFormContext } from "./adaptive-form-context";
-import { isEmptyValue } from "./is-empty-value";
-import { useAsyncValidation } from "./use-async-validation";
-import { usePhoneHome } from "./use-phone-home";
-import { useRequirements } from "./use-requirements";
+import { builtInAsyncValidators } from '../core/validate-api';
+import { AdaptiveFormContext } from './adaptive-form-context';
+import { isEmptyValue } from './is-empty-value';
+import { useAsyncValidation } from './use-async-validation';
+import { usePhoneHome } from './use-phone-home';
+import { useRequirements } from './use-requirements';
 
-const isDev =
-  typeof process !== "undefined" && process.env["NODE_ENV"] !== "production";
+const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
 /** Field types that receive FieldComputedProps (display-only, no onChange/onBlur) */
 const DISPLAY_ONLY_TYPES = new Set(['computed', 'notice_info', 'notice_warning', 'notice_danger']);
@@ -89,7 +80,7 @@ export interface FieldRenderProps<TFieldId extends string = string> {
   asyncErrors: string[];
   onChange: (value: FieldValue) => void;
   onBlur: () => void;
-  components?: AdaptiveFormProps<TFieldId>["components"];
+  components?: AdaptiveFormProps<TFieldId>['components'];
 }
 
 /**
@@ -230,9 +221,7 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
   usePhoneHome();
   const ctx = useContext(AdaptiveFormContext);
   if (!ctx) {
-    throw new Error(
-      "AdaptiveForm must be rendered inside an AdaptiveFormProvider.",
-    );
+    throw new Error('AdaptiveForm must be rendered inside an AdaptiveFormProvider.');
   }
 
   const {
@@ -260,8 +249,7 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
   const isControlled = controlledValue !== undefined;
   const formData = isControlled ? controlledValue : internalValue;
 
-  const { currentStepId, setCurrentStepId, visitedSteps, markStepVisited } =
-    ctx;
+  const { currentStepId, setCurrentStepId, visitedSteps, markStepVisited } = ctx;
 
   // Correct the provider's initial step — the provider can't skip empty steps because
   // it doesn't have access to formData. On mount (or when requirements changes),
@@ -287,15 +275,10 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
   }, [ctx, flow, requirements, formData]);
 
   // Touched field tracking — errors are only shown for fields the user has interacted with
-  const [touchedFields, setTouchedFields] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(() => new Set());
 
   // Reset touched state when the field schema changes (stable key derived from field IDs)
-  const fieldIdKey = useMemo(
-    () => requirements.fields.map((f) => f.id).join(","),
-    [requirements.fields],
-  );
+  const fieldIdKey = useMemo(() => requirements.fields.map((f) => f.id).join(','), [requirements.fields]);
   useEffect(() => {
     setTouchedFields(new Set());
   }, [fieldIdKey]);
@@ -378,18 +361,12 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
     }
   }, [isAsyncValidating, onValidationStateChange]);
 
-  const currentStepIndex = flow
-    ? flow.steps.findIndex((s) => s.id === currentStepId)
-    : -1;
-  const currentStep =
-    flow && currentStepIndex >= 0 ? flow.steps[currentStepIndex] : undefined;
+  const currentStepIndex = flow ? flow.steps.findIndex((s) => s.id === currentStepId) : -1;
+  const currentStep = flow && currentStepIndex >= 0 ? flow.steps[currentStepIndex] : undefined;
   const totalSteps = flow ? flow.steps.length : 0;
 
   const idToField = useMemo(
-    () =>
-      new Map<string, Field<TFieldId>>(
-        requirements.fields.map((f) => [f.id, f]),
-      ),
+    () => new Map<string, Field<TFieldId>>(requirements.fields.map((f) => [f.id, f])),
     [requirements.fields],
   );
 
@@ -397,23 +374,18 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
     if (!flow || !currentStep) {
       return [];
     }
-    return currentStep.fields
-      .map((id) => idToField.get(id))
-      .filter((f): f is Field<TFieldId> => f != null);
+    return currentStep.fields.map((id) => idToField.get(id)).filter((f): f is Field<TFieldId> => f != null);
   }, [flow, currentStep, idToField]);
 
-  const allStepsWithFields: { step: FlowStep; fields: Field<TFieldId>[] }[] =
-    useMemo(() => {
-      if (!flow || !showAllSteps) {
-        return [];
-      }
-      return flow.steps.map((step) => ({
-        step,
-        fields: step.fields
-          .map((id) => idToField.get(id))
-          .filter((f): f is Field<TFieldId> => f != null),
-      }));
-    }, [flow, showAllSteps, idToField]);
+  const allStepsWithFields: { step: FlowStep; fields: Field<TFieldId>[] }[] = useMemo(() => {
+    if (!flow || !showAllSteps) {
+      return [];
+    }
+    return flow.steps.map((step) => ({
+      step,
+      fields: step.fields.map((id) => idToField.get(id)).filter((f): f is Field<TFieldId> => f != null),
+    }));
+  }, [flow, showAllSteps, idToField]);
 
   const currentStepIsValid = useMemo(() => {
     if (!flow || currentStepFields.length === 0) {
@@ -433,12 +405,8 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
     });
   }, [flow, currentStepFields, getFieldState, asyncState]);
 
-  const nextStepId = flow
-    ? getNextStepId(flow, currentStepId, mergedFormData, { requirements })
-    : undefined;
-  const previousStepId = flow
-    ? getPreviousStepId(flow, currentStepId)
-    : undefined;
+  const nextStepId = flow ? getNextStepId(flow, currentStepId, mergedFormData, { requirements }) : undefined;
+  const previousStepId = flow ? getPreviousStepId(flow, currentStepId) : undefined;
   const canGoNext = nextStepId !== undefined && currentStepIsValid;
   const canGoPrevious = previousStepId !== undefined;
 
@@ -501,9 +469,7 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
   const handleNext = useCallback(() => {
     if (!currentStepIsValid) {
       // Reveal errors for all visible fields in current step
-      const visibleFieldIds = currentStepFields
-        .filter((f) => getFieldState(f.id).isVisible)
-        .map((f) => f.id);
+      const visibleFieldIds = currentStepFields.filter((f) => getFieldState(f.id).isVisible).map((f) => f.id);
       markFieldsTouched(visibleFieldIds);
       return;
     }
@@ -573,21 +539,10 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
         fieldState.errors.length === 0 &&
         !isEmptyValue(fieldState.value)
       ) {
-        triggerAsyncValidation(
-          fieldId,
-          fieldState.value,
-          mergedFormData,
-          requirements,
-        );
+        triggerAsyncValidation(fieldId, fieldState.value, mergedFormData, requirements);
       }
     },
-    [
-      markFieldTouched,
-      getFieldState,
-      triggerAsyncValidation,
-      mergedFormData,
-      requirements,
-    ],
+    [markFieldTouched, getFieldState, triggerAsyncValidation, mergedFormData, requirements],
   );
 
   const renderFieldContent = useCallback(
@@ -606,8 +561,7 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
           isTouched: touchedFields.has(field.id),
           isValidating: fieldIsValidating,
           asyncErrors: fieldAsyncErrors,
-          onChange: (newValue: FieldValue) =>
-            handleFieldChange(field.id, newValue),
+          onChange: (newValue: FieldValue) => handleFieldChange(field.id, newValue),
           onBlur: () => handleFieldBlur(field.id),
           components,
         });
@@ -631,16 +585,12 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
         return <DisplayField field={field} value={fieldState.value} isVisible={fieldState.isVisible} />;
       }
 
-      const InputField = renderFn as React.ComponentType<
-        FieldInputProps<TFieldId>
-      >;
+      const InputField = renderFn as React.ComponentType<FieldInputProps<TFieldId>>;
       return (
         <InputField
           field={field}
           value={fieldState.value}
-          onChange={(newValue: FieldValue) =>
-            handleFieldChange(field.id, newValue)
-          }
+          onChange={(newValue: FieldValue) => handleFieldChange(field.id, newValue)}
           onBlur={() => handleFieldBlur(field.id)}
           errors={getDisplayErrors(field.id, mergedErrors)}
           isRequired={fieldState.isRequired}
@@ -668,57 +618,35 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
   if (flow) {
     if (showAllSteps) {
       return (
-        <div
-          className={className}
-          role="group"
-          aria-label="Adaptive form with steps"
-        >
+        <div className={className} role="group" aria-label="Adaptive form with steps">
           {allStepsWithFields.map(({ step, fields }) => {
             const stepTitle =
-              step.title !== undefined
-                ? typeof step.title === "string"
-                  ? step.title
-                  : step.title.default
-                : undefined;
+              step.title !== undefined ? (typeof step.title === 'string' ? step.title : step.title.default) : undefined;
             const stepSubtitle =
               step.subtitle !== undefined
-                ? typeof step.subtitle === "string"
+                ? typeof step.subtitle === 'string'
                   ? step.subtitle
                   : step.subtitle.default
                 : undefined;
             return (
               <Fragment key={step.id}>
                 {stepTitle != null && (
-                  <h2
-                    className="text-foreground-header mb-4 text-lg font-semibold"
-                    id={`step-${step.id}-title`}
-                  >
+                  <h2 className="text-foreground-header mb-4 text-lg font-semibold" id={`step-${step.id}-title`}>
                     {stepTitle}
                   </h2>
                 )}
                 {stepSubtitle != null && (
-                  <p
-                    className="text-muted-foreground mb-4 text-sm"
-                    id={`step-${step.id}-subtitle`}
-                  >
+                  <p className="text-muted-foreground mb-4 text-sm" id={`step-${step.id}-subtitle`}>
                     {stepSubtitle}
                   </p>
                 )}
                 <div
                   className={groupClassName}
-                  aria-labelledby={
-                    stepTitle != null ? `step-${step.id}-title` : undefined
-                  }
-                  aria-describedby={
-                    stepSubtitle != null
-                      ? `step-${step.id}-subtitle`
-                      : undefined
-                  }
+                  aria-labelledby={stepTitle != null ? `step-${step.id}-title` : undefined}
+                  aria-describedby={stepSubtitle != null ? `step-${step.id}-subtitle` : undefined}
                 >
                   {fields.map((field) => (
-                    <Fragment key={field.id}>
-                      {renderFieldContent(field)}
-                    </Fragment>
+                    <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
                   ))}
                 </div>
               </Fragment>
@@ -731,49 +659,33 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
 
     const stepTitle =
       currentStep?.title !== undefined
-        ? typeof currentStep.title === "string"
+        ? typeof currentStep.title === 'string'
           ? currentStep.title
           : currentStep.title.default
         : undefined;
     const stepSubtitle =
       currentStep?.subtitle !== undefined
-        ? typeof currentStep.subtitle === "string"
+        ? typeof currentStep.subtitle === 'string'
           ? currentStep.subtitle
           : currentStep.subtitle.default
         : undefined;
 
     return (
-      <div
-        className={className}
-        role="group"
-        aria-label="Adaptive form with steps"
-      >
+      <div className={className} role="group" aria-label="Adaptive form with steps">
         {stepTitle != null && (
-          <h2
-            className="text-foreground-header mb-4 text-lg font-semibold"
-            id={`step-${currentStepId}-title`}
-          >
+          <h2 className="text-foreground-header mb-4 text-lg font-semibold" id={`step-${currentStepId}-title`}>
             {stepTitle}
           </h2>
         )}
         {stepSubtitle != null && (
-          <p
-            className="text-muted-foreground mb-4 text-sm"
-            id={`step-${currentStepId}-subtitle`}
-          >
+          <p className="text-muted-foreground mb-4 text-sm" id={`step-${currentStepId}-subtitle`}>
             {stepSubtitle}
           </p>
         )}
         <div
           className={groupClassName}
-          aria-labelledby={
-            stepTitle != null ? `step-${currentStepId}-title` : undefined
-          }
-          aria-describedby={
-            stepSubtitle != null
-              ? `step-${currentStepId}-subtitle`
-              : undefined
-          }
+          aria-labelledby={stepTitle != null ? `step-${currentStepId}-title` : undefined}
+          aria-describedby={stepSubtitle != null ? `step-${currentStepId}-subtitle` : undefined}
         >
           {currentStepFields.map((field) => (
             <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
@@ -808,13 +720,9 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
                 type="button"
                 onClick={handleNext}
                 aria-disabled={!currentStepIsValid || undefined}
-                title={
-                  !currentStepIsValid
-                    ? "Fix validation errors to continue"
-                    : undefined
-                }
+                title={!currentStepIsValid ? 'Fix validation errors to continue' : undefined}
                 className={`bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90${
-                  !currentStepIsValid ? " cursor-not-allowed opacity-50" : ""
+                  !currentStepIsValid ? ' cursor-not-allowed opacity-50' : ''
                 }`}
               >
                 Next

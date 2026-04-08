@@ -115,7 +115,11 @@ const requirements: RequirementsObject = {
   flow: {
     steps: [
       { id: 'personal', title: { default: 'Personal info' }, fields: ['first_name', 'country'] },
-      { id: 'employment', title: { default: 'Employment details' }, fields: ['department', 'start_date', 'needs_visa', 'visa_notes'] },
+      {
+        id: 'employment',
+        title: { default: 'Employment details' },
+        fields: ['department', 'start_date', 'needs_visa', 'visa_notes'],
+      },
     ],
     navigation: { start: 'personal' },
   },
@@ -137,9 +141,9 @@ const computed = calculateData(requirements, formData);
 const data = { ...formData, ...computed };
 const state = checkField(requirements, 'visa_notes', data);
 
-state.isVisible;  // true — country is 'us', so needs_visa is true
+state.isVisible; // true — country is 'us', so needs_visa is true
 state.isRequired; // true — requireWhen rule matches
-state.errors;     // ['Required'] — no value provided yet
+state.errors; // ['Required'] — no value provided yet
 ```
 
 ## API
