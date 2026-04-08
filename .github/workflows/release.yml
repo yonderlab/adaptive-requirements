@@ -52,7 +52,6 @@ jobs:
       - name: Publish to npm (Trusted Publishing)
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
-          npm install -g npm@latest
           cd packages/adaptive-requirements-engine
           TARBALL=$(pnpm pack --pack-destination /tmp)
           npm publish "$TARBALL" --provenance --access public
