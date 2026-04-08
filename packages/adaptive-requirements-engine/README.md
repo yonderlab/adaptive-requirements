@@ -29,15 +29,17 @@ The engine provides pure functions to evaluate these schemas against the current
 Here is an example of what a schema returned by the API looks like — an employee onboarding form:
 
 ```ts
+import type { RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+
 const requirements: RequirementsObject = {
   datasets: [
     {
       id: 'department',
       items: [
-        { value: 'engineering', label: { default: 'Engineering' }, region: 'global' },
-        { value: 'sales_eu', label: { default: 'Sales (EU)' }, region: 'eu' },
-        { value: 'sales_us', label: { default: 'Sales (US)' }, region: 'us' },
-        { value: 'support', label: { default: 'Support' }, region: 'global' },
+        { value: 'engineering', label: { default: 'Engineering' }, country: 'global' },
+        { value: 'sales_de', label: { default: 'Sales (DE)' }, country: 'de' },
+        { value: 'sales_us', label: { default: 'Sales (US)' }, country: 'us' },
+        { value: 'support', label: { default: 'Support' }, country: 'global' },
       ],
     },
   ],
@@ -61,7 +63,7 @@ const requirements: RequirementsObject = {
       ],
       validation: { required: true },
     },
-    // Select from a dataset with filtering — only shows departments matching the selected country's region
+    // Select from a dataset with filtering — only shows departments matching the selected country
     {
       id: 'department',
       type: 'select',
@@ -70,8 +72,8 @@ const requirements: RequirementsObject = {
         dataset: 'department',
         filter: {
           or: [
-            { '==': [{ var: 'item.region' }, 'global'] },
-            { '==': [{ var: 'item.region' }, { var: 'answers.country' }] },
+            { '==': [{ var: 'item.country' }, 'global'] },
+            { '==': [{ var: 'item.country' }, { var: 'answers.country' }] },
           ],
         },
       },

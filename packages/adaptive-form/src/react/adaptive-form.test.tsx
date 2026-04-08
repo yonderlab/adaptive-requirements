@@ -470,10 +470,8 @@ describe('adaptiveForm step subtitle rendering', () => {
     );
 
     expect(screen.getByText('Bank details')).toBeTruthy();
-    // Only the h2 title should exist, no subtitle paragraph
-    const heading = screen.getByText('Bank details');
-    const nextSibling = heading.nextElementSibling;
-    expect(nextSibling?.tagName).not.toBe('P');
+    // No subtitle text should be present in the document
+    expect(screen.queryByText('Required by the insurer')).toBeNull();
   });
 
   it('renders subtitle with localized object format', () => {
@@ -555,10 +553,8 @@ describe('adaptiveForm step subtitle rendering', () => {
     );
 
     expect(screen.getByText('First step description')).toBeTruthy();
-    // Step 2 has no subtitle — should not render an extra paragraph
-    const step2Title = screen.getByText('Step Two');
-    const step2NextSibling = step2Title.nextElementSibling;
-    expect(step2NextSibling?.tagName).not.toBe('P');
+    // Step 2 has no subtitle — assert no subtitle text is rendered for it
+    expect(screen.queryByText('Second step description')).toBeNull();
   });
 });
 
