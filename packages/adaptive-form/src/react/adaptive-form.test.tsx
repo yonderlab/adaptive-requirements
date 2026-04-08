@@ -1,4 +1,4 @@
-import type { FieldInputProps, FieldRenderProps } from './adaptive-form';
+import type { FieldComputedProps, FieldInputProps, FieldRenderProps } from './adaptive-form';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -648,5 +648,126 @@ describe('adaptiveForm async validation integration', () => {
     // Only sync required error should show (async was cleared by onChange)
     expect(screen.getByTestId('display-errors').textContent).toBe('This field is required');
     expect(screen.getByTestId('async-errors').textContent).toBe('');
+  });
+});
+
+/** Test renderer for notice fields — renders FieldComputedProps */
+function TestNotice({ field, isVisible }: FieldComputedProps) {
+  if (!isVisible) {
+    return null;
+  }
+  return <div data-testid={`notice-${field.id}`}>{field.type}</div>;
+}
+
+describe('notice field types', () => {
+  it('renders a notice field when visibleWhen is not set', () => {
+    const requirements = makeRequirements([
+      { id: 'danger_msg', type: 'notice_danger', label: { default: 'Enrolment closed' } },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{ notice_danger: TestNotice }} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.getByTestId('notice-danger_msg')).toBeTruthy();
+    expect(screen.getByTestId('notice-danger_msg').textContent).toBe('notice_danger');
+  });
+
+  it('hides a notice field when visibleWhen evaluates to false', () => {
+    const requirements = makeRequirements([
+      { id: 'status', type: 'text' },
+      {
+        id: 'warn_msg',
+        type: 'notice_warning',
+        label: { default: 'Coverage may be affected' },
+        visibleWhen: { '!=': [{ var: 'status' }, 'active'] },
+      },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm
+          defaultValue={{ status: 'active' }}
+          components={{ text: TestTextInput, notice_warning: TestNotice }}
+        />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.queryByTestId('notice-warn_msg')).toBeNull();
+  });
+
+  it('does not include notice fields in form data on controlled onChange', () => {
+    const requirements = makeRequirements([
+      { id: 'name', type: 'text' },
+      { id: 'info_msg', type: 'notice_info', label: { default: 'Your scheme starts Jan 1' } },
+    ]);
+
+    let lastData: FormData = {};
+    function Controlled() {
+      const [data, setData] = useState<FormData>({ name: '' });
+      return (
+        <AdaptiveFormProvider requirements={requirements}>
+          <AdaptiveForm
+            value={data}
+            onChange={(d) => {
+              setData(d);
+              lastData = d;
+            }}
+            components={{ text: TestTextInput, notice_info: TestNotice }}
+          />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    render(<Controlled />);
+
+    fireEvent.change(screen.getByTestId('input-name'), { target: { value: 'Alice' } });
+
+    expect(lastData).toStrictEqual({ name: 'Alice' });
+    expect(lastData).not.toHaveProperty('info_msg');
+  });
+
+  it('logs a dev warning when no renderer is provided for a notice type', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
+
+    const requirements = makeRequirements([{ id: 'info_msg', type: 'notice_info', label: { default: 'Info' } }]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{}} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('No render function found for field type: "notice_info"'),
+    );
+
+    warnSpy.mockRestore();
+  });
+
+  it('renders all three notice variants with FieldComputedProps', () => {
+    const requirements = makeRequirements([
+      { id: 'info', type: 'notice_info', label: { default: 'Info message' } },
+      { id: 'warn', type: 'notice_warning', label: { default: 'Warning message' } },
+      { id: 'danger', type: 'notice_danger', label: { default: 'Danger message' } },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm
+          components={{
+            notice_info: TestNotice,
+            notice_warning: TestNotice,
+            notice_danger: TestNotice,
+          }}
+        />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.getByTestId('notice-info').textContent).toBe('notice_info');
+    expect(screen.getByTestId('notice-warn').textContent).toBe('notice_warning');
+    expect(screen.getByTestId('notice-danger').textContent).toBe('notice_danger');
   });
 });

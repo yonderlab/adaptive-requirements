@@ -111,6 +111,10 @@ interface AsyncValidatorRef {
 - `checkFieldAsync()` — runs `checkField()` first, short-circuits if field not visible/excluded/empty/has sync errors, then runs async validators and merges errors
 - `createAdapter()` returns `checkFieldAsync()` and `hasAsyncValidators` boolean when async validators are configured
 
+## Display-Only Field Type Convention
+
+The engine treats `field.type` as an opaque string — it does not restrict or enumerate valid types. By convention, `notice_info`, `notice_warning`, and `notice_danger` are used for display-only notice fields. These carry a `label` for content and optionally `visibleWhen` for conditional visibility, but collect no values and have no validation. Rendering is handled entirely by the consumer (e.g. `@kotaio/adaptive-form`'s `components` prop).
+
 ## Anti-patterns
 
 - No React imports — this package must remain framework-agnostic
