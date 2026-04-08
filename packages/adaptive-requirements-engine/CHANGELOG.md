@@ -1,5 +1,25 @@
 # @kotaio/adaptive-requirements-engine
 
+## 2.0.0
+
+### Major Changes
+
+- [#28](https://github.com/yonderlab/adaptive-requirements/pull/28) [`cada9ba`](https://github.com/yonderlab/adaptive-requirements/commit/cada9ba38f2d310c29e4c7d7ebfd4ec050a30793) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Remove built-in date arithmetic operators (`age_from_date`, `months_since`, `date_diff`) and `abs` from the engine. Only `today` and `match` remain as custom JSON Logic operations. Consumers relying on these operators should migrate to `customOperations`.
+
+### Minor Changes
+
+- [#29](https://github.com/yonderlab/adaptive-requirements/pull/29) [`d1afb89`](https://github.com/yonderlab/adaptive-requirements/commit/d1afb89a1eeae173857cb26109975228e6f87b86) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Add deep semantic validation to `validateRequirementsObject`: field ID cross-reference checks, computed field cycle detection, and unknown JSON Logic operation validation.
+
+- [#34](https://github.com/yonderlab/adaptive-requirements/pull/34) [`bdcea5d`](https://github.com/yonderlab/adaptive-requirements/commit/bdcea5da21a1dcf015564597b4f0b6563848395a) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Add built-in `phone_valid` JSON Logic operation for phone number validation via `libphonenumber-js`.
+
+- [#31](https://github.com/yonderlab/adaptive-requirements/pull/31) [`a0ad211`](https://github.com/yonderlab/adaptive-requirements/commit/a0ad21193ffd7f445121e41d51d02cf3530c25d2) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Add `group_policy_intent` to `RequirementContext` type
+
+### Patch Changes
+
+- [#33](https://github.com/yonderlab/adaptive-requirements/pull/33) [`142e451`](https://github.com/yonderlab/adaptive-requirements/commit/142e451e21007e78d86ea691596adfa5db66e164) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Apply schema field `defaultValue`s in the engine and use them to auto-initialize uncontrolled React forms when no form-level default is provided.
+
+- [#25](https://github.com/yonderlab/adaptive-requirements/pull/25) [`fdb65b4`](https://github.com/yonderlab/adaptive-requirements/commit/fdb65b4f475a2c8fc063d33dcc161402706e0ea8) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Stop shipping raw TypeScript source files in published packages and remove `development` export conditions. All exports now resolve to compiled `dist/` output only.
+
 ## 1.0.0
 
 ### Major Changes
