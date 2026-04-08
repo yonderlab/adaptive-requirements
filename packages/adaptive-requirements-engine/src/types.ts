@@ -54,7 +54,9 @@ export type Rule =
   | { cat: Rule[] }
   | { substr: [Rule, Rule, Rule?] }
   // Pattern matching
-  | { match: [Rule, Rule] | [Rule, Rule, Rule] };
+  | { match: [Rule, Rule] | [Rule, Rule, Rule] }
+  // Phone validation
+  | { phone_valid: [Rule] | [Rule, Rule] };
 
 /**
  * Localized label - supports both string and localized object (requirements package shape).

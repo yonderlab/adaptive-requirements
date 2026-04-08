@@ -2,7 +2,7 @@
 
 ## Purpose & Scope
 
-Framework-agnostic core: types, rule engine, validation. Zero React/browser dependencies. Used for both client-side and server-side validation. Runtime dependency: `json-logic-js` only.
+Framework-agnostic core: types, rule engine, validation. Zero React/browser dependencies. Used for both client-side and server-side validation. Runtime dependencies: `json-logic-js` (rule evaluation), `libphonenumber-js` (phone validation).
 
 ## Entry Point
 
@@ -50,10 +50,11 @@ Framework-agnostic core: types, rule engine, validation. Zero React/browser depe
 
 Custom operations registered lazily on first `runRule()` call:
 
-| Operation | Description                                         |
-| --------- | --------------------------------------------------- |
-| `today`   | Returns current date as `YYYY-MM-DD`                |
-| `match`   | Regex test: `{ "match": [value, pattern, flags?] }` |
+| Operation     | Description                                                                                                                 |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `today`       | Returns current date as `YYYY-MM-DD`                                                                                        |
+| `match`       | Regex test: `{ "match": [value, pattern, flags?] }`                                                                         |
+| `phone_valid` | Phone validation: `{ "phone_valid": [value, countryCode?] }` via libphonenumber-js; E.164 required if `countryCode` omitted |
 
 **Variable resolution:**
 

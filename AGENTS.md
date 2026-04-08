@@ -38,7 +38,7 @@ pnpm --filter @kotaio/adaptive-form build
 
 ## Dependencies
 
-- **Engine runtime:** `json-logic-js` (rule evaluation) — zero other runtime deps
+- **Engine runtime:** `json-logic-js` (rule evaluation), `libphonenumber-js` (phone validation)
 - **Adaptive-form runtime:** `@kotaio/adaptive-requirements-engine`
 - **Adaptive-form peer:** `react`, `react-dom` (>=18.3.1)
 

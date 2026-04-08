@@ -255,10 +255,11 @@ Schemas use [JSON Logic](https://jsonlogic.com) expressions for conditional visi
 
 The engine registers these additional operations:
 
-| Operation                             | Description                         |
-| ------------------------------------- | ----------------------------------- |
-| `{ today: {} }`                       | Current date as `YYYY-MM-DD`        |
-| `{ match: [value, pattern, flags?] }` | Regex test (returns `true`/`false`) |
+| Operation                                | Description                                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `{ today: {} }`                          | Current date as `YYYY-MM-DD`                                                               |
+| `{ match: [value, pattern, flags?] }`    | Regex test (returns `true`/`false`)                                                        |
+| `{ phone_valid: [value, countryCode?] }` | Phone number validation via `libphonenumber-js`; E.164 required when `countryCode` omitted |
 
 ## Key types
 
