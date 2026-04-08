@@ -9,6 +9,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 export interface StepDetail {
   readonly id: string;
   readonly title?: string;
+  readonly subtitle?: string;
   readonly isCurrent: boolean;
   /** True when all visible fields in this step pass validation (sync + async) */
   readonly isValid: boolean;
@@ -82,6 +83,7 @@ export function AdaptiveFormProvider({
       steps: flow.steps.map((step) => ({
         id: step.id,
         title: resolveLabel(step.title),
+        subtitle: resolveLabel(step.subtitle),
         isCurrent: step.id === initialId,
         isValid: false,
         hasBeenVisited: step.id === initialId,
@@ -112,6 +114,7 @@ export function AdaptiveFormProvider({
         steps: flow.steps.map((step) => ({
           id: step.id,
           title: resolveLabel(step.title),
+          subtitle: resolveLabel(step.subtitle),
           isCurrent: step.id === newInitialId,
           isValid: false,
           hasBeenVisited: step.id === newInitialId,

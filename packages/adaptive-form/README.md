@@ -15,7 +15,10 @@ npm install @kotaio/adaptive-form
 Fetch a requirements schema from the API, wrap your form in an `AdaptiveFormProvider`, and render `AdaptiveForm`. You provide the UI components — the form handles visibility, validation, computed values, and step navigation automatically.
 
 ```tsx
-import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
+import {
+  AdaptiveFormProvider,
+  AdaptiveForm,
+} from "@kotaio/adaptive-form/react";
 
 function RequirementsForm({ requirementId }) {
   const [requirements, setRequirements] = useState(null);
@@ -35,7 +38,7 @@ function RequirementsForm({ requirementId }) {
           e.preventDefault();
           const formData = new FormData(e.currentTarget);
           fetch(`/api/requirements/${requirementId}`, {
-            method: 'POST',
+            method: "POST",
             body: formData,
           });
         }}
@@ -76,7 +79,11 @@ function MyForm({ requirements }) {
 
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <AdaptiveForm value={formData} onChange={setFormData} components={myComponents} />
+      <AdaptiveForm
+        value={formData}
+        onChange={setFormData}
+        components={myComponents}
+      />
     </AdaptiveFormProvider>
   );
 }
@@ -91,7 +98,10 @@ The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`
 If you need an explicit annotation (e.g. for a standalone variable), `FieldInputProps` and `FieldComputedProps` are exported for typing component renderers:
 
 ```tsx
-import type { FieldInputProps, FieldComputedProps } from '@kotaio/adaptive-form/react';
+import type {
+  FieldInputProps,
+  FieldComputedProps,
+} from "@kotaio/adaptive-form/react";
 ```
 
 ### `FieldInputProps`
@@ -117,7 +127,16 @@ A `ResolvedFieldOption` has `{ value: string | boolean, label: string }`.
 ### Example component
 
 ```tsx
-function TextInput({ field, value, onChange, onBlur, errors, isRequired, isVisible, label }) {
+function TextInput({
+  field,
+  value,
+  onChange,
+  onBlur,
+  errors,
+  isRequired,
+  isVisible,
+  label,
+}) {
   if (!isVisible) return null;
 
   return (
@@ -129,7 +148,7 @@ function TextInput({ field, value, onChange, onBlur, errors, isRequired, isVisib
       <input
         type="text"
         name={field.id}
-        value={(value as string) ?? ''}
+        value={(value as string) ?? ""}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         placeholder={field.placeholder}
@@ -161,7 +180,8 @@ function ComputedDisplay({ field, value, isVisible }: FieldComputedProps) {
   if (!isVisible) return null;
 
   // field.label may be a string or { default: string, key?: string }
-  const label = typeof field.label === 'object' ? field.label.default : field.label;
+  const label =
+    typeof field.label === "object" ? field.label.default : field.label;
 
   return (
     <div>
@@ -239,8 +259,14 @@ For complete control over how each field renders, use the `renderField` prop. It
       if (!fieldState.isVisible) return null;
 
       // Custom rendering for a specific field type
-      if (field.type === 'file') {
-        return <FileUploader field={field} onChange={onChange} errors={displayErrors} />;
+      if (field.type === "file") {
+        return (
+          <FileUploader
+            field={field}
+            onChange={onChange}
+            errors={displayErrors}
+          />
+        );
       }
 
       // Return null to fall back to the components map
@@ -308,8 +334,12 @@ To render all steps as sections on a single page (no navigation), set `showAllSt
 Wrap `AdaptiveForm` in an `AdaptiveFormProvider` to expose step information to sibling components (e.g. a progress stepper or breadcrumbs) via the `useFormInfo()` hook.
 
 ```tsx
-import { useState } from 'react';
-import { AdaptiveFormProvider, AdaptiveForm, useFormInfo } from '@kotaio/adaptive-form/react';
+import { useState } from "react";
+import {
+  AdaptiveFormProvider,
+  AdaptiveForm,
+  useFormInfo,
+} from "@kotaio/adaptive-form/react";
 
 function ProgressStepper() {
   const stepInfo = useFormInfo();
@@ -317,9 +347,13 @@ function ProgressStepper() {
   return (
     <nav>
       {stepInfo.steps.map((step) => (
-        <span key={step.id} data-active={step.isCurrent} data-visited={step.hasBeenVisited}>
+        <span
+          key={step.id}
+          data-active={step.isCurrent}
+          data-visited={step.hasBeenVisited}
+        >
           {step.title}
-          {step.isValid && ' ✓'}
+          {step.isValid && " ✓"}
         </span>
       ))}
     </nav>
@@ -332,7 +366,11 @@ function MyForm({ requirements }) {
   return (
     <AdaptiveFormProvider requirements={requirements}>
       <ProgressStepper />
-      <AdaptiveForm value={formData} onChange={setFormData} components={myComponents} />
+      <AdaptiveForm
+        value={formData}
+        onChange={setFormData}
+        components={myComponents}
+      />
     </AdaptiveFormProvider>
   );
 }
@@ -371,8 +409,8 @@ When your application's field names differ from the schema's, use the `mapping` 
     defaultValue={{}}
     mapping={{
       fieldIdMap: {
-        firstName: 'first_name',
-        lastName: 'last_name',
+        firstName: "first_name",
+        lastName: "last_name",
       },
     }}
     components={myComponents}
@@ -393,7 +431,15 @@ Datasets can also include filters that narrow options based on the current form 
 Option values can be `string` or `boolean`. If your select/radio component requires string values for the DOM (e.g. `<option value="...">`), serialize for display but pass the raw value to `onChange`:
 
 ```tsx
-function SelectInput({ field, value, onChange, options, isVisible, isRequired, label }) {
+function SelectInput({
+  field,
+  value,
+  onChange,
+  options,
+  isVisible,
+  isRequired,
+  label,
+}) {
   if (!isVisible) return null;
 
   return (
@@ -404,9 +450,11 @@ function SelectInput({ field, value, onChange, options, isVisible, isRequired, l
       </label>
       <select
         name={field.id}
-        value={String(value ?? '')}
+        value={String(value ?? "")}
         onChange={(e) => {
-          const selected = options?.find((o) => String(o.value) === e.target.value);
+          const selected = options?.find(
+            (o) => String(o.value) === e.target.value,
+          );
           onChange(selected?.value ?? e.target.value);
         }}
       >
@@ -429,8 +477,11 @@ Adapter hooks bridge AdaptiveForm with popular form libraries. They return `{ va
 ### React Hook Form
 
 ```tsx
-import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
-import { useReactHookFormAdapter } from '@kotaio/adaptive-form/react/adapters/react-hook-form';
+import {
+  AdaptiveFormProvider,
+  AdaptiveForm,
+} from "@kotaio/adaptive-form/react";
+import { useReactHookFormAdapter } from "@kotaio/adaptive-form/react/adapters/react-hook-form";
 
 function MyForm({ requirements }) {
   const form = useFormContext();
@@ -438,7 +489,11 @@ function MyForm({ requirements }) {
 
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <AdaptiveForm value={value} onChange={onChange} components={myComponents} />
+      <AdaptiveForm
+        value={value}
+        onChange={onChange}
+        components={myComponents}
+      />
     </AdaptiveFormProvider>
   );
 }
@@ -449,9 +504,12 @@ The adapter accepts optional `serialize` and `deserialize` functions for custom 
 ### Formik
 
 ```tsx
-import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
-import { useFormikAdapter } from '@kotaio/adaptive-form/react/adapters/formik';
-import { useState } from 'react';
+import {
+  AdaptiveFormProvider,
+  AdaptiveForm,
+} from "@kotaio/adaptive-form/react";
+import { useFormikAdapter } from "@kotaio/adaptive-form/react/adapters/formik";
+import { useState } from "react";
 
 function MyForm({ requirements }) {
   const formik = useFormikContext();
@@ -467,7 +525,7 @@ function MyForm({ requirements }) {
         components={myComponents}
       />
       <button type="submit" disabled={isValidating || !formik.isValid}>
-        {isValidating ? 'Validating...' : 'Submit'}
+        {isValidating ? "Validating..." : "Submit"}
       </button>
     </AdaptiveFormProvider>
   );

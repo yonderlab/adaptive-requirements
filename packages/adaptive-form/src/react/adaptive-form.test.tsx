@@ -434,6 +434,134 @@ describe('phone number validation with phone_valid rule', () => {
   });
 });
 
+describe('adaptiveForm step subtitle rendering', () => {
+  it('renders subtitle below the step title', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'name', type: 'text' }],
+      flow: {
+        mode: 'manual',
+        steps: [{ id: 'step1', title: 'Bank details', subtitle: 'Required by the insurer', fields: ['name'] }],
+      },
+    };
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.getByText('Bank details')).toBeTruthy();
+    expect(screen.getByText('Required by the insurer')).toBeTruthy();
+  });
+
+  it('does not render subtitle element when subtitle is not defined', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'name', type: 'text' }],
+      flow: {
+        mode: 'manual',
+        steps: [{ id: 'step1', title: 'Bank details', fields: ['name'] }],
+      },
+    };
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.getByText('Bank details')).toBeTruthy();
+    // Only the h2 title should exist, no subtitle paragraph
+    const heading = screen.getByText('Bank details');
+    const nextSibling = heading.nextElementSibling;
+    expect(nextSibling?.tagName).not.toBe('P');
+  });
+
+  it('renders subtitle with localized object format', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'name', type: 'text' }],
+      flow: {
+        mode: 'manual',
+        steps: [
+          {
+            id: 'step1',
+            title: { default: 'Bank details' },
+            subtitle: { default: 'Required by the insurer' },
+            fields: ['name'],
+          },
+        ],
+      },
+    };
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm defaultValue={{}} components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.getByText('Required by the insurer')).toBeTruthy();
+  });
+
+  it('passes stepSubtitle to renderStepNavigation callback', () => {
+    let capturedSubtitle: string | undefined;
+
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'name', type: 'text' }],
+      flow: {
+        mode: 'manual',
+        steps: [{ id: 'step1', title: 'Title', subtitle: 'Subtitle text', fields: ['name'] }],
+      },
+    };
+
+    function Wrapper() {
+      const [data, setData] = useState<FormData>({});
+      return (
+        <AdaptiveFormProvider requirements={requirements}>
+          <AdaptiveForm
+            value={data}
+            onChange={setData}
+            components={testComponents}
+            renderStepNavigation={(props) => {
+              capturedSubtitle = props.stepSubtitle;
+              return <div>nav</div>;
+            }}
+          />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    render(<Wrapper />);
+    expect(capturedSubtitle).toBe('Subtitle text');
+  });
+
+  it('renders subtitle in showAllSteps mode', () => {
+    const requirements: RequirementsObject = {
+      fields: [
+        { id: 'name', type: 'text' },
+        { id: 'age', type: 'text' },
+      ],
+      flow: {
+        mode: 'manual',
+        steps: [
+          { id: 'step1', title: 'Step One', subtitle: 'First step description', fields: ['name'] },
+          { id: 'step2', title: 'Step Two', fields: ['age'] },
+        ],
+      },
+    };
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm defaultValue={{}} components={testComponents} showAllSteps />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.getByText('First step description')).toBeTruthy();
+    // Step 2 has no subtitle — should not render an extra paragraph
+    const step2Title = screen.getByText('Step Two');
+    const step2NextSibling = step2Title.nextElementSibling;
+    expect(step2NextSibling?.tagName).not.toBe('P');
+  });
+});
+
 // --- Async validation integration tests ---
 /* eslint-disable require-await */
 

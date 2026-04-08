@@ -26,6 +26,122 @@ Requirement schemas are returned by the API as `RequirementsObject` values. A sc
 
 The engine provides pure functions to evaluate these schemas against the current form data. You never need to construct schemas yourself — they come from the API.
 
+Here is an example of what a schema returned by the API looks like — an employee onboarding form:
+
+```ts
+const requirements: RequirementsObject = {
+  datasets: [
+    {
+      id: 'department',
+      items: [
+        { value: 'engineering', label: { default: 'Engineering' }, region: 'global' },
+        { value: 'sales_eu', label: { default: 'Sales (EU)' }, region: 'eu' },
+        { value: 'sales_us', label: { default: 'Sales (US)' }, region: 'us' },
+        { value: 'support', label: { default: 'Support' }, region: 'global' },
+      ],
+    },
+  ],
+  fields: [
+    // Basic required text field
+    {
+      id: 'first_name',
+      type: 'text',
+      label: { default: 'First name' },
+      validation: { required: true },
+    },
+    // Select with inline options
+    {
+      id: 'country',
+      type: 'select',
+      label: { default: 'Country' },
+      options: [
+        { value: 'de', label: { default: 'Germany' } },
+        { value: 'us', label: { default: 'United States' } },
+        { value: 'gb', label: { default: 'United Kingdom' } },
+      ],
+      validation: { required: true },
+    },
+    // Select from a dataset with filtering — only shows departments matching the selected country's region
+    {
+      id: 'department',
+      type: 'select',
+      label: { default: 'Department' },
+      optionsSource: {
+        dataset: 'department',
+        filter: {
+          or: [
+            { '==': [{ var: 'item.region' }, 'global'] },
+            { '==': [{ var: 'item.region' }, { var: 'answers.country' }] },
+          ],
+        },
+      },
+      validation: { required: true },
+    },
+    // Date field with a validation rule
+    {
+      id: 'start_date',
+      type: 'date',
+      label: { default: 'Start date' },
+      validation: {
+        required: true,
+        rules: [
+          {
+            rule: { '>=': [{ var: 'start_date' }, { today: {} }] },
+            message: 'Start date must be today or later',
+          },
+        ],
+      },
+    },
+    // Computed field — automatically derived from other values
+    {
+      id: 'needs_visa',
+      type: 'computed',
+      readOnly: true,
+      compute: { '!=': [{ var: 'answers.country' }, 'de'] },
+    },
+    // Conditionally visible field — only shown when needs_visa is true
+    {
+      id: 'visa_notes',
+      type: 'textarea',
+      label: { default: 'Visa / work permit details' },
+      visibleWhen: { '==': [{ var: 'answers.needs_visa' }, true] },
+      excludeWhen: { '!=': [{ var: 'answers.needs_visa' }, true] },
+      validation: {
+        requireWhen: { '==': [{ var: 'answers.needs_visa' }, true] },
+      },
+    },
+  ],
+  // Multi-step flow with conditional navigation
+  flow: {
+    steps: [
+      { id: 'personal', title: { default: 'Personal info' }, fields: ['first_name', 'country'] },
+      { id: 'employment', title: { default: 'Employment details' }, fields: ['department', 'start_date', 'needs_visa', 'visa_notes'] },
+    ],
+    navigation: { start: 'personal' },
+  },
+};
+```
+
+The engine evaluates this schema against the current form data to determine the runtime state of each field:
+
+```ts
+import { checkField, calculateData } from '@kotaio/adaptive-requirements-engine';
+
+const formData = { first_name: 'Anna', country: 'us', department: 'engineering', start_date: '2026-05-01' };
+
+// Compute derived values (needs_visa will be true because country !== 'de')
+const computed = calculateData(requirements, formData);
+// { needs_visa: true }
+
+// Merge computed values into form data, then check a field
+const data = { ...formData, ...computed };
+const state = checkField(requirements, 'visa_notes', data);
+
+state.isVisible;  // true — country is 'us', so needs_visa is true
+state.isRequired; // true — requireWhen rule matches
+state.errors;     // ['Required'] — no value provided yet
+```
+
 ## API
 
 ### Field state

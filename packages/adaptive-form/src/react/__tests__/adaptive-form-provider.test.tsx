@@ -63,6 +63,7 @@ function StepperInfoDisplay() {
         {stepInfo.steps.map((step) => (
           <li key={step.id} data-testid={`step-${step.id}`}>
             <span data-testid={`step-${step.id}-title`}>{step.title ?? ''}</span>
+            <span data-testid={`step-${step.id}-subtitle`}>{step.subtitle ?? ''}</span>
             <span data-testid={`step-${step.id}-current`}>{String(step.isCurrent)}</span>
             <span data-testid={`step-${step.id}-valid`}>{String(step.isValid)}</span>
             <span data-testid={`step-${step.id}-visited`}>{String(step.hasBeenVisited)}</span>
@@ -124,6 +125,39 @@ describe('adaptiveFormProvider + useFormInfo', () => {
       expect(screen.getByTestId('step-treatment_details-title').textContent).toBe('Treatment details');
       expect(screen.getByTestId('step-financials-title').textContent).toBe('Financial details');
       expect(screen.getByTestId('step-documentation-title').textContent).toBe('Documentation & declaration');
+    });
+
+    it('exposes step subtitles when defined', () => {
+      const requirements: RequirementsObject = {
+        fields: [
+          { id: 'name', type: 'text' },
+          { id: 'age', type: 'text' },
+        ],
+        flow: {
+          steps: [
+            { id: 'step1', title: 'Step One', subtitle: 'Description for step one', fields: ['name'] },
+            { id: 'step2', title: 'Step Two', fields: ['age'] },
+          ],
+        },
+      };
+
+      render(<ControlledFormWithProvider requirements={requirements} />);
+      expect(screen.getByTestId('step-step1-subtitle').textContent).toBe('Description for step one');
+      expect(screen.getByTestId('step-step2-subtitle').textContent).toBe('');
+    });
+
+    it('resolves localized subtitle objects', () => {
+      const requirements: RequirementsObject = {
+        fields: [{ id: 'name', type: 'text' }],
+        flow: {
+          steps: [
+            { id: 'step1', title: { default: 'Title' }, subtitle: { default: 'Localized subtitle' }, fields: ['name'] },
+          ],
+        },
+      };
+
+      render(<ControlledFormWithProvider requirements={requirements} />);
+      expect(screen.getByTestId('step-step1-subtitle').textContent).toBe('Localized subtitle');
     });
 
     it('marks first step as current and visited', () => {
