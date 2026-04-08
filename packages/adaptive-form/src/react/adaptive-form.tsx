@@ -30,6 +30,9 @@ import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
+/** Field types that receive FieldComputedProps (display-only, no onChange/onBlur) */
+const DISPLAY_ONLY_TYPES = new Set(['computed', 'notice_info', 'notice_warning', 'notice_danger']);
+
 /**
  * Props for individual field input components
  */
@@ -140,6 +143,9 @@ export interface AdaptiveFormProps<TFieldId extends string = string> {
     checkbox?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
     radio?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
     computed?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
+    notice_info?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
+    notice_warning?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
+    notice_danger?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
     [key: string]:
       | ((props: FieldInputProps<TFieldId>) => React.ReactNode)
       | ((props: FieldComputedProps<TFieldId>) => React.ReactNode)
@@ -558,9 +564,9 @@ export function AdaptiveForm<TFieldId extends string = string>({
         return null;
       }
 
-      if (fieldType === 'computed') {
-        const ComputedField = renderFn as React.ComponentType<FieldComputedProps<TFieldId>>;
-        return <ComputedField field={field} value={fieldState.value} isVisible={fieldState.isVisible} />;
+      if (DISPLAY_ONLY_TYPES.has(fieldType)) {
+        const DisplayField = renderFn as React.ComponentType<FieldComputedProps<TFieldId>>;
+        return <DisplayField field={field} value={fieldState.value} isVisible={fieldState.isVisible} />;
       }
 
       const InputField = renderFn as React.ComponentType<FieldInputProps<TFieldId>>;

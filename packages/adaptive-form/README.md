@@ -176,6 +176,42 @@ const components = {
 };
 ```
 
+### Notice fields — `FieldComputedProps`
+
+Notice fields (`notice_info`, `notice_warning`, `notice_danger`) are display-only fields for showing contextual messages. They receive `FieldComputedProps` (same as `computed`) — no `onChange`, no validation, no form submission data.
+
+| Type             | Purpose                                                   |
+| ---------------- | --------------------------------------------------------- |
+| `notice_info`    | Informational context (e.g. "Your scheme begins Jan 1")   |
+| `notice_warning` | Caution the user should be aware of                       |
+| `notice_danger`  | Blocker or critical info (e.g. "Enrolment window closed") |
+
+```tsx
+function NoticeInfo({ field, isVisible }: FieldComputedProps) {
+  if (!isVisible) return null;
+  const label = typeof field.label === 'object' ? field.label.default : field.label;
+  return <div className="notice notice-info">{label}</div>;
+}
+
+const components = {
+  text: (props: FieldInputProps) => <TextInput {...props} />,
+  notice_info: (props: FieldComputedProps) => <NoticeInfo {...props} />,
+  notice_warning: (props: FieldComputedProps) => <NoticeWarning {...props} />,
+  notice_danger: (props: FieldComputedProps) => <NoticeDanger {...props} />,
+};
+```
+
+Notice fields support `visibleWhen` for conditional visibility (driven by JSON Logic rules evaluated by the engine):
+
+```json
+{
+  "id": "enrolment_closed_notice",
+  "type": "notice_danger",
+  "label": { "default": "The enrolment window is closed." },
+  "visibleWhen": { "==": [{ "var": "has_active_policy" }, "no"] }
+}
+```
+
 ## Custom render function
 
 For complete control over how each field renders, use the `renderField` prop. It receives:

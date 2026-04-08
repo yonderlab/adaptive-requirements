@@ -30,7 +30,7 @@ React integration layer and browser utilities: `AdaptiveForm` component, hooks, 
 Three layers within this package:
 
 1. **Core** (`src/core/`) — Browser-capable, framework-agnostic utilities. Browser APIs allowed, React forbidden.
-2. **React** (`src/react/`) — Hooks (`useRequirements`, `useFieldState`, `useCalculatedData`) and `AdaptiveForm` component. Pluggable rendering via `components` prop.
+2. **React** (`src/react/`) — Hooks (`useRequirements`, `useFieldState`, `useCalculatedData`) and `AdaptiveForm` component. Pluggable rendering via `components` prop. Display-only field types (`computed`, `notice_info`, `notice_warning`, `notice_danger`) receive `FieldComputedProps` instead of `FieldInputProps`.
 3. **Adapters** (`src/react/adapters/`) — Form library bridges for React Hook Form and Formik. Return `{ value, onChange }` for controlled mode.
 
 ## Dependencies
