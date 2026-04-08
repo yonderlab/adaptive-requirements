@@ -21,6 +21,7 @@ vi.mock(import('@kotaio/adaptive-requirements-engine'), async (importOriginal) =
   const actual = await importOriginal();
   return {
     ...actual,
+    initializeFormData: actual.initializeFormData,
     runAsyncValidators: (...args: unknown[]) => mockRunAsyncValidators(...args),
   };
 });
