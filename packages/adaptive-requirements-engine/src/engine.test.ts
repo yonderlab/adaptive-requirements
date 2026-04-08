@@ -10,6 +10,7 @@ import {
   checkFieldAsync,
   clearHiddenFieldValues,
   createAdapter,
+  initializeFormData,
   resolveFieldOptions,
   resolveLabel,
   runAsyncValidators,
@@ -1695,5 +1696,118 @@ describe('runValidationRules', () => {
     ];
     const errors = runValidationRules(rules, { data: { start_date: '2025-06-01', end_date: '2025-01-01' } });
     expect(errors).toStrictEqual(['End date must be after start date']);
+  });
+});
+
+describe('field defaultValue support', () => {
+  it('uses defaultValue when no form data is present', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'policy_number', type: 'text', defaultValue: 'POL-123' }],
+    };
+
+    const state = checkField(requirements, 'policy_number', {});
+
+    expect(state.value).toBe('POL-123');
+  });
+
+  it('prefers explicit form data over defaultValue, including null and empty string', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'nickname', type: 'text', defaultValue: 'Default nickname' }],
+    };
+
+    expect(checkField(requirements, 'nickname', { nickname: 'Manual nickname' }).value).toBe('Manual nickname');
+    expect(checkField(requirements, 'nickname', { nickname: null }).value).toBeNull();
+    expect(checkField(requirements, 'nickname', { nickname: '' }).value).toBe('');
+  });
+
+  it('returns undefined when no defaultValue exists', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'middle_name', type: 'text' }],
+    };
+
+    const state = checkField(requirements, 'middle_name', {});
+
+    expect(state.value).toBeUndefined();
+  });
+
+  it('evaluates validation rules using schema defaults when form data is missing', () => {
+    const requirements: RequirementsObject = {
+      fields: [
+        {
+          id: 'country',
+          type: 'text',
+          defaultValue: 'DE',
+        },
+        {
+          id: 'tax_id',
+          type: 'text',
+          validation: {
+            rules: [
+              {
+                rule: { '==': [{ var: 'country' }, 'DE'] },
+                message: 'Country default should be available in validation context',
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const state = checkField(requirements, 'tax_id', {});
+
+    expect(state.errors).toHaveLength(0);
+  });
+});
+
+describe('initializeFormData', () => {
+  it('collects schema field defaults into initial form data', () => {
+    const requirements: RequirementsObject = {
+      fields: [
+        { id: 'first_name', type: 'text', defaultValue: 'Ada' },
+        { id: 'last_name', type: 'text' },
+        { id: 'country', type: 'text', defaultValue: 'IE' },
+        { id: 'wants_marketing', type: 'checkbox', defaultValue: false },
+      ],
+    };
+
+    expect(initializeFormData(requirements)).toStrictEqual({
+      first_name: 'Ada',
+      country: 'IE',
+      wants_marketing: false,
+    });
+  });
+
+  it('clones array defaults so form state cannot mutate schema defaults', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'tags', type: 'text', defaultValue: ['one', 'two'] }],
+    };
+
+    const initialData = initializeFormData(requirements);
+    const tags = initialData['tags'];
+    if (!Array.isArray(tags)) {
+      throw new TypeError('Expected tags default to be an array');
+    }
+
+    tags.push('three');
+
+    expect(requirements.fields[0]?.defaultValue).toStrictEqual(['one', 'two']);
+    expect(initialData['tags']).toStrictEqual(['one', 'two', 'three']);
+  });
+
+  it('checkField returns a cloned array default when data is missing', () => {
+    const requirements: RequirementsObject = {
+      fields: [{ id: 'tags', type: 'text', defaultValue: ['one', 'two'] }],
+    };
+
+    const state = checkField(requirements, 'tags', {});
+    const tags = state.value;
+    if (!Array.isArray(tags)) {
+      throw new TypeError('Expected checkField value to be an array');
+    }
+
+    tags.push('three');
+
+    expect(requirements.fields[0]?.defaultValue).toStrictEqual(['one', 'two']);
+    expect(state.value).toStrictEqual(['one', 'two', 'three']);
   });
 });

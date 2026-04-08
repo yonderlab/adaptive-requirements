@@ -58,13 +58,15 @@ function RequirementsForm({ requirementId }) {
 
 ## Uncontrolled vs controlled mode
 
-**Uncontrolled (recommended):** Pass `defaultValue` and let AdaptiveForm manage state internally. Use native form submission via `name` attributes on your inputs.
+**Uncontrolled (recommended):** Omit `defaultValue` to let AdaptiveForm seed its internal state from any `field.defaultValue` values in the schema. Pass `defaultValue` when you want to explicitly override those schema defaults. Use native form submission via `name` attributes on your inputs.
 
 ```tsx
 <AdaptiveFormProvider requirements={requirements}>
-  <AdaptiveForm defaultValue={{}} components={myComponents} />
+  <AdaptiveForm components={myComponents} />
 </AdaptiveFormProvider>
 ```
+
+If you need the same seeded object outside React, use `initializeFormData(requirements)` from `@kotaio/adaptive-requirements-engine` and pass the result as `defaultValue` or controlled `value`.
 
 **Controlled:** Pass `value` and `onChange` when you need real-time access to form data in the parent.
 
@@ -496,23 +498,23 @@ These are features expressed in the schema that AdaptiveForm handles automatical
 
 ## AdaptiveForm props
 
-| Prop                      | Type                                   | Default  | Description                                    |
-| ------------------------- | -------------------------------------- | -------- | ---------------------------------------------- |
-| `requirements`            | `RequirementsObject`                   | required | The schema from the API                        |
-| `defaultValue`            | `FormData`                             | `{}`     | Initial data (uncontrolled mode)               |
-| `value`                   | `FormData`                             | —        | Current data (controlled mode)                 |
-| `onChange`                | `(data: FormData) => void`             | —        | Change handler (required in controlled mode)   |
-| `onValidationStateChange` | `(isValidating: boolean) => void`      | —        | Called when async validation state transitions |
-| `components`              | `Record<string, (props) => ReactNode>` | —        | Map of field type → render function            |
-| `renderField`             | `(props) => ReactNode`                 | —        | Custom per-field render function               |
-| `renderStepNavigation`    | `(props) => ReactNode`                 | —        | Custom step navigation UI                      |
-| `mapping`                 | `FieldMapping`                         | —        | Field ID remapping                             |
-| `clearHiddenValues`       | `boolean`                              | `false`  | Clear values when fields become hidden         |
-| `showAllSteps`            | `boolean`                              | `false`  | Render all flow steps as sections              |
-| `showAllErrors`           | `boolean`                              | `false`  | Show validation errors before interaction      |
-| `className`               | `string`                               | —        | Container class name                           |
-| `groupClassName`          | `string`                               | —        | Field group container class name               |
-| `children`                | `ReactNode`                            | —        | Content rendered after fields                  |
+| Prop                      | Type                                   | Default         | Description                                                                                   |
+| ------------------------- | -------------------------------------- | --------------- | --------------------------------------------------------------------------------------------- |
+| `requirements`            | `RequirementsObject`                   | required        | The schema from the API                                                                       |
+| `defaultValue`            | `FormData`                             | schema defaults | Initial data override (uncontrolled mode); when omitted, field-level `defaultValue`s are used |
+| `value`                   | `FormData`                             | —               | Current data (controlled mode)                                                                |
+| `onChange`                | `(data: FormData) => void`             | —               | Change handler (required in controlled mode)                                                  |
+| `onValidationStateChange` | `(isValidating: boolean) => void`      | —               | Called when async validation state transitions                                                |
+| `components`              | `Record<string, (props) => ReactNode>` | —               | Map of field type → render function                                                           |
+| `renderField`             | `(props) => ReactNode`                 | —               | Custom per-field render function                                                              |
+| `renderStepNavigation`    | `(props) => ReactNode`                 | —               | Custom step navigation UI                                                                     |
+| `mapping`                 | `FieldMapping`                         | —               | Field ID remapping                                                                            |
+| `clearHiddenValues`       | `boolean`                              | `false`         | Clear values when fields become hidden                                                        |
+| `showAllSteps`            | `boolean`                              | `false`         | Render all flow steps as sections                                                             |
+| `showAllErrors`           | `boolean`                              | `false`         | Show validation errors before interaction                                                     |
+| `className`               | `string`                               | —               | Container class name                                                                          |
+| `groupClassName`          | `string`                               | —               | Field group container class name                                                              |
+| `children`                | `ReactNode`                            | —               | Content rendered after fields                                                                 |
 
 ## License
 
