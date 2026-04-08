@@ -32,7 +32,7 @@ The engine provides pure functions to evaluate these schemas against the current
 
 #### `checkField(requirements, fieldId, data, options?)`
 
-The primary function. Returns the complete runtime state for a single field: visibility, required status, validation errors, resolved options, computed value, and label.
+The primary function. Returns the complete runtime state for a single field: visibility, required status, validation errors, resolved options, computed value, and label. For non-computed fields, an explicit value from `data` wins; otherwise the engine falls back to the field's schema-level `defaultValue`.
 
 ```ts
 import { checkField } from '@kotaio/adaptive-requirements-engine';
@@ -48,6 +48,17 @@ state.value; // current field value (from data or computed)
 state.options; // ResolvedFieldOption[] | undefined — resolved select/radio options
 state.label; // string | undefined — resolved label text
 state.field; // the field definition from the schema
+```
+
+#### `initializeFormData(requirements)`
+
+Builds initial form data from schema-level field defaults. This is useful when your API already returns known answers as `field.defaultValue` and you want to seed form state directly from the schema.
+
+```ts
+import { initializeFormData } from '@kotaio/adaptive-requirements-engine';
+
+const initialData = initializeFormData(requirements);
+// { first_name: 'Ada', country: 'GB' }
 ```
 
 #### `calculateData(requirements, data)`
