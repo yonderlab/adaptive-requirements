@@ -53,10 +53,11 @@ jobs:
       - name: Publish to npm (Trusted Publishing)
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
-          # setup-node sets NODE_AUTH_TOKEN to GITHUB_TOKEN by default,
-          # which breaks npm OIDC Trusted Publishing. Unset it so npm
-          # performs the OIDC token exchange itself via --provenance.
+          # setup-node creates .npmrc with _authToken=${NODE_AUTH_TOKEN}
+          # and sets NODE_AUTH_TOKEN to GITHUB_TOKEN. Both must be cleared
+          # for npm to fall back to OIDC Trusted Publishing via --provenance.
           unset NODE_AUTH_TOKEN
+          sed -i '/_authToken/d' "$NPM_CONFIG_USERCONFIG"
           failed=0
           publish_pkg() {
             local dir=$1
