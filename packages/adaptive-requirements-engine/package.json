@@ -1,6 +1,6 @@
 {
   "name": "@kotaio/adaptive-requirements-engine",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Schema-driven requirements engine with JSON Logic rules for conditional evaluation, validation, and computed fields",
   "license": "Apache-2.0",
   "repository": {
