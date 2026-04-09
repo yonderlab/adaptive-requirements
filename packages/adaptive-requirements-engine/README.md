@@ -133,7 +133,7 @@ The engine evaluates this schema against the current form data to determine the 
 ```ts
 import { checkField, calculateData } from '@kotaio/adaptive-requirements-engine';
 
-const formData = { first_name: 'Anna', country: 'us', department: 'engineering', start_date: '2026-05-01' };
+const formData = { first_name: 'Anna', country: 'us', department: 'engineering', start_date: '2099-01-01' };
 
 // Compute derived values (needs_visa will be true because country !== 'de')
 const computed = calculateData(requirements, formData);

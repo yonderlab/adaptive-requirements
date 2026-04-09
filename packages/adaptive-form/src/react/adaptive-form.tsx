@@ -620,14 +620,8 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
       return (
         <div className={className} role="group" aria-label="Adaptive form with steps">
           {allStepsWithFields.map(({ step, fields }) => {
-            const stepTitle =
-              step.title !== undefined ? (typeof step.title === 'string' ? step.title : step.title.default) : undefined;
-            const stepSubtitle =
-              step.subtitle !== undefined
-                ? typeof step.subtitle === 'string'
-                  ? step.subtitle
-                  : step.subtitle.default
-                : undefined;
+            const stepTitle = resolveLabel(step.title);
+            const stepSubtitle = resolveLabel(step.subtitle);
             return (
               <Fragment key={step.id}>
                 {stepTitle != null && (
@@ -657,18 +651,8 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
       );
     }
 
-    const stepTitle =
-      currentStep?.title !== undefined
-        ? typeof currentStep.title === 'string'
-          ? currentStep.title
-          : currentStep.title.default
-        : undefined;
-    const stepSubtitle =
-      currentStep?.subtitle !== undefined
-        ? typeof currentStep.subtitle === 'string'
-          ? currentStep.subtitle
-          : currentStep.subtitle.default
-        : undefined;
+    const stepTitle = resolveLabel(currentStep?.title);
+    const stepSubtitle = resolveLabel(currentStep?.subtitle);
 
     return (
       <div className={className} role="group" aria-label="Adaptive form with steps">
