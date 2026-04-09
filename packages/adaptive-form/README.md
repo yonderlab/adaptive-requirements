@@ -361,11 +361,11 @@ function MyForm({ requirements }) {
 }
 ```
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `currentStepId` | `string` | Controlled mode — provider uses this instead of internal state |
-| `onStepChange` | `(stepId: string) => void` | Called when the form wants to navigate (next/previous) |
-| `defaultStepId` | `string` | Uncontrolled mode — sets the initial step instead of the first step in the flow |
+| Prop            | Type                       | Description                                                                     |
+| --------------- | -------------------------- | ------------------------------------------------------------------------------- |
+| `currentStepId` | `string`                   | Controlled mode — provider uses this instead of internal state                  |
+| `onStepChange`  | `(stepId: string) => void` | Called when the form wants to navigate (next/previous)                          |
+| `defaultStepId` | `string`                   | Uncontrolled mode — sets the initial step instead of the first step in the flow |
 
 When `currentStepId` is provided, the provider does not update the step internally — `onStepChange` fires and the consumer is responsible for updating `currentStepId`. When omitted, the provider manages step state itself (existing behaviour). `onStepChange` is called in both modes, so it can also be used as a notification callback in uncontrolled mode.
 

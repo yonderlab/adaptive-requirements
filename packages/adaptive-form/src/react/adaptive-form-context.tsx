@@ -88,12 +88,33 @@ export function AdaptiveFormProvider({
 }) {
   const { flow } = requirements;
 
-  const [internalStepId, setInternalStepId] = useState<string>(() =>
-    defaultStepId ?? (flow ? getInitialStepId(flow) : ''),
-  );
+  const validStepIds = flow ? new Set(flow.steps.map((s) => s.id)) : new Set<string>();
+
+  const [internalStepId, setInternalStepId] = useState<string>(() => {
+    if (defaultStepId !== undefined) {
+      if (validStepIds.has(defaultStepId)) {
+        return defaultStepId;
+      }
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          `[AdaptiveFormProvider] defaultStepId "${defaultStepId}" does not match any step in the flow. Falling back to the first step.`,
+        );
+      }
+    }
+    return flow ? getInitialStepId(flow) : '';
+  });
   const isStepControlled = controlledStepId !== undefined;
   const hasExplicitStepId = isStepControlled || defaultStepId !== undefined;
-  const activeStepId = isStepControlled ? controlledStepId : internalStepId;
+
+  let activeStepId = isStepControlled ? controlledStepId : internalStepId;
+  if (activeStepId && !validStepIds.has(activeStepId)) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        `[AdaptiveFormProvider] currentStepId "${activeStepId}" does not match any step in the flow. Falling back to the first step.`,
+      );
+    }
+    activeStepId = flow ? getInitialStepId(flow) : '';
+  }
 
   const handleSetStep = useCallback(
     (id: string) => {
@@ -106,6 +127,21 @@ export function AdaptiveFormProvider({
   );
 
   const [visitedSteps, setVisitedSteps] = useState<Set<string>>(() => new Set(activeStepId ? [activeStepId] : []));
+
+  // Keep visitedSteps in sync when the active step changes externally (e.g. controlled mode URL sync)
+  useEffect(() => {
+    if (!activeStepId) {
+      return;
+    }
+    setVisitedSteps((prev) => {
+      if (prev.has(activeStepId)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(activeStepId);
+      return next;
+    });
+  }, [activeStepId]);
 
   const [stepInfo, setStepperInfo] = useState<StepperInfo>(() => {
     if (!flow) {
@@ -191,7 +227,17 @@ export function AdaptiveFormProvider({
       stepInfo,
       _setStepperInfo: setStepperInfo,
     }),
-    [requirements, activeStepId, handleSetStep, isStepControlled, hasExplicitStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
+    [
+      requirements,
+      activeStepId,
+      handleSetStep,
+      isStepControlled,
+      hasExplicitStepId,
+      visitedSteps,
+      markStepVisited,
+      replaceVisitedSteps,
+      stepInfo,
+    ],
   );
 
   return <AdaptiveFormContext.Provider value={value}>{children}</AdaptiveFormContext.Provider>;

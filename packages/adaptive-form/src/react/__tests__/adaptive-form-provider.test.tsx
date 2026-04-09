@@ -309,20 +309,10 @@ describe('adaptiveFormProvider + useFormInfo', () => {
   });
 
   describe('controlled step mode', () => {
-    function ControlledStepForm({
-      stepId,
-      onStepChange,
-    }: {
-      stepId: string;
-      onStepChange: (id: string) => void;
-    }) {
+    function ControlledStepForm({ stepId, onStepChange }: { stepId: string; onStepChange: (id: string) => void }) {
       const [data, setData] = useState<FormData>(medicalClaimData);
       return (
-        <AdaptiveFormProvider
-          requirements={schema}
-          currentStepId={stepId}
-          onStepChange={onStepChange}
-        >
+        <AdaptiveFormProvider requirements={schema} currentStepId={stepId} onStepChange={onStepChange}>
           <StepperInfoDisplay />
           <AdaptiveForm value={data} onChange={setData} components={testComponents} />
         </AdaptiveFormProvider>
@@ -378,10 +368,13 @@ describe('adaptiveFormProvider + useFormInfo', () => {
             <button type="button" onClick={() => setStepId('treatment_details')}>
               Go to treatment
             </button>
-            <ControlledStepForm stepId={stepId} onStepChange={(id) => {
-              onStepChange(id);
-              setStepId(id);
-            }} />
+            <ControlledStepForm
+              stepId={stepId}
+              onStepChange={(id) => {
+                onStepChange(id);
+                setStepId(id);
+              }}
+            />
           </>
         );
       }
@@ -416,6 +409,79 @@ describe('adaptiveFormProvider + useFormInfo', () => {
       expect(onStepChange).toHaveBeenCalledWith('treatment_details');
       // Step also changes internally in uncontrolled mode
       expect(screen.getByTestId('current-step-id').textContent).toBe('treatment_details');
+    });
+  });
+
+  describe('invalid step ID fallback', () => {
+    it('falls back to first step when currentStepId does not match any step', () => {
+      const onStepChange = vi.fn();
+      const [data, setData] = [medicalClaimData, vi.fn()];
+
+      render(
+        <AdaptiveFormProvider requirements={schema} currentStepId="nonexistent_step" onStepChange={onStepChange}>
+          <StepperInfoDisplay />
+          <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+        </AdaptiveFormProvider>,
+      );
+
+      expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
+    });
+
+    it('falls back to first step when defaultStepId does not match any step', () => {
+      function FormWithBadDefault() {
+        const [data, setData] = useState<FormData>(medicalClaimData);
+        return (
+          <AdaptiveFormProvider requirements={schema} defaultStepId="nonexistent_step">
+            <StepperInfoDisplay />
+            <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+          </AdaptiveFormProvider>
+        );
+      }
+
+      render(<FormWithBadDefault />);
+      expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
+    });
+  });
+
+  describe('visited steps sync in controlled mode', () => {
+    it('marks step as visited when currentStepId changes externally', async () => {
+      const user = userEvent.setup();
+      const onStepChange = vi.fn();
+
+      function ControlledStepWrapper() {
+        const [stepId, setStepId] = useState('claim_info');
+        const [data, setData] = useState<FormData>(medicalClaimData);
+        return (
+          <>
+            <button type="button" onClick={() => setStepId('financials')}>
+              Jump to financials
+            </button>
+            <AdaptiveFormProvider
+              requirements={schema}
+              currentStepId={stepId}
+              onStepChange={(id) => {
+                onStepChange(id);
+                setStepId(id);
+              }}
+            >
+              <StepperInfoDisplay />
+              <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+            </AdaptiveFormProvider>
+          </>
+        );
+      }
+
+      render(<ControlledStepWrapper />);
+
+      // treatment_details has not been visited yet
+      expect(screen.getByTestId('step-financials-visited').textContent).toBe('false');
+
+      // Jump directly to financials (skipping treatment_details)
+      await user.click(screen.getByText('Jump to financials'));
+
+      // financials should now be both current and visited
+      expect(screen.getByTestId('current-step-id').textContent).toBe('financials');
+      expect(screen.getByTestId('step-financials-visited').textContent).toBe('true');
     });
   });
 });

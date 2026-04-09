@@ -254,7 +254,7 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
   // Correct the provider's initial step — the provider can't skip empty steps because
   // it doesn't have access to formData. On mount (or when requirements changes),
   // compute the correct initial step and push it to context if it differs.
-  // Skip this correction in controlled mode — the consumer owns the step.
+  // Skip when the consumer explicitly set a step ID (controlled mode or defaultStepId).
   const hasCorrectedInitialStep = useRef(false);
   const prevRequirementsRef = useRef(requirements);
   useEffect(() => {
