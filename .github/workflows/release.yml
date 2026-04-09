@@ -29,7 +29,6 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -53,11 +52,7 @@ jobs:
       - name: Publish to npm (Trusted Publishing)
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
-          # Completely bypass the .npmrc that setup-node created (it sets
-          # _authToken to GITHUB_TOKEN, which interferes with OIDC Trusted
-          # Publishing). Unsetting both lets npm perform native OIDC auth.
-          unset NODE_AUTH_TOKEN
-          unset NPM_CONFIG_USERCONFIG
+          npm install -g npm@latest
           failed=0
           publish_pkg() {
             local dir=$1
