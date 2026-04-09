@@ -7,7 +7,8 @@ import {
   claimsSubmissionSchema as schema,
   medicalClaimData,
 } from '@kotaio/adaptive-requirements-engine/test-fixtures/claims-submission';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -186,49 +187,53 @@ describe('adaptiveFormProvider + useFormInfo', () => {
   });
 
   describe('step info updates on navigation', () => {
-    it('updates current step after navigating forward', () => {
+    it('updates current step after navigating forward', async () => {
+      const user = userEvent.setup();
       render(<ControlledFormWithProvider requirements={schema} initialData={medicalClaimData} />);
 
       expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
 
-      fireEvent.click(screen.getByText('Next'));
+      await user.click(screen.getByText('Next'));
 
       expect(screen.getByTestId('current-step-id').textContent).toBe('treatment_details');
       expect(screen.getByTestId('current-step-index').textContent).toBe('1');
     });
 
-    it('updates current step after navigating backward', () => {
+    it('updates current step after navigating backward', async () => {
+      const user = userEvent.setup();
       render(<ControlledFormWithProvider requirements={schema} initialData={medicalClaimData} />);
 
-      fireEvent.click(screen.getByText('Next'));
+      await user.click(screen.getByText('Next'));
       expect(screen.getByTestId('current-step-id').textContent).toBe('treatment_details');
 
-      fireEvent.click(screen.getByText('Previous'));
+      await user.click(screen.getByText('Previous'));
       expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
       expect(screen.getByTestId('current-step-index').textContent).toBe('0');
     });
   });
 
   describe('visited steps tracking', () => {
-    it('marks steps as visited after navigation', () => {
+    it('marks steps as visited after navigation', async () => {
+      const user = userEvent.setup();
       render(<ControlledFormWithProvider requirements={schema} initialData={medicalClaimData} />);
 
       expect(screen.getByTestId('step-claim_info-visited').textContent).toBe('true');
       expect(screen.getByTestId('step-treatment_details-visited').textContent).toBe('false');
 
-      fireEvent.click(screen.getByText('Next'));
+      await user.click(screen.getByText('Next'));
 
       expect(screen.getByTestId('step-claim_info-visited').textContent).toBe('true');
       expect(screen.getByTestId('step-treatment_details-visited').textContent).toBe('true');
     });
 
-    it('retains visited state when navigating back', () => {
+    it('retains visited state when navigating back', async () => {
+      const user = userEvent.setup();
       render(<ControlledFormWithProvider requirements={schema} initialData={medicalClaimData} />);
 
-      fireEvent.click(screen.getByText('Next'));
+      await user.click(screen.getByText('Next'));
       expect(screen.getByTestId('step-treatment_details-visited').textContent).toBe('true');
 
-      fireEvent.click(screen.getByText('Previous'));
+      await user.click(screen.getByText('Previous'));
       expect(screen.getByTestId('step-treatment_details-visited').textContent).toBe('true');
     });
   });
@@ -330,36 +335,40 @@ describe('adaptiveFormProvider + useFormInfo', () => {
       expect(screen.getByTestId('current-step-id').textContent).toBe('treatment_details');
     });
 
-    it('calls onStepChange with next step id when Next is clicked', () => {
+    it('calls onStepChange with next step id when Next is clicked', async () => {
+      const user = userEvent.setup();
       const onStepChange = vi.fn();
       render(<ControlledStepForm stepId="claim_info" onStepChange={onStepChange} />);
 
-      fireEvent.click(screen.getByText('Next'));
+      await user.click(screen.getByText('Next'));
 
       expect(onStepChange).toHaveBeenCalledWith('treatment_details');
     });
 
-    it('calls onStepChange with previous step id when Previous is clicked', () => {
+    it('calls onStepChange with previous step id when Previous is clicked', async () => {
+      const user = userEvent.setup();
       const onStepChange = vi.fn();
       render(<ControlledStepForm stepId="treatment_details" onStepChange={onStepChange} />);
 
-      fireEvent.click(screen.getByText('Previous'));
+      await user.click(screen.getByText('Previous'));
 
       expect(onStepChange).toHaveBeenCalledWith('claim_info');
     });
 
-    it('does not change step internally — only changes when prop changes', () => {
+    it('does not change step internally — only changes when prop changes', async () => {
+      const user = userEvent.setup();
       const onStepChange = vi.fn();
       render(<ControlledStepForm stepId="claim_info" onStepChange={onStepChange} />);
 
-      fireEvent.click(screen.getByText('Next'));
+      await user.click(screen.getByText('Next'));
 
       // onStepChange was called, but currentStepId prop hasn't changed
       expect(onStepChange).toHaveBeenCalledWith('treatment_details');
       expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
     });
 
-    it('updates displayed step when currentStepId prop changes', () => {
+    it('updates displayed step when currentStepId prop changes', async () => {
+      const user = userEvent.setup();
       const onStepChange = vi.fn();
 
       function ControlledStepWrapper() {
@@ -380,13 +389,14 @@ describe('adaptiveFormProvider + useFormInfo', () => {
       render(<ControlledStepWrapper />);
       expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
 
-      fireEvent.click(screen.getByText('Go to treatment'));
+      await user.click(screen.getByText('Go to treatment'));
       expect(screen.getByTestId('current-step-id').textContent).toBe('treatment_details');
     });
   });
 
   describe('onStepChange in uncontrolled mode', () => {
-    it('calls onStepChange as notification when navigating', () => {
+    it('calls onStepChange as notification when navigating', async () => {
+      const user = userEvent.setup();
       const onStepChange = vi.fn();
 
       function UncontrolledWithCallback() {
@@ -401,7 +411,7 @@ describe('adaptiveFormProvider + useFormInfo', () => {
 
       render(<UncontrolledWithCallback />);
 
-      fireEvent.click(screen.getByText('Next'));
+      await user.click(screen.getByText('Next'));
 
       expect(onStepChange).toHaveBeenCalledWith('treatment_details');
       // Step also changes internally in uncontrolled mode

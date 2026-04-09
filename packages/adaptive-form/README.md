@@ -338,6 +338,37 @@ function MyForm({ requirements }) {
 }
 ```
 
+### Controlled step mode (URL sync)
+
+By default, `AdaptiveFormProvider` manages the current step internally. When you need to sync the step with the browser URL (so back/forward navigation works), use controlled step mode:
+
+```tsx
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
+
+function MyForm({ requirements }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stepId = searchParams.get('step') ?? undefined;
+
+  return (
+    <AdaptiveFormProvider
+      requirements={requirements}
+      currentStepId={stepId}
+      onStepChange={(id) => setSearchParams({ step: id })}
+    >
+      <AdaptiveForm defaultValue={{}} components={myComponents} />
+    </AdaptiveFormProvider>
+  );
+}
+```
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `currentStepId` | `string` | Controlled mode — provider uses this instead of internal state |
+| `onStepChange` | `(stepId: string) => void` | Called when the form wants to navigate (next/previous) |
+| `defaultStepId` | `string` | Uncontrolled mode — sets the initial step instead of the first step in the flow |
+
+When `currentStepId` is provided, the provider does not update the step internally — `onStepChange` fires and the consumer is responsible for updating `currentStepId`. When omitted, the provider manages step state itself (existing behaviour). `onStepChange` is called in both modes, so it can also be used as a notification callback in uncontrolled mode.
+
 `AdaptiveForm` must be rendered inside an `AdaptiveFormProvider`. The provider supplies `requirements` via context and enables siblings to read step state via `useFormInfo()`.
 
 `useFormInfo()` returns a `StepperInfo` object:
