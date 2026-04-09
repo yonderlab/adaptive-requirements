@@ -1,5 +1,11 @@
 # @kotaio/adaptive-requirements-engine
 
+## 2.1.0
+
+### Minor Changes
+
+- [#38](https://github.com/yonderlab/adaptive-requirements/pull/38) [`65047d3`](https://github.com/yonderlab/adaptive-requirements/commit/65047d36130164ceba6c54464c43a7bab39acf61) Thanks [@Artmann](https://github.com/Artmann)! - Add optional `subtitle` to flow steps, rendered below the step title with aria-describedby for accessibility.
+
 ## 2.0.0
 
 ### Major Changes
