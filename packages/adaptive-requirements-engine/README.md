@@ -145,7 +145,7 @@ const state = checkField(requirements, 'visa_notes', data);
 
 state.isVisible; // true — country is 'us', so needs_visa is true
 state.isRequired; // true — requireWhen rule matches
-state.errors; // ['Required'] — no value provided yet
+state.errors; // ['This field is required'] — no value provided yet
 ```
 
 ## API
