@@ -52,7 +52,6 @@ jobs:
       - name: Publish to npm (Trusted Publishing)
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
-          npm install -g npm@latest
           failed=0
           publish_pkg() {
             local dir=$1
@@ -64,7 +63,7 @@ jobs:
             else
               echo "Publishing ${name}@${version}..."
               TARBALL=$(pnpm pack --pack-destination /tmp)
-              if ! npm publish "$TARBALL" --provenance --access public; then
+              if ! npx npm@latest publish "$TARBALL" --provenance --access public; then
                 echo "::error::Failed to publish ${name}@${version}"
                 failed=1
               fi
