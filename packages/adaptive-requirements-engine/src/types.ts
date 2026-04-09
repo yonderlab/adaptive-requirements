@@ -208,6 +208,7 @@ export interface Dataset {
 export interface FlowStep {
   id: string;
   title?: LocalizedLabel;
+  subtitle?: LocalizedLabel;
   fields: string[];
 }
 

@@ -95,6 +95,7 @@ export interface StepNavigationProps {
   onPrevious: () => void;
   onNext: () => void;
   stepTitle?: string;
+  stepSubtitle?: string;
   currentStepIndex: number;
   totalSteps: number;
   /** Read-only details for all steps in the flow (id, title, validity, visited state) */
@@ -431,9 +432,11 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
         return state.errors.length === 0 && asyncErrors.length === 0;
       });
       const title = resolveLabel(step.title);
+      const subtitle = resolveLabel(step.subtitle);
       return {
         id: step.id,
         title,
+        subtitle,
         isCurrent: step.id === currentStepId,
         isValid: stepIsValid,
         hasBeenVisited: visitedSteps.has(step.id),
@@ -617,8 +620,8 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
       return (
         <div className={className} role="group" aria-label="Adaptive form with steps">
           {allStepsWithFields.map(({ step, fields }) => {
-            const stepTitle =
-              step.title !== undefined ? (typeof step.title === 'string' ? step.title : step.title.default) : undefined;
+            const stepTitle = resolveLabel(step.title);
+            const stepSubtitle = resolveLabel(step.subtitle);
             return (
               <Fragment key={step.id}>
                 {stepTitle != null && (
@@ -626,9 +629,15 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
                     {stepTitle}
                   </h2>
                 )}
+                {stepSubtitle != null && (
+                  <p className="text-muted-foreground mb-4 text-sm" id={`step-${step.id}-subtitle`}>
+                    {stepSubtitle}
+                  </p>
+                )}
                 <div
                   className={groupClassName}
                   aria-labelledby={stepTitle != null ? `step-${step.id}-title` : undefined}
+                  aria-describedby={stepSubtitle != null ? `step-${step.id}-subtitle` : undefined}
                 >
                   {fields.map((field) => (
                     <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
@@ -642,12 +651,8 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
       );
     }
 
-    const stepTitle =
-      currentStep?.title !== undefined
-        ? typeof currentStep.title === 'string'
-          ? currentStep.title
-          : currentStep.title.default
-        : undefined;
+    const stepTitle = resolveLabel(currentStep?.title);
+    const stepSubtitle = resolveLabel(currentStep?.subtitle);
 
     return (
       <div className={className} role="group" aria-label="Adaptive form with steps">
@@ -656,7 +661,16 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
             {stepTitle}
           </h2>
         )}
-        <div className={groupClassName} aria-labelledby={stepTitle != null ? `step-${currentStepId}-title` : undefined}>
+        {stepSubtitle != null && (
+          <p className="text-muted-foreground mb-4 text-sm" id={`step-${currentStepId}-subtitle`}>
+            {stepSubtitle}
+          </p>
+        )}
+        <div
+          className={groupClassName}
+          aria-labelledby={stepTitle != null ? `step-${currentStepId}-title` : undefined}
+          aria-describedby={stepSubtitle != null ? `step-${currentStepId}-subtitle` : undefined}
+        >
           {currentStepFields.map((field) => (
             <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
           ))}
@@ -669,6 +683,7 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
             onPrevious: handlePrevious,
             onNext: handleNext,
             stepTitle,
+            stepSubtitle,
             currentStepIndex: Math.max(currentStepIndex, 0),
             totalSteps,
             steps: stepDetails,
@@ -690,7 +705,9 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
                 onClick={handleNext}
                 aria-disabled={!currentStepIsValid || undefined}
                 title={!currentStepIsValid ? 'Fix validation errors to continue' : undefined}
-                className={`bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90${!currentStepIsValid ? ' cursor-not-allowed opacity-50' : ''}`}
+                className={`bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90${
+                  !currentStepIsValid ? ' cursor-not-allowed opacity-50' : ''
+                }`}
               >
                 Next
               </button>
