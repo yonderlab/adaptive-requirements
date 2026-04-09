@@ -95,7 +95,7 @@ export function AdaptiveFormProvider({
       if (validStepIds.has(defaultStepId)) {
         return defaultStepId;
       }
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env['NODE_ENV'] !== 'production') {
         console.warn(
           `[AdaptiveFormProvider] defaultStepId "${defaultStepId}" does not match any step in the flow. Falling back to the first step.`,
         );
@@ -108,7 +108,7 @@ export function AdaptiveFormProvider({
 
   let activeStepId = isStepControlled ? controlledStepId : internalStepId;
   if (activeStepId && !validStepIds.has(activeStepId)) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env['NODE_ENV'] !== 'production') {
       console.warn(
         `[AdaptiveFormProvider] currentStepId "${activeStepId}" does not match any step in the flow. Falling back to the first step.`,
       );
