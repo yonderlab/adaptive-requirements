@@ -57,6 +57,7 @@ jobs:
           # which breaks npm OIDC Trusted Publishing. Unset it so npm
           # performs the OIDC token exchange itself via --provenance.
           unset NODE_AUTH_TOKEN
+          failed=0
           publish_pkg() {
             local dir=$1
             cd "packages/$dir"
@@ -67,9 +68,13 @@ jobs:
             else
               echo "Publishing ${name}@${version}..."
               TARBALL=$(pnpm pack --pack-destination /tmp)
-              npm publish "$TARBALL" --provenance --access public
+              if ! npm publish "$TARBALL" --provenance --access public; then
+                echo "::error::Failed to publish ${name}@${version}"
+                failed=1
+              fi
             fi
             cd "$GITHUB_WORKSPACE"
           }
           publish_pkg adaptive-requirements-engine
           publish_pkg adaptive-form
+          exit "$failed"
