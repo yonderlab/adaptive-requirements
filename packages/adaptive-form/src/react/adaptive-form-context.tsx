@@ -178,7 +178,10 @@ export function AdaptiveFormProvider({
     const newFallback = flow ? getInitialStepId(flow) : '';
     const newInternalId = defaultStepId !== undefined && newValidIds.has(defaultStepId) ? defaultStepId : newFallback;
     setInternalStepId(newInternalId);
-    const effectiveId: string = controlledStepId !== undefined ? controlledStepId : newInternalId;
+    let effectiveId: string = controlledStepId !== undefined ? controlledStepId : newInternalId;
+    if (effectiveId && !newValidIds.has(effectiveId)) {
+      effectiveId = newFallback;
+    }
     setVisitedSteps(new Set(effectiveId ? [effectiveId] : []));
     if (!flow) {
       setStepperInfo({ currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] });
