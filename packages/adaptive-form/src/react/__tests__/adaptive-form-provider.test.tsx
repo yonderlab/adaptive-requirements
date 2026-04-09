@@ -9,7 +9,7 @@ import {
 } from '@kotaio/adaptive-requirements-engine/test-fixtures/claims-submission';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AdaptiveForm } from '../adaptive-form';
 import { AdaptiveFormProvider, useFormInfo } from '../adaptive-form-context';
@@ -278,6 +278,134 @@ describe('adaptiveFormProvider + useFormInfo', () => {
       expect(capturedSteps![0]!.id).toBe('claim_info');
       expect(capturedSteps![0]!.isCurrent).toBeTruthy();
       expect(capturedSteps![1]!.isCurrent).toBeFalsy();
+    });
+  });
+
+  describe('defaultStepId (uncontrolled)', () => {
+    it('starts on the specified step when defaultStepId is provided', () => {
+      function FormWithDefaultStep() {
+        const [data, setData] = useState<FormData>(medicalClaimData);
+        return (
+          <AdaptiveFormProvider requirements={schema} defaultStepId="treatment_details">
+            <StepperInfoDisplay />
+            <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+          </AdaptiveFormProvider>
+        );
+      }
+
+      render(<FormWithDefaultStep />);
+      expect(screen.getByTestId('current-step-id').textContent).toBe('treatment_details');
+    });
+
+    it('falls back to first step when defaultStepId is omitted', () => {
+      render(<ControlledFormWithProvider requirements={schema} initialData={medicalClaimData} />);
+      expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
+    });
+  });
+
+  describe('controlled step mode', () => {
+    function ControlledStepForm({
+      stepId,
+      onStepChange,
+    }: {
+      stepId: string;
+      onStepChange: (id: string) => void;
+    }) {
+      const [data, setData] = useState<FormData>(medicalClaimData);
+      return (
+        <AdaptiveFormProvider
+          requirements={schema}
+          currentStepId={stepId}
+          onStepChange={onStepChange}
+        >
+          <StepperInfoDisplay />
+          <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    it('renders the step specified by currentStepId prop', () => {
+      const onStepChange = vi.fn();
+      render(<ControlledStepForm stepId="treatment_details" onStepChange={onStepChange} />);
+      expect(screen.getByTestId('current-step-id').textContent).toBe('treatment_details');
+    });
+
+    it('calls onStepChange with next step id when Next is clicked', () => {
+      const onStepChange = vi.fn();
+      render(<ControlledStepForm stepId="claim_info" onStepChange={onStepChange} />);
+
+      fireEvent.click(screen.getByText('Next'));
+
+      expect(onStepChange).toHaveBeenCalledWith('treatment_details');
+    });
+
+    it('calls onStepChange with previous step id when Previous is clicked', () => {
+      const onStepChange = vi.fn();
+      render(<ControlledStepForm stepId="treatment_details" onStepChange={onStepChange} />);
+
+      fireEvent.click(screen.getByText('Previous'));
+
+      expect(onStepChange).toHaveBeenCalledWith('claim_info');
+    });
+
+    it('does not change step internally — only changes when prop changes', () => {
+      const onStepChange = vi.fn();
+      render(<ControlledStepForm stepId="claim_info" onStepChange={onStepChange} />);
+
+      fireEvent.click(screen.getByText('Next'));
+
+      // onStepChange was called, but currentStepId prop hasn't changed
+      expect(onStepChange).toHaveBeenCalledWith('treatment_details');
+      expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
+    });
+
+    it('updates displayed step when currentStepId prop changes', () => {
+      const onStepChange = vi.fn();
+
+      function ControlledStepWrapper() {
+        const [stepId, setStepId] = useState('claim_info');
+        return (
+          <>
+            <button type="button" onClick={() => setStepId('treatment_details')}>
+              Go to treatment
+            </button>
+            <ControlledStepForm stepId={stepId} onStepChange={(id) => {
+              onStepChange(id);
+              setStepId(id);
+            }} />
+          </>
+        );
+      }
+
+      render(<ControlledStepWrapper />);
+      expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
+
+      fireEvent.click(screen.getByText('Go to treatment'));
+      expect(screen.getByTestId('current-step-id').textContent).toBe('treatment_details');
+    });
+  });
+
+  describe('onStepChange in uncontrolled mode', () => {
+    it('calls onStepChange as notification when navigating', () => {
+      const onStepChange = vi.fn();
+
+      function UncontrolledWithCallback() {
+        const [data, setData] = useState<FormData>(medicalClaimData);
+        return (
+          <AdaptiveFormProvider requirements={schema} onStepChange={onStepChange}>
+            <StepperInfoDisplay />
+            <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+          </AdaptiveFormProvider>
+        );
+      }
+
+      render(<UncontrolledWithCallback />);
+
+      fireEvent.click(screen.getByText('Next'));
+
+      expect(onStepChange).toHaveBeenCalledWith('treatment_details');
+      // Step also changes internally in uncontrolled mode
+      expect(screen.getByTestId('current-step-id').textContent).toBe('treatment_details');
     });
   });
 });

@@ -249,14 +249,18 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
   const isControlled = controlledValue !== undefined;
   const formData = isControlled ? controlledValue : internalValue;
 
-  const { currentStepId, setCurrentStepId, visitedSteps, markStepVisited } = ctx;
+  const { currentStepId, setCurrentStepId, hasExplicitStepId, visitedSteps, markStepVisited } = ctx;
 
   // Correct the provider's initial step — the provider can't skip empty steps because
   // it doesn't have access to formData. On mount (or when requirements changes),
   // compute the correct initial step and push it to context if it differs.
+  // Skip this correction in controlled mode — the consumer owns the step.
   const hasCorrectedInitialStep = useRef(false);
   const prevRequirementsRef = useRef(requirements);
   useEffect(() => {
+    if (hasExplicitStepId) {
+      return;
+    }
     if (prevRequirementsRef.current !== requirements) {
       prevRequirementsRef.current = requirements;
       hasCorrectedInitialStep.current = false;
@@ -272,7 +276,7 @@ export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFo
       // doesn't remain marked as visited.
       ctx.replaceVisitedSteps(new Set([correctStepId]));
     }
-  }, [ctx, flow, requirements, formData]);
+  }, [ctx, flow, requirements, formData, hasExplicitStepId]);
 
   // Touched field tracking — errors are only shown for fields the user has interacted with
   const [touchedFields, setTouchedFields] = useState<Set<string>>(() => new Set());

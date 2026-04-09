@@ -34,6 +34,8 @@ export interface AdaptiveFormContextValue {
   requirements: RequirementsObject;
   currentStepId: string;
   setCurrentStepId: (id: string) => void;
+  isStepControlled: boolean;
+  hasExplicitStepId: boolean;
   visitedSteps: ReadonlySet<string>;
   markStepVisited: (id: string) => void;
   replaceVisitedSteps: (ids: Set<string>) => void;
@@ -47,10 +49,23 @@ export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null
  * Required provider that supplies `requirements` to `AdaptiveForm` and enables
  * sibling components to read step information via the `useFormInfo()` hook.
  *
+ * Supports both controlled and uncontrolled step modes:
+ * - **Uncontrolled (default):** Step is managed internally. Use `defaultStepId` to set the initial step.
+ * - **Controlled:** Pass `currentStepId` and `onStepChange` to manage the step externally (e.g. URL sync).
+ *
  * @example
  * ```tsx
+ * // Uncontrolled (default)
  * <AdaptiveFormProvider requirements={requirements}>
- *   <ProgressStepper />
+ *   <AdaptiveForm components={...} />
+ * </AdaptiveFormProvider>
+ *
+ * // Controlled (URL sync)
+ * <AdaptiveFormProvider
+ *   requirements={requirements}
+ *   currentStepId={searchParams.get('step') ?? undefined}
+ *   onStepChange={(id) => setSearchParams({ step: id })}
+ * >
  *   <AdaptiveForm components={...} />
  * </AdaptiveFormProvider>
  * ```
@@ -58,21 +73,45 @@ export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null
 export function AdaptiveFormProvider({
   requirements,
   children,
+  currentStepId: controlledStepId,
+  onStepChange,
+  defaultStepId,
 }: {
   requirements: RequirementsObject;
   children: React.ReactNode;
+  /** Controlled mode — provider uses this instead of internal state. */
+  currentStepId?: string;
+  /** Called when the form wants to navigate (next/previous). */
+  onStepChange?: (stepId: string) => void;
+  /** Uncontrolled mode — sets the initial step instead of the first step in the flow. */
+  defaultStepId?: string;
 }) {
   const { flow } = requirements;
 
-  const [currentStepId, setCurrentStepId] = useState<string>(() => (flow ? getInitialStepId(flow) : ''));
+  const [internalStepId, setInternalStepId] = useState<string>(() =>
+    defaultStepId ?? (flow ? getInitialStepId(flow) : ''),
+  );
+  const isStepControlled = controlledStepId !== undefined;
+  const hasExplicitStepId = isStepControlled || defaultStepId !== undefined;
+  const activeStepId = isStepControlled ? controlledStepId : internalStepId;
 
-  const [visitedSteps, setVisitedSteps] = useState<Set<string>>(() => new Set(currentStepId ? [currentStepId] : []));
+  const handleSetStep = useCallback(
+    (id: string) => {
+      if (!isStepControlled) {
+        setInternalStepId(id);
+      }
+      onStepChange?.(id);
+    },
+    [isStepControlled, onStepChange],
+  );
+
+  const [visitedSteps, setVisitedSteps] = useState<Set<string>>(() => new Set(activeStepId ? [activeStepId] : []));
 
   const [stepInfo, setStepperInfo] = useState<StepperInfo>(() => {
     if (!flow) {
       return { currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] };
     }
-    const initialId = getInitialStepId(flow);
+    const initialId = activeStepId || getInitialStepId(flow);
     return {
       currentStepId: initialId,
       currentStepIndex: Math.max(
@@ -99,15 +138,16 @@ export function AdaptiveFormProvider({
     }
     prevFlowRef.current = flow;
     const newInitialId = flow ? getInitialStepId(flow) : '';
-    setCurrentStepId(newInitialId);
-    setVisitedSteps(new Set(newInitialId ? [newInitialId] : []));
+    setInternalStepId(newInitialId);
+    const effectiveId = isStepControlled ? controlledStepId : newInitialId;
+    setVisitedSteps(new Set(effectiveId ? [effectiveId] : []));
     if (!flow) {
       setStepperInfo({ currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] });
     } else {
       setStepperInfo({
-        currentStepId: newInitialId,
+        currentStepId: effectiveId,
         currentStepIndex: Math.max(
-          flow.steps.findIndex((s) => s.id === newInitialId),
+          flow.steps.findIndex((s) => s.id === effectiveId),
           0,
         ),
         totalSteps: flow.steps.length,
@@ -115,13 +155,13 @@ export function AdaptiveFormProvider({
           id: step.id,
           title: resolveLabel(step.title),
           subtitle: resolveLabel(step.subtitle),
-          isCurrent: step.id === newInitialId,
+          isCurrent: step.id === effectiveId,
           isValid: false,
-          hasBeenVisited: step.id === newInitialId,
+          hasBeenVisited: step.id === effectiveId,
         })),
       });
     }
-  }, [flow]);
+  }, [flow, isStepControlled, controlledStepId]);
 
   const markStepVisited = useCallback((id: string) => {
     setVisitedSteps((prev) => {
@@ -141,15 +181,17 @@ export function AdaptiveFormProvider({
   const value = useMemo<AdaptiveFormContextValue>(
     () => ({
       requirements,
-      currentStepId,
-      setCurrentStepId,
+      currentStepId: activeStepId,
+      setCurrentStepId: handleSetStep,
+      isStepControlled,
+      hasExplicitStepId,
       visitedSteps,
       markStepVisited,
       replaceVisitedSteps,
       stepInfo,
       _setStepperInfo: setStepperInfo,
     }),
-    [requirements, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
+    [requirements, activeStepId, handleSetStep, isStepControlled, hasExplicitStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
   );
 
   return <AdaptiveFormContext.Provider value={value}>{children}</AdaptiveFormContext.Provider>;
