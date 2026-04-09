@@ -106,14 +106,15 @@ export function AdaptiveFormProvider({
   const isStepControlled = controlledStepId !== undefined;
   const hasExplicitStepId = isStepControlled || defaultStepId !== undefined;
 
-  let activeStepId = isStepControlled ? controlledStepId : internalStepId;
+  const fallbackStepId = flow ? getInitialStepId(flow) : '';
+  let activeStepId: string = controlledStepId !== undefined ? controlledStepId : internalStepId;
   if (activeStepId && !validStepIds.has(activeStepId)) {
     if (process.env['NODE_ENV'] !== 'production') {
       console.warn(
         `[AdaptiveFormProvider] currentStepId "${activeStepId}" does not match any step in the flow. Falling back to the first step.`,
       );
     }
-    activeStepId = flow ? getInitialStepId(flow) : '';
+    activeStepId = fallbackStepId;
   }
 
   const handleSetStep = useCallback(
@@ -173,9 +174,11 @@ export function AdaptiveFormProvider({
       return;
     }
     prevFlowRef.current = flow;
-    const newInitialId = flow ? getInitialStepId(flow) : '';
-    setInternalStepId(newInitialId);
-    const effectiveId = isStepControlled ? controlledStepId : newInitialId;
+    const newValidIds = flow ? new Set(flow.steps.map((s) => s.id)) : new Set<string>();
+    const newFallback = flow ? getInitialStepId(flow) : '';
+    const newInternalId = defaultStepId !== undefined && newValidIds.has(defaultStepId) ? defaultStepId : newFallback;
+    setInternalStepId(newInternalId);
+    const effectiveId: string = controlledStepId !== undefined ? controlledStepId : newInternalId;
     setVisitedSteps(new Set(effectiveId ? [effectiveId] : []));
     if (!flow) {
       setStepperInfo({ currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] });
@@ -197,7 +200,7 @@ export function AdaptiveFormProvider({
         })),
       });
     }
-  }, [flow, isStepControlled, controlledStepId]);
+  }, [flow, isStepControlled, controlledStepId, defaultStepId]);
 
   const markStepVisited = useCallback((id: string) => {
     setVisitedSteps((prev) => {
