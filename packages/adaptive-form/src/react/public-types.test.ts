@@ -1,9 +1,4 @@
-import type {
-  AdaptiveFormData,
-  AdaptiveFormProps,
-  AdaptiveFormProviderProps,
-  AdaptiveFormRequirements,
-} from './index';
+import type { AdaptiveFormData, AdaptiveFormProps, AdaptiveFormProviderProps, AdaptiveFormRequirements } from './index';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { expectTypeOf, it } from 'vitest';
