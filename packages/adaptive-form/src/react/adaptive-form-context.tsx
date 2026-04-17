@@ -28,6 +28,19 @@ export interface StepperInfo {
 }
 
 /**
+ * Public requirements schema type for AdaptiveForm consumers.
+ */
+export type AdaptiveFormRequirements<TFieldId extends string = string> = RequirementsObject<TFieldId>;
+
+/**
+ * Props for the `AdaptiveFormProvider` component.
+ */
+export interface AdaptiveFormProviderProps<TFieldId extends string = string> {
+  requirements: AdaptiveFormRequirements<TFieldId>;
+  children: React.ReactNode;
+}
+
+/**
  * Internal context value — not part of the public API.
  */
 export interface AdaptiveFormContextValue {
@@ -55,13 +68,10 @@ export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null
  * </AdaptiveFormProvider>
  * ```
  */
-export function AdaptiveFormProvider({
+export function AdaptiveFormProvider<TFieldId extends string = string>({
   requirements,
   children,
-}: {
-  requirements: RequirementsObject;
-  children: React.ReactNode;
-}) {
+}: AdaptiveFormProviderProps<TFieldId>) {
   const { flow } = requirements;
 
   const [currentStepId, setCurrentStepId] = useState<string>(() => (flow ? getInitialStepId(flow) : ''));

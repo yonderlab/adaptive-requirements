@@ -103,6 +103,11 @@ export interface StepNavigationProps {
 }
 
 /**
+ * Public form data type for AdaptiveForm consumers.
+ */
+export type AdaptiveFormData = FormData;
+
+/**
  * Props for AdaptiveForm component.
  *
  * `AdaptiveForm` must be rendered inside an `AdaptiveFormProvider` which supplies
@@ -114,21 +119,21 @@ export interface AdaptiveFormProps<TFieldId extends string = string> {
    * Use this when you want AdaptiveForm to manage its own state internally.
    * Values are used to initialize the form and native form submission handles the rest.
    */
-  defaultValue?: FormData;
+  defaultValue?: AdaptiveFormData;
 
   /**
    * Current form data for controlled mode.
    * When provided, AdaptiveForm becomes a controlled component and you must
    * also provide `onChange` to update the value.
    */
-  value?: FormData;
+  value?: AdaptiveFormData;
 
   /**
    * Callback when form data changes.
    * - In controlled mode (with `value`): Required to update parent state
    * - In uncontrolled mode (with `defaultValue`): Optional, for notification only
    */
-  onChange?: (data: FormData) => void;
+  onChange?: (data: AdaptiveFormData) => void;
 
   /** Called when aggregate async validation state transitions between validating and not validating. */
   onValidationStateChange?: (isValidating: boolean) => void;
