@@ -98,19 +98,19 @@ import type { FieldComputedProps, FieldInputProps, FieldOption } from '@kotaio/a
 
 Props received by render functions for interactive fields (`text`, `number`, `email`, `select`, `checkbox`, `radio`, and custom types):
 
-| Prop           | Type                                 | Description                                                                            |
-| -------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
-| `field`        | `Field`                              | The field definition from the schema (id, type, label, placeholder, description, etc.) |
-| `value`        | `FieldValue`                         | The current field value                                                                |
-| `onChange`     | `(value: FieldValue) => void`        | Call this when the user changes the value                                              |
-| `onBlur`       | `(() => void) \| undefined`          | Call this on blur for touched-state tracking                                           |
-| `errors`       | `string[]`                           | Validation error messages to display                                                   |
-| `isRequired`   | `boolean`                            | Whether the field is currently required                                                |
-| `isVisible`    | `boolean`                            | Whether the field should be rendered                                                   |
-| `isReadOnly`   | `boolean`                            | Whether the field should be read-only                                                  |
-| `isValidating` | `boolean \| undefined`               | Whether an async validator is currently running for this field                         |
-| `options`      | `FieldOption[] \| undefined`         | Resolved options for select/radio fields                                               |
-| `label`        | `string \| undefined`                | Resolved label text (after localization)                                               |
+| Prop           | Type                          | Description                                                                            |
+| -------------- | ----------------------------- | -------------------------------------------------------------------------------------- |
+| `field`        | `Field`                       | The field definition from the schema (id, type, label, placeholder, description, etc.) |
+| `value`        | `FieldValue`                  | The current field value                                                                |
+| `onChange`     | `(value: FieldValue) => void` | Call this when the user changes the value                                              |
+| `onBlur`       | `(() => void) \| undefined`   | Call this on blur for touched-state tracking                                           |
+| `errors`       | `string[]`                    | Validation error messages to display                                                   |
+| `isRequired`   | `boolean`                     | Whether the field is currently required                                                |
+| `isVisible`    | `boolean`                     | Whether the field should be rendered                                                   |
+| `isReadOnly`   | `boolean`                     | Whether the field should be read-only                                                  |
+| `isValidating` | `boolean \| undefined`        | Whether an async validator is currently running for this field                         |
+| `options`      | `FieldOption[] \| undefined`  | Resolved options for select/radio fields                                               |
+| `label`        | `string \| undefined`         | Resolved label text (after localization)                                               |
 
 A `FieldOption` has `{ value: string | boolean, label: string }`.
 
