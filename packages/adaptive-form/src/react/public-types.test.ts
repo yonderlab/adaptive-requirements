@@ -1,9 +1,9 @@
 import type { AdaptiveFormData, AdaptiveFormProps, AdaptiveFormProviderProps, AdaptiveFormRequirements } from './index';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
-import { expectTypeOf, it } from 'vitest';
+import { expectTypeOf, test } from 'vitest';
 
-it('exports first-class consumer type aliases', () => {
+test('exports first-class consumer type aliases', () => {
   type FieldId = 'firstName' | 'lastName';
 
   expectTypeOf<AdaptiveFormData>().toEqualTypeOf<FormData>();
