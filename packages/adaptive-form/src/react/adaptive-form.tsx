@@ -35,6 +35,11 @@ const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'pro
 const DISPLAY_ONLY_TYPES = new Set(['computed', 'notice_info', 'notice_warning', 'notice_danger']);
 
 /**
+ * Public field option shape for selectable inputs.
+ */
+export type FieldOption = ResolvedFieldOption;
+
+/**
  * Props for individual field input components
  */
 export interface FieldInputProps<TFieldId extends string = string> {
@@ -49,7 +54,7 @@ export interface FieldInputProps<TFieldId extends string = string> {
   isReadOnly: boolean;
   /** Whether an async validator is currently running for this field */
   isValidating?: boolean;
-  options?: ResolvedFieldOption[];
+  options?: FieldOption[];
   /** Resolved label string (after localization) */
   label?: string;
 }
