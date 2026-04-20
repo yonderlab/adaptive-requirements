@@ -84,7 +84,7 @@ function MyForm({ requirements }) {
 
 ## Typing consumer code
 
-`@kotaio/adaptive-form/react` exports first-class consumer types so you don't need to derive them from `ComponentProps`.
+`@kotaio/adaptive-form/react` exports these types directly, so you don't need to derive them from `ComponentProps`.
 
 ```tsx
 import { AdaptiveForm, AdaptiveFormProvider } from '@kotaio/adaptive-form/react';

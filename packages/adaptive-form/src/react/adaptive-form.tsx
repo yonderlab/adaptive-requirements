@@ -34,10 +34,12 @@ const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'pro
 /** Field types that receive FieldComputedProps (display-only, no onChange/onBlur) */
 const DISPLAY_ONLY_TYPES = new Set(['computed', 'notice_info', 'notice_warning', 'notice_danger']);
 
+type FieldId = string;
+
 /**
  * Props for individual field input components
  */
-export interface FieldInputProps<TFieldId extends string = string> {
+export interface FieldInputProps<TFieldId extends FieldId = FieldId> {
   field: Field<TFieldId>;
   value: FieldValue;
   onChange: (value: FieldValue) => void;
@@ -57,7 +59,7 @@ export interface FieldInputProps<TFieldId extends string = string> {
 /**
  * Props for computed field display components
  */
-export interface FieldComputedProps<TFieldId extends string = string> {
+export interface FieldComputedProps<TFieldId extends FieldId = FieldId> {
   field: Field<TFieldId>;
   value: FieldValue;
   isVisible: boolean;
@@ -66,7 +68,7 @@ export interface FieldComputedProps<TFieldId extends string = string> {
 /**
  * Props for custom field rendering
  */
-export interface FieldRenderProps<TFieldId extends string = string> {
+export interface FieldRenderProps<TFieldId extends FieldId = FieldId> {
   field: Field<TFieldId>;
   /** Raw engine field state with unfiltered errors (always includes all validation errors) */
   fieldState: FieldState<TFieldId>;
@@ -113,7 +115,7 @@ export type AdaptiveFormData = FormData;
  * `AdaptiveForm` must be rendered inside an `AdaptiveFormProvider` which supplies
  * the `requirements` object via context.
  */
-export interface AdaptiveFormProps<TFieldId extends string = string> {
+export interface AdaptiveFormProps<TFieldId extends FieldId = FieldId> {
   /**
    * Initial form data for uncontrolled mode.
    * Use this when you want AdaptiveForm to manage its own state internally.
@@ -222,7 +224,7 @@ export interface AdaptiveFormProps<TFieldId extends string = string> {
  * </AdaptiveFormProvider>
  * ```
  */
-export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFormProps<TFieldId>) {
+export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: AdaptiveFormProps<TFieldId>) {
   usePhoneHome();
   const ctx = useContext(AdaptiveFormContext);
   if (!ctx) {

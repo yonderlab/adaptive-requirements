@@ -27,15 +27,17 @@ export interface StepperInfo {
   readonly steps: readonly StepDetail[];
 }
 
+export type FieldId = string;
+
 /**
  * Public requirements schema type for AdaptiveForm consumers.
  */
-export type AdaptiveFormRequirements<TFieldId extends string = string> = RequirementsObject<TFieldId>;
+export type AdaptiveFormRequirements<TFieldId extends FieldId = FieldId> = RequirementsObject<TFieldId>;
 
 /**
  * Props for the `AdaptiveFormProvider` component.
  */
-export interface AdaptiveFormProviderProps<TFieldId extends string = string> {
+export interface AdaptiveFormProviderProps<TFieldId extends FieldId = FieldId> {
   requirements: AdaptiveFormRequirements<TFieldId>;
   children: React.ReactNode;
 }
@@ -68,7 +70,7 @@ export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null
  * </AdaptiveFormProvider>
  * ```
  */
-export function AdaptiveFormProvider<TFieldId extends string = string>({
+export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
   requirements,
   children,
 }: AdaptiveFormProviderProps<TFieldId>) {
