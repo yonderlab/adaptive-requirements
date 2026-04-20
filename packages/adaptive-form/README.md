@@ -82,6 +82,46 @@ function MyForm({ requirements }) {
 }
 ```
 
+## Typing consumer code
+
+`@kotaio/adaptive-form/react` exports first-class consumer types so you don't need to derive them from `ComponentProps`.
+
+```tsx
+import { AdaptiveForm, AdaptiveFormProvider } from '@kotaio/adaptive-form/react';
+import type {
+  AdaptiveFormData,
+  AdaptiveFormProviderProps,
+  AdaptiveFormRequirements,
+} from '@kotaio/adaptive-form/react';
+import { useState } from 'react';
+
+type EmployeeFieldId = 'first_name' | 'last_name' | 'country';
+
+interface RequirementsFormProps {
+  requirements: AdaptiveFormRequirements<EmployeeFieldId>;
+}
+
+function RequirementsForm({ requirements }: RequirementsFormProps) {
+  const [formData, setFormData] = useState<AdaptiveFormData>({});
+
+  return (
+    <AdaptiveFormProvider requirements={requirements}>
+      <AdaptiveForm value={formData} onChange={setFormData} components={myComponents} />
+    </AdaptiveFormProvider>
+  );
+}
+
+function RequirementsProvider(props: AdaptiveFormProviderProps<EmployeeFieldId>) {
+  return <AdaptiveFormProvider {...props} />;
+}
+```
+
+Use these exported types when you want to:
+
+- type a fetched or injected schema with `AdaptiveFormRequirements<TFieldId>`
+- type a wrapper component around `AdaptiveFormProvider` with `AdaptiveFormProviderProps<TFieldId>`
+- type controlled form state with `AdaptiveFormData`
+
 ## Providing components
 
 The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`) to render functions. Each render function receives typed props with full autocomplete — types are inferred automatically from the `components` prop signature.
