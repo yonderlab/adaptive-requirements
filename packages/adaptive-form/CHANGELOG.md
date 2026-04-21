@@ -1,5 +1,13 @@
 # @kotaio/adaptive-form
 
+## 1.2.1
+
+### Patch Changes
+
+- [#51](https://github.com/yonderlab/adaptive-requirements/pull/51) [`3a161e1`](https://github.com/yonderlab/adaptive-requirements/commit/3a161e173cc952f4ca767ed2f2c9e4a28ceac0d1) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Export `FieldOption` from `@kotaio/adaptive-form/react` so consumers can type selectable field options without unwrapping `FieldInputProps['options']`.
+
+- [#50](https://github.com/yonderlab/adaptive-requirements/pull/50) [`5ba6dbe`](https://github.com/yonderlab/adaptive-requirements/commit/5ba6dbef94adc52eba5a2e97fbd36b45ff4d066d) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Export first-class adaptive form consumer types for requirements, provider props, and form data.
+
 ## 1.2.0
 
 ### Minor Changes
