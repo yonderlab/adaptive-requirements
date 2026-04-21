@@ -1,7 +1,13 @@
 export { AdaptiveFormProvider, useFormInfo } from './adaptive-form-context';
-export type { StepDetail, StepperInfo } from './adaptive-form-context';
+export type {
+  AdaptiveFormProviderProps,
+  AdaptiveFormRequirements,
+  StepDetail,
+  StepperInfo,
+} from './adaptive-form-context';
 export { AdaptiveForm } from './adaptive-form';
 export type {
+  AdaptiveFormData,
   AdaptiveFormProps,
   FieldComputedProps,
   FieldInputProps,

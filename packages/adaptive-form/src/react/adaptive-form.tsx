@@ -34,6 +34,8 @@ const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'pro
 /** Field types that receive FieldComputedProps (display-only, no onChange/onBlur) */
 const DISPLAY_ONLY_TYPES = new Set(['computed', 'notice_info', 'notice_warning', 'notice_danger']);
 
+type FieldId = string;
+
 /**
  * Public field option shape for selectable inputs.
  */
@@ -42,7 +44,7 @@ export type FieldOption = ResolvedFieldOption;
 /**
  * Props for individual field input components
  */
-export interface FieldInputProps<TFieldId extends string = string> {
+export interface FieldInputProps<TFieldId extends FieldId = FieldId> {
   field: Field<TFieldId>;
   value: FieldValue;
   onChange: (value: FieldValue) => void;
@@ -62,7 +64,7 @@ export interface FieldInputProps<TFieldId extends string = string> {
 /**
  * Props for computed field display components
  */
-export interface FieldComputedProps<TFieldId extends string = string> {
+export interface FieldComputedProps<TFieldId extends FieldId = FieldId> {
   field: Field<TFieldId>;
   value: FieldValue;
   isVisible: boolean;
@@ -71,7 +73,7 @@ export interface FieldComputedProps<TFieldId extends string = string> {
 /**
  * Props for custom field rendering
  */
-export interface FieldRenderProps<TFieldId extends string = string> {
+export interface FieldRenderProps<TFieldId extends FieldId = FieldId> {
   field: Field<TFieldId>;
   /** Raw engine field state with unfiltered errors (always includes all validation errors) */
   fieldState: FieldState<TFieldId>;
@@ -108,32 +110,37 @@ export interface StepNavigationProps {
 }
 
 /**
+ * Public form data type for AdaptiveForm consumers.
+ */
+export type AdaptiveFormData = FormData;
+
+/**
  * Props for AdaptiveForm component.
  *
  * `AdaptiveForm` must be rendered inside an `AdaptiveFormProvider` which supplies
  * the `requirements` object via context.
  */
-export interface AdaptiveFormProps<TFieldId extends string = string> {
+export interface AdaptiveFormProps<TFieldId extends FieldId = FieldId> {
   /**
    * Initial form data for uncontrolled mode.
    * Use this when you want AdaptiveForm to manage its own state internally.
    * Values are used to initialize the form and native form submission handles the rest.
    */
-  defaultValue?: FormData;
+  defaultValue?: AdaptiveFormData;
 
   /**
    * Current form data for controlled mode.
    * When provided, AdaptiveForm becomes a controlled component and you must
    * also provide `onChange` to update the value.
    */
-  value?: FormData;
+  value?: AdaptiveFormData;
 
   /**
    * Callback when form data changes.
    * - In controlled mode (with `value`): Required to update parent state
    * - In uncontrolled mode (with `defaultValue`): Optional, for notification only
    */
-  onChange?: (data: FormData) => void;
+  onChange?: (data: AdaptiveFormData) => void;
 
   /** Called when aggregate async validation state transitions between validating and not validating. */
   onValidationStateChange?: (isValidating: boolean) => void;
@@ -222,7 +229,7 @@ export interface AdaptiveFormProps<TFieldId extends string = string> {
  * </AdaptiveFormProvider>
  * ```
  */
-export function AdaptiveForm<TFieldId extends string = string>(props: AdaptiveFormProps<TFieldId>) {
+export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: AdaptiveFormProps<TFieldId>) {
   usePhoneHome();
   const ctx = useContext(AdaptiveFormContext);
   if (!ctx) {
