@@ -128,31 +128,31 @@ The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`
 
 > **Tip:** In controlled mode, define your `components` object outside the component or memoize it with `useMemo` to keep stable references. Inline arrow functions create new component identities each render, which causes React to remount fields (losing focus and internal state).
 
-If you need an explicit annotation (e.g. for a standalone variable), `FieldInputProps` and `FieldComputedProps` are exported for typing component renderers:
+If you need explicit annotations (e.g. for standalone variables or helper functions), `FieldInputProps`, `FieldComputedProps`, and `FieldOption` are exported for typing component renderers and selectable options:
 
 ```tsx
-import type { FieldInputProps, FieldComputedProps } from '@kotaio/adaptive-form/react';
+import type { FieldComputedProps, FieldInputProps, FieldOption } from '@kotaio/adaptive-form/react';
 ```
 
 ### `FieldInputProps`
 
 Props received by render functions for interactive fields (`text`, `number`, `email`, `select`, `checkbox`, `radio`, and custom types):
 
-| Prop           | Type                                 | Description                                                                            |
-| -------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
-| `field`        | `Field`                              | The field definition from the schema (id, type, label, placeholder, description, etc.) |
-| `value`        | `FieldValue`                         | The current field value                                                                |
-| `onChange`     | `(value: FieldValue) => void`        | Call this when the user changes the value                                              |
-| `onBlur`       | `(() => void) \| undefined`          | Call this on blur for touched-state tracking                                           |
-| `errors`       | `string[]`                           | Validation error messages to display                                                   |
-| `isRequired`   | `boolean`                            | Whether the field is currently required                                                |
-| `isVisible`    | `boolean`                            | Whether the field should be rendered                                                   |
-| `isReadOnly`   | `boolean`                            | Whether the field should be read-only                                                  |
-| `isValidating` | `boolean \| undefined`               | Whether an async validator is currently running for this field                         |
-| `options`      | `ResolvedFieldOption[] \| undefined` | Resolved options for select/radio fields                                               |
-| `label`        | `string \| undefined`                | Resolved label text (after localization)                                               |
+| Prop           | Type                          | Description                                                                            |
+| -------------- | ----------------------------- | -------------------------------------------------------------------------------------- |
+| `field`        | `Field`                       | The field definition from the schema (id, type, label, placeholder, description, etc.) |
+| `value`        | `FieldValue`                  | The current field value                                                                |
+| `onChange`     | `(value: FieldValue) => void` | Call this when the user changes the value                                              |
+| `onBlur`       | `(() => void) \| undefined`   | Call this on blur for touched-state tracking                                           |
+| `errors`       | `string[]`                    | Validation error messages to display                                                   |
+| `isRequired`   | `boolean`                     | Whether the field is currently required                                                |
+| `isVisible`    | `boolean`                     | Whether the field should be rendered                                                   |
+| `isReadOnly`   | `boolean`                     | Whether the field should be read-only                                                  |
+| `isValidating` | `boolean \| undefined`        | Whether an async validator is currently running for this field                         |
+| `options`      | `FieldOption[] \| undefined`  | Resolved options for select/radio fields                                               |
+| `label`        | `string \| undefined`         | Resolved label text (after localization)                                               |
 
-A `ResolvedFieldOption` has `{ value: string | boolean, label: string }`.
+A `FieldOption` has `{ value: string | boolean, label: string }`.
 
 ### Example component
 

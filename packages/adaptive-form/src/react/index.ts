@@ -11,6 +11,7 @@ export type {
   AdaptiveFormProps,
   FieldComputedProps,
   FieldInputProps,
+  FieldOption,
   StepNavigationProps,
 } from './adaptive-form';
 export { useAsyncValidation } from './use-async-validation';

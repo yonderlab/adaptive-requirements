@@ -37,6 +37,11 @@ const DISPLAY_ONLY_TYPES = new Set(['computed', 'notice_info', 'notice_warning',
 type FieldId = string;
 
 /**
+ * Public field option shape for selectable inputs.
+ */
+export type FieldOption = ResolvedFieldOption;
+
+/**
  * Props for individual field input components
  */
 export interface FieldInputProps<TFieldId extends FieldId = FieldId> {
@@ -51,7 +56,7 @@ export interface FieldInputProps<TFieldId extends FieldId = FieldId> {
   isReadOnly: boolean;
   /** Whether an async validator is currently running for this field */
   isValidating?: boolean;
-  options?: ResolvedFieldOption[];
+  options?: FieldOption[];
   /** Resolved label string (after localization) */
   label?: string;
 }
