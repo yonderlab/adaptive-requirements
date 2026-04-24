@@ -1,5 +1,14 @@
 # @kotaio/adaptive-form
 
+## 1.2.2
+
+### Patch Changes
+
+- [#53](https://github.com/yonderlab/adaptive-requirements/pull/53) [`56a4c03`](https://github.com/yonderlab/adaptive-requirements/commit/56a4c03e876e2c5756fcc92d34c7595cb920c566) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Bump vitest to ^4.1.5 and tsdown to ^0.21.9 to resolve 18 transitive security advisories (vite, rollup, minimatch, brace-expansion, picomatch, undici, defu). Dev-tooling only — no runtime behavior change.
+
+- Updated dependencies [[`56a4c03`](https://github.com/yonderlab/adaptive-requirements/commit/56a4c03e876e2c5756fcc92d34c7595cb920c566)]:
+  - @kotaio/adaptive-requirements-engine@2.1.1
+
 ## 1.2.1
 
 ### Patch Changes
