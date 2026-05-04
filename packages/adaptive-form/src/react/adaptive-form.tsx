@@ -362,7 +362,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     isValidating: isAsyncValidating,
   } = useAsyncValidation({
     asyncValidators: builtInAsyncValidators,
-    customOperations,
+    engine: customOperations ? { customOperations } : undefined,
   });
 
   // Reset async validation state when requirements (schema/fields) change

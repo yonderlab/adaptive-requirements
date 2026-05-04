@@ -475,44 +475,6 @@ The op is then available throughout the schema — for example, in a validation 
 
 The same `customOperations` also flow into async validation, so custom ops can be used inside an `AsyncValidatorRef`'s `when` guard.
 
-### With the `useRequirements` hook
-
-If you're driving the form yourself (not using `<AdaptiveForm>`), `useRequirements` accepts a `customOperations` option as a third argument. Custom ops registered here power validation, computed fields, and visibility rules just like they do inside `<AdaptiveFormProvider>`.
-
-```tsx
-import { useRequirements } from '@kotaio/adaptive-form/react';
-import { useState } from 'react';
-
-const customOperations = {
-  age_from_date: (date: unknown) => {
-    /* same impl as above */
-  },
-};
-
-function MyForm({ requirements }) {
-  const [data, setData] = useState({});
-  const { getFieldState, getErrors, isValid, formData } = useRequirements(requirements, data, {
-    customOperations,
-  });
-
-  const dobState = getFieldState('dob');
-
-  return (
-    <form>
-      <input value={(data.dob as string) ?? ''} onChange={(e) => setData((d) => ({ ...d, dob: e.target.value }))} />
-      {dobState.errors.map((error, i) => (
-        <p key={i}>{error}</p>
-      ))}
-      <button type="submit" disabled={!isValid}>
-        Submit
-      </button>
-    </form>
-  );
-}
-```
-
-`useFieldState(requirements, fieldId, data, { customOperations })` and `useCalculatedData(requirements, data, { customOperations })` accept the same option for single-field and computed-only consumers respectively.
-
 ## Datasets and dynamic options
 
 Schemas can include datasets — reusable lists of options that fields reference. When a field uses a dataset, AdaptiveForm resolves the options automatically and passes them to your component via the `options` prop.
