@@ -253,7 +253,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     children,
   } = props;
   const requirements = ctx.requirements as RequirementsObject<TFieldId>;
-  const { engine } = ctx;
+  const { customOperations } = ctx;
   const { flow } = requirements;
   const hasExplicitDefaultValue = Object.hasOwn(props, 'defaultValue');
   const [internalValue, setInternalValue] = useState<FormData>(() =>
@@ -346,7 +346,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     formData: mergedFormData,
   } = useRequirements(requirements, formData, {
     mapping,
-    engine,
+    customOperations,
   });
 
   // Async validation setup
@@ -358,7 +358,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     isValidating: isAsyncValidating,
   } = useAsyncValidation({
     asyncValidators: builtInAsyncValidators,
-    engine,
+    customOperations,
   });
 
   // Reset async validation state when requirements (schema/fields) change

@@ -424,9 +424,9 @@ Form data will use your field names (`firstName`) while the engine maps them to 
 
 ## Custom JSON Logic operations
 
-The engine evaluates JSON Logic expressions wherever the schema uses `validation.rules`, `visibleWhen`, `excludeWhen`, or a `computed` field formula. Beyond the standard JSON Logic operators, the engine ships with a small built-in set (`today`, `match`). Anything else — date arithmetic, business-specific predicates, lookups against a static table — can be registered through `AdaptiveFormProvider`'s `engine` prop and then referenced from the schema by name.
+The engine evaluates JSON Logic expressions wherever the schema uses `validation.rules`, `visibleWhen`, `excludeWhen`, or a `computed` field formula. Beyond the standard JSON Logic operators, the engine ships with a small built-in set (`today`, `match`). Anything else — date arithmetic, business-specific predicates, lookups against a static table — can be registered through `AdaptiveFormProvider`'s `customOperations` prop and then referenced from the schema by name.
 
-Pass `engine={{ customOperations: { ... } }}` to the provider:
+Pass `customOperations={{ ... }}` to the provider:
 
 ```tsx
 import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
@@ -449,7 +449,7 @@ const customOperations = {
 
 function MyForm({ requirements }) {
   return (
-    <AdaptiveFormProvider requirements={requirements} engine={{ customOperations }}>
+    <AdaptiveFormProvider requirements={requirements} customOperations={customOperations}>
       <AdaptiveForm components={myComponents} />
     </AdaptiveFormProvider>
   );
@@ -473,11 +473,11 @@ The op is then available throughout the schema — for example, in a validation 
 }
 ```
 
-The same `engine` configuration also flows into async validation, so custom ops can be used inside an `AsyncValidatorRef`'s `when` guard.
+The same `customOperations` also flow into async validation, so custom ops can be used inside an `AsyncValidatorRef`'s `when` guard.
 
 ### With the `useRequirements` hook
 
-If you're driving the form yourself (not using `<AdaptiveForm>`), `useRequirements` accepts the same `engine` shape as a third argument. Custom ops registered here power validation, computed fields, and visibility rules just like they do inside `<AdaptiveFormProvider>`.
+If you're driving the form yourself (not using `<AdaptiveForm>`), `useRequirements` accepts a `customOperations` option as a third argument. Custom ops registered here power validation, computed fields, and visibility rules just like they do inside `<AdaptiveFormProvider>`.
 
 ```tsx
 import { useRequirements } from '@kotaio/adaptive-form/react';
@@ -492,7 +492,7 @@ const customOperations = {
 function MyForm({ requirements }) {
   const [data, setData] = useState({});
   const { getFieldState, getErrors, isValid, formData } = useRequirements(requirements, data, {
-    engine: { customOperations },
+    customOperations,
   });
 
   const dobState = getFieldState('dob');
@@ -511,7 +511,7 @@ function MyForm({ requirements }) {
 }
 ```
 
-`useFieldState(requirements, fieldId, data, { engine })` accepts the same options for single-field consumers.
+`useFieldState(requirements, fieldId, data, { customOperations })` accepts the same options for single-field consumers.
 
 ## Datasets and dynamic options
 

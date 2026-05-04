@@ -1,18 +1,16 @@
-import type {
-  EngineOptions,
-  FieldMapping,
-  FieldState,
-  FormData,
-  RequirementsObject,
-} from '@kotaio/adaptive-requirements-engine';
+import type { FieldMapping, FieldState, FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { createAdapter } from '@kotaio/adaptive-requirements-engine';
 import { useCallback, useMemo } from 'react';
 
 export interface UseRequirementsOptions {
   mapping?: FieldMapping;
-  /** Engine options for custom validators and localization */
-  engine?: EngineOptions;
+  /**
+   * Additional JSON Logic operations to register on the underlying engine.
+   * Available inside `validation.rules`, `visibleWhen`, `excludeWhen`,
+   * `computed` formulas, and async validator `when` guards.
+   */
+  customOperations?: Record<string, (...args: unknown[]) => unknown>;
 }
 
 /**
@@ -26,8 +24,13 @@ export function useRequirements<TFieldId extends string = string>(
 ) {
   // Create adapter with memoization
   const adapter = useMemo(
-    () => createAdapter(requirements, options?.mapping, options?.engine),
-    [requirements, options?.mapping, options?.engine],
+    () =>
+      createAdapter(
+        requirements,
+        options?.mapping,
+        options?.customOperations ? { customOperations: options.customOperations } : undefined,
+      ),
+    [requirements, options?.mapping, options?.customOperations],
   );
 
   // Calculate computed field values
@@ -108,8 +111,13 @@ export function useFieldState<TFieldId extends string = string>(
   options?: UseRequirementsOptions,
 ): FieldState<TFieldId> {
   const adapter = useMemo(
-    () => createAdapter(requirements, options?.mapping, options?.engine),
-    [requirements, options?.mapping, options?.engine],
+    () =>
+      createAdapter(
+        requirements,
+        options?.mapping,
+        options?.customOperations ? { customOperations: options.customOperations } : undefined,
+      ),
+    [requirements, options?.mapping, options?.customOperations],
   );
 
   const calculatedData = useMemo(() => adapter.calculateData(data), [adapter, data]);

@@ -1092,7 +1092,7 @@ function ageFromDate(value: unknown) {
   return age;
 }
 
-describe('adaptiveForm engine.customOperations', () => {
+describe('adaptiveForm customOperations', () => {
   it('evaluates validation rules using a custom JSON Logic operation registered on the provider', () => {
     const requirements = makeRequirements([
       {
@@ -1111,7 +1111,7 @@ describe('adaptiveForm engine.customOperations', () => {
     ]);
 
     render(
-      <AdaptiveFormProvider requirements={requirements} engine={{ customOperations: { age_from_date: ageFromDate } }}>
+      <AdaptiveFormProvider requirements={requirements} customOperations={{ age_from_date: ageFromDate }}>
         <AdaptiveForm showAllErrors components={testComponents} />
       </AdaptiveFormProvider>,
     );
@@ -1137,7 +1137,7 @@ describe('adaptiveForm engine.customOperations', () => {
     ]);
 
     render(
-      <AdaptiveFormProvider requirements={requirements} engine={{ customOperations: { age_from_date: ageFromDate } }}>
+      <AdaptiveFormProvider requirements={requirements} customOperations={{ age_from_date: ageFromDate }}>
         <AdaptiveForm showAllErrors components={testComponents} />
       </AdaptiveFormProvider>,
     );

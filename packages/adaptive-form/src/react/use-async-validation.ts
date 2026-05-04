@@ -1,7 +1,6 @@
 import type {
   AsyncValidatorFn,
   AsyncValidatorRef,
-  EngineOptions,
   FieldValue,
   FormData,
   RequirementsObject,
@@ -31,8 +30,12 @@ export interface UseAsyncValidationOptions {
   asyncValidators: Record<string, AsyncValidatorFn>;
   /** Debounce delay in milliseconds before async validation fires. Defaults to 300. */
   debounceMs?: number;
-  /** Engine options passed to checkField for sync gating in validateAll. */
-  engine?: EngineOptions;
+  /**
+   * Additional JSON Logic operations available to the engine, including
+   * async validator `when` guards and the sync `checkField` pass used to
+   * gate eligibility in `validateAll`.
+   */
+  customOperations?: Record<string, (...args: unknown[]) => unknown>;
 }
 
 export interface UseAsyncValidationReturn {
@@ -71,7 +74,7 @@ function cleanupTimersAndControllers(
  * Designed to be composed into AdaptiveForm or used standalone alongside useRequirements.
  */
 export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsyncValidationReturn {
-  const { asyncValidators, debounceMs = 300, engine } = options;
+  const { asyncValidators, debounceMs = 300, customOperations } = options;
 
   const [asyncState, setAsyncState] = useState<AsyncValidationState>({});
 
@@ -130,8 +133,8 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
    */
   const executeValidation = useCallback(
     (value: FieldValue, refs: AsyncValidatorRef[], context: RuleContext, signal?: AbortSignal): Promise<string[]> =>
-      runAsyncValidators(value, refs, context, asyncValidators, signal, engine?.customOperations),
-    [asyncValidators, engine?.customOperations],
+      runAsyncValidators(value, refs, context, asyncValidators, signal, customOperations),
+    [asyncValidators, customOperations],
   );
 
   /**
@@ -250,7 +253,12 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
         const hasEligible = asyncRefs.some((ref) => Object.hasOwn(asyncValidators, ref.name));
 
         if (hasEligible) {
-          const syncState = checkField(requirements, field.id, data, engine);
+          const syncState = checkField(
+            requirements,
+            field.id,
+            data,
+            customOperations ? { customOperations } : undefined,
+          );
           if (
             !syncState.isVisible ||
             syncState.isExcluded ||
@@ -321,7 +329,7 @@ export function useAsyncValidation(options: UseAsyncValidationOptions): UseAsync
 
       return errorMap;
     },
-    [asyncValidators, executeValidation, engine],
+    [asyncValidators, executeValidation, customOperations],
   );
 
   /**
