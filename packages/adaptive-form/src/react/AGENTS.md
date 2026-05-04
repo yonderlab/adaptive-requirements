@@ -21,7 +21,7 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 | ------------------------------------------------------ | ----------------------------------------------------------- |
 | `useRequirements(requirements, data, options?)`        | Main hook: adapter, field states, validation, computed data |
 | `useFieldState(requirements, fieldId, data, options?)` | Single field state (minimizes re-renders)                   |
-| `useCalculatedData(requirements, data)`                | Computed field values only                                  |
+| `useCalculatedData(requirements, data, options?)`      | Computed field values only                                  |
 | `useAsyncValidation(options)`                          | Async validation: debounce, abort, per-field state          |
 | `useFormInfo()`                                        | Read-only step info from context (requires provider)        |
 
@@ -72,15 +72,15 @@ Required provider that owns `requirements` and step state. `AdaptiveForm` must b
 
 ## Extension Points
 
-| Extension               | Mechanism                                                                                          |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| Custom field types      | `components` prop — map any string to a render function                                            |
-| Custom JSON Logic ops   | `AdaptiveFormProvider` `customOperations` prop — registers additional ops on the underlying engine |
-| Custom label resolution | `EngineOptions.labelResolver` (engine-level) — integrate with i18n systems                         |
-| Custom field rendering  | `renderField` prop — full control over per-field rendering                                         |
-| Custom step navigation  | `renderStepNavigation` prop — custom Previous/Next UI                                              |
-| Field ID remapping      | `FieldMapping.fieldIdMap` — remap consumer IDs to schema IDs                                       |
-| Async validators        | `EngineOptions.asyncValidators` — `Record<string, AsyncValidatorFn>`                               |
+| Extension               | Mechanism                                                                                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Custom field types      | `components` prop — map any string to a render function                                                                                                     |
+| Custom JSON Logic ops   | `AdaptiveFormProvider` `customOperations` prop — registers additional ops on the underlying engine                                                          |
+| Custom label resolution | `EngineOptions.labelResolver` (engine-level) — integrate with i18n systems                                                                                  |
+| Custom field rendering  | `renderField` prop — full control over per-field rendering                                                                                                  |
+| Custom step navigation  | `renderStepNavigation` prop — custom Previous/Next UI                                                                                                       |
+| Field ID remapping      | `FieldMapping.fieldIdMap` — remap consumer IDs to schema IDs                                                                                                |
+| Async validators        | `<AdaptiveForm>` uses `builtInAsyncValidators`; consumers needing custom ones drive `useAsyncValidation` directly with their own `asyncValidators` registry |
 
 ## Downlinks
 

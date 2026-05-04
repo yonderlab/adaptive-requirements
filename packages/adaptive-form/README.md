@@ -511,7 +511,7 @@ function MyForm({ requirements }) {
 }
 ```
 
-`useFieldState(requirements, fieldId, data, { customOperations })` accepts the same options for single-field consumers.
+`useFieldState(requirements, fieldId, data, { customOperations })` and `useCalculatedData(requirements, data, { customOperations })` accept the same option for single-field and computed-only consumers respectively.
 
 ## Datasets and dynamic options
 

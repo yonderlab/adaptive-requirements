@@ -137,9 +137,14 @@ export function useFieldState<TFieldId extends string = string>(
 export function useCalculatedData<TFieldId extends string = string>(
   requirements: RequirementsObject<TFieldId>,
   inputData: FormData,
+  options?: UseRequirementsOptions,
 ): FormData {
   return useMemo(() => {
-    const adapter = createAdapter(requirements);
+    const adapter = createAdapter(
+      requirements,
+      options?.mapping,
+      options?.customOperations ? { customOperations: options.customOperations } : undefined,
+    );
     return adapter.calculateData(inputData);
-  }, [requirements, inputData]);
+  }, [requirements, inputData, options?.mapping, options?.customOperations]);
 }
