@@ -253,6 +253,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     children,
   } = props;
   const requirements = ctx.requirements as RequirementsObject<TFieldId>;
+  const { customOperations } = ctx;
   const { flow } = requirements;
   const hasExplicitDefaultValue = Object.hasOwn(props, 'defaultValue');
   const [internalValue, setInternalValue] = useState<FormData>(() =>
@@ -277,14 +278,18 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       return;
     }
     hasCorrectedInitialStep.current = true;
-    const correctStepId = getInitialStepId(flow, { requirements, formData });
+    const correctStepId = getInitialStepId(flow, {
+      requirements,
+      formData,
+      engine: customOperations ? { customOperations } : undefined,
+    });
     if (correctStepId && correctStepId !== ctx.currentStepId) {
       ctx.setCurrentStepId(correctStepId);
       // Replace visited steps entirely so the skipped provider initial step
       // doesn't remain marked as visited.
       ctx.replaceVisitedSteps(new Set([correctStepId]));
     }
-  }, [ctx, flow, requirements, formData]);
+  }, [ctx, flow, requirements, formData, customOperations]);
 
   // Touched field tracking — errors are only shown for fields the user has interacted with
   const [touchedFields, setTouchedFields] = useState<Set<string>>(() => new Set());
@@ -345,6 +350,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     formData: mergedFormData,
   } = useRequirements(requirements, formData, {
     mapping,
+    customOperations,
   });
 
   // Async validation setup
@@ -356,6 +362,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     isValidating: isAsyncValidating,
   } = useAsyncValidation({
     asyncValidators: builtInAsyncValidators,
+    engine: customOperations ? { customOperations } : undefined,
   });
 
   // Reset async validation state when requirements (schema/fields) change
@@ -417,7 +424,12 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     });
   }, [flow, currentStepFields, getFieldState, asyncState]);
 
-  const nextStepId = flow ? getNextStepId(flow, currentStepId, mergedFormData, { requirements }) : undefined;
+  const nextStepId = flow
+    ? getNextStepId(flow, currentStepId, mergedFormData, {
+        requirements,
+        engine: customOperations ? { customOperations } : undefined,
+      })
+    : undefined;
   const previousStepId = flow ? getPreviousStepId(flow, currentStepId) : undefined;
   const canGoNext = nextStepId !== undefined && currentStepIsValid;
   const canGoPrevious = previousStepId !== undefined;

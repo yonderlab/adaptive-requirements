@@ -422,6 +422,59 @@ When your application's field names differ from the schema's, use the `mapping` 
 
 Form data will use your field names (`firstName`) while the engine maps them to the schema's field IDs (`first_name`) internally.
 
+## Custom JSON Logic operations
+
+The engine evaluates JSON Logic expressions wherever the schema uses `validation.rules`, `visibleWhen`, `excludeWhen`, or a `computed` field formula. Beyond the standard JSON Logic operators, the engine ships with a small built-in set (`today`, `match`, `phone_valid`). Anything else — date arithmetic, business-specific predicates, lookups against a static table — can be registered through `AdaptiveFormProvider`'s `customOperations` prop and then referenced from the schema by name.
+
+Pass `customOperations={{ ... }}` to the provider:
+
+```tsx
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
+
+const customOperations = {
+  age_from_date: (date: unknown) => {
+    if (typeof date !== 'string' && !(date instanceof Date)) {
+      return null;
+    }
+    const dob = new Date(date);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
+  },
+};
+
+function MyForm({ requirements }) {
+  return (
+    <AdaptiveFormProvider requirements={requirements} customOperations={customOperations}>
+      <AdaptiveForm components={myComponents} />
+    </AdaptiveFormProvider>
+  );
+}
+```
+
+The op is then available throughout the schema — for example, in a validation rule that requires the user to be at least 18:
+
+```json
+{
+  "id": "dob",
+  "type": "date",
+  "validation": {
+    "rules": [
+      {
+        "rule": { ">=": [{ "age_from_date": { "var": "dob" } }, 18] },
+        "message": "You must be at least 18 years old."
+      }
+    ]
+  }
+}
+```
+
+The same `customOperations` also flow into async validation, so custom ops can be used inside an `AsyncValidatorRef`'s `when` guard.
+
 ## Datasets and dynamic options
 
 Schemas can include datasets — reusable lists of options that fields reference. When a field uses a dataset, AdaptiveForm resolves the options automatically and passes them to your component via the `options` prop.
