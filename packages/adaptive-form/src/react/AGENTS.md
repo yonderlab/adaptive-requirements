@@ -72,15 +72,15 @@ Required provider that owns `requirements` and step state. `AdaptiveForm` must b
 
 ## Extension Points
 
-| Extension               | Mechanism                                                                        |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| Custom field types      | `components` prop — map any string to a render function                          |
-| Custom JSON Logic ops   | `EngineOptions.customOperations` — register additional operations for validation |
-| Custom label resolution | `EngineOptions.labelResolver` — integrate with i18n systems                      |
-| Custom field rendering  | `renderField` prop — full control over per-field rendering                       |
-| Custom step navigation  | `renderStepNavigation` prop — custom Previous/Next UI                            |
-| Field ID remapping      | `FieldMapping.fieldIdMap` — remap consumer IDs to schema IDs                     |
-| Async validators        | `EngineOptions.asyncValidators` — `Record<string, AsyncValidatorFn>`             |
+| Extension               | Mechanism                                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Custom field types      | `components` prop — map any string to a render function                                                    |
+| Custom JSON Logic ops   | `AdaptiveFormProvider` `engine={{ customOperations }}` — registers additional ops on the underlying engine |
+| Custom label resolution | `AdaptiveFormProvider` `engine={{ labelResolver }}` — integrate with i18n systems                          |
+| Custom field rendering  | `renderField` prop — full control over per-field rendering                                                 |
+| Custom step navigation  | `renderStepNavigation` prop — custom Previous/Next UI                                                      |
+| Field ID remapping      | `FieldMapping.fieldIdMap` — remap consumer IDs to schema IDs                                               |
+| Async validators        | `EngineOptions.asyncValidators` — `Record<string, AsyncValidatorFn>`                                       |
 
 ## Downlinks
 

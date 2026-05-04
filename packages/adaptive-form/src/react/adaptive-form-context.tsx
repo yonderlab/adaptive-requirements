@@ -1,4 +1,4 @@
-import type { RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type { EngineOptions, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { getInitialStepId, resolveLabel } from '@kotaio/adaptive-requirements-engine';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -39,6 +39,13 @@ export type AdaptiveFormRequirements<TFieldId extends FieldId = FieldId> = Requi
  */
 export interface AdaptiveFormProviderProps<TFieldId extends FieldId = FieldId> {
   requirements: AdaptiveFormRequirements<TFieldId>;
+  /**
+   * Engine options forwarded to the underlying validation engine. Use this to
+   * register `customOperations` (additional JSON Logic ops available in
+   * `validation.rules`, `visibleWhen`, `excludeWhen`, and `computed` formulas)
+   * or other engine-level configuration.
+   */
+  engine?: EngineOptions;
   children: React.ReactNode;
 }
 
@@ -47,6 +54,7 @@ export interface AdaptiveFormProviderProps<TFieldId extends FieldId = FieldId> {
  */
 export interface AdaptiveFormContextValue {
   requirements: RequirementsObject;
+  engine?: EngineOptions;
   currentStepId: string;
   setCurrentStepId: (id: string) => void;
   visitedSteps: ReadonlySet<string>;
@@ -72,6 +80,7 @@ export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null
  */
 export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
   requirements,
+  engine,
   children,
 }: AdaptiveFormProviderProps<TFieldId>) {
   const { flow } = requirements;
@@ -153,6 +162,7 @@ export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
   const value = useMemo<AdaptiveFormContextValue>(
     () => ({
       requirements,
+      engine,
       currentStepId,
       setCurrentStepId,
       visitedSteps,
@@ -161,7 +171,7 @@ export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
       stepInfo,
       _setStepperInfo: setStepperInfo,
     }),
-    [requirements, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
+    [requirements, engine, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
   );
 
   return <AdaptiveFormContext.Provider value={value}>{children}</AdaptiveFormContext.Provider>;

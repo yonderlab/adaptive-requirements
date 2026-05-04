@@ -14,6 +14,8 @@ export type {
   FieldOption,
   StepNavigationProps,
 } from './adaptive-form';
+export { useCalculatedData, useFieldState, useRequirements } from './use-requirements';
+export type { UseRequirementsOptions } from './use-requirements';
 export { useAsyncValidation } from './use-async-validation';
 export type {
   AsyncFieldState,

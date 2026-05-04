@@ -1,5 +1,5 @@
 import type { FieldComputedProps, FieldInputProps, FieldRenderProps } from './adaptive-form';
-import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type { FormData, RequirementsObject, Rule } from '@kotaio/adaptive-requirements-engine';
 
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
@@ -1075,5 +1075,73 @@ describe('notice field types', () => {
     expect(screen.getByTestId('notice-info').textContent).toBe('notice_info');
     expect(screen.getByTestId('notice-warn').textContent).toBe('notice_warning');
     expect(screen.getByTestId('notice-danger').textContent).toBe('notice_danger');
+  });
+});
+
+function ageFromDate(value: unknown) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const dob = new Date(value);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+describe('adaptiveForm engine.customOperations', () => {
+  it('evaluates validation rules using a custom JSON Logic operation registered on the provider', () => {
+    const requirements = makeRequirements([
+      {
+        id: 'dob',
+        type: 'text',
+        defaultValue: '2020-01-01',
+        validation: {
+          rules: [
+            {
+              rule: { '>=': [{ age_from_date: { var: 'dob' } } as unknown as Rule, 18] },
+              message: 'Must be at least 18 years old',
+            },
+          ],
+        },
+      },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements} engine={{ customOperations: { age_from_date: ageFromDate } }}>
+        <AdaptiveForm showAllErrors components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.getByTestId('error-dob').textContent).toBe('Must be at least 18 years old');
+  });
+
+  it('passes when the custom operation evaluates the rule to true', () => {
+    const requirements = makeRequirements([
+      {
+        id: 'dob',
+        type: 'text',
+        defaultValue: '1980-01-01',
+        validation: {
+          rules: [
+            {
+              rule: { '>=': [{ age_from_date: { var: 'dob' } } as unknown as Rule, 18] },
+              message: 'Must be at least 18 years old',
+            },
+          ],
+        },
+      },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements} engine={{ customOperations: { age_from_date: ageFromDate } }}>
+        <AdaptiveForm showAllErrors components={testComponents} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(screen.queryByTestId('error-dob')).toBeNull();
   });
 });
