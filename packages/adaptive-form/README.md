@@ -424,7 +424,7 @@ Form data will use your field names (`firstName`) while the engine maps them to 
 
 ## Custom JSON Logic operations
 
-The engine evaluates JSON Logic expressions wherever the schema uses `validation.rules`, `visibleWhen`, `excludeWhen`, or a `computed` field formula. Beyond the standard JSON Logic operators, the engine ships with a small built-in set (`today`, `match`). Anything else — date arithmetic, business-specific predicates, lookups against a static table — can be registered through `AdaptiveFormProvider`'s `customOperations` prop and then referenced from the schema by name.
+The engine evaluates JSON Logic expressions wherever the schema uses `validation.rules`, `visibleWhen`, `excludeWhen`, or a `computed` field formula. Beyond the standard JSON Logic operators, the engine ships with a small built-in set (`today`, `match`, `phone_valid`). Anything else — date arithmetic, business-specific predicates, lookups against a static table — can be registered through `AdaptiveFormProvider`'s `customOperations` prop and then referenced from the schema by name.
 
 Pass `customOperations={{ ... }}` to the provider:
 

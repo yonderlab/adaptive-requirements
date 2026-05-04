@@ -1092,13 +1092,19 @@ function ageFromDate(value: unknown) {
   return age;
 }
 
+function dobYearsAgo(years: number): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - years);
+  return d.toISOString().split('T')[0] ?? '';
+}
+
 describe('adaptiveForm customOperations', () => {
   it('evaluates validation rules using a custom JSON Logic operation registered on the provider', () => {
     const requirements = makeRequirements([
       {
         id: 'dob',
         type: 'text',
-        defaultValue: '2020-01-01',
+        defaultValue: dobYearsAgo(5),
         validation: {
           rules: [
             {
@@ -1124,7 +1130,7 @@ describe('adaptiveForm customOperations', () => {
       {
         id: 'dob',
         type: 'text',
-        defaultValue: '1980-01-01',
+        defaultValue: dobYearsAgo(40),
         validation: {
           rules: [
             {
