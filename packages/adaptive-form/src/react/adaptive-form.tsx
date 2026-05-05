@@ -1,4 +1,4 @@
-import type { StepDetail, StepperInfo } from './adaptive-form-context';
+import type { StepDetail, StepNavigationProps } from './adaptive-form-context';
 import type {
   Field,
   FieldMapping,
@@ -88,25 +88,6 @@ export interface FieldRenderProps<TFieldId extends FieldId = FieldId> {
   onChange: (value: FieldValue) => void;
   onBlur: () => void;
   components?: AdaptiveFormProps<TFieldId>['components'];
-}
-
-/**
- * Step navigation props (used when requirements.flow is defined)
- */
-export interface StepNavigationProps {
-  canGoPrevious: boolean;
-  /** True when there is a next step and current step fields pass validation */
-  canGoNext: boolean;
-  /** True when all visible fields in the current step pass validation (use to disable Next when false) */
-  isStepValid: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-  stepTitle?: string;
-  stepSubtitle?: string;
-  currentStepIndex: number;
-  totalSteps: number;
-  /** Read-only details for all steps in the flow (id, title, validity, visited state) */
-  steps: readonly StepDetail[];
 }
 
 /**
@@ -456,28 +437,6 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     });
   }, [flow, currentStepId, visitedSteps, getFieldState, asyncState, idToField]);
 
-  const stepInfo: StepperInfo | null = useMemo(() => {
-    if (!flow) {
-      return null;
-    }
-    return {
-      currentStepId,
-      currentStepIndex: Math.max(
-        flow.steps.findIndex((s) => s.id === currentStepId),
-        0,
-      ),
-      totalSteps: flow.steps.length,
-      steps: stepDetails,
-    };
-  }, [flow, currentStepId, stepDetails]);
-
-  // Push computed StepperInfo to context when provider exists
-  useEffect(() => {
-    if (ctx && stepInfo) {
-      ctx._setStepperInfo(stepInfo);
-    }
-  }, [ctx, stepInfo]);
-
   const handleNext = useCallback(() => {
     if (!currentStepIsValid) {
       // Reveal errors for all visible fields in current step
@@ -505,6 +464,56 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       markStepVisited(previousStepId);
     }
   }, [previousStepId, setCurrentStepId, markStepVisited]);
+
+  const currentStepTitle = useMemo(() => resolveLabel(currentStep?.title), [currentStep]);
+  const currentStepSubtitle = useMemo(() => resolveLabel(currentStep?.subtitle), [currentStep]);
+
+  const navigationProps = useMemo<StepNavigationProps | null>(() => {
+    if (!flow) {
+      return null;
+    }
+    return {
+      canGoPrevious,
+      canGoNext,
+      isStepValid: currentStepIsValid,
+      onPrevious: handlePrevious,
+      onNext: handleNext,
+      stepTitle: currentStepTitle,
+      stepSubtitle: currentStepSubtitle,
+      currentStepId,
+      currentStepIndex: Math.max(currentStepIndex, 0),
+      totalSteps,
+      steps: stepDetails,
+    };
+  }, [
+    flow,
+    canGoPrevious,
+    canGoNext,
+    currentStepIsValid,
+    handlePrevious,
+    handleNext,
+    currentStepTitle,
+    currentStepSubtitle,
+    currentStepId,
+    currentStepIndex,
+    totalSteps,
+    stepDetails,
+  ]);
+
+  // Publish navigation state so siblings of AdaptiveForm can subscribe via useStepNavigation().
+  // Reset to { initialised: false } when AdaptiveForm unmounts so consumers don't see stale state.
+  // Depend on the setter (stable per useState contract), not the whole ctx — otherwise the ctx
+  // re-memoization triggered by our own setNavigationState call would cause an infinite loop.
+  const setNavigationState = ctx._setNavigationState;
+  useEffect(() => {
+    if (!navigationProps) {
+      return;
+    }
+    setNavigationState({ initialised: true, ...navigationProps });
+    return () => {
+      setNavigationState({ initialised: false });
+    };
+  }, [setNavigationState, navigationProps]);
 
   const handleFieldChange = useCallback(
     (fieldId: string, newValue: FieldValue) => {
@@ -663,43 +672,29 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       );
     }
 
-    const stepTitle = resolveLabel(currentStep?.title);
-    const stepSubtitle = resolveLabel(currentStep?.subtitle);
-
     return (
       <div className={className} role="group" aria-label="Adaptive form with steps">
-        {stepTitle != null && (
+        {currentStepTitle != null && (
           <h2 className="text-foreground-header mb-4 text-lg font-semibold" id={`step-${currentStepId}-title`}>
-            {stepTitle}
+            {currentStepTitle}
           </h2>
         )}
-        {stepSubtitle != null && (
+        {currentStepSubtitle != null && (
           <p className="text-muted-foreground mb-4 text-sm" id={`step-${currentStepId}-subtitle`}>
-            {stepSubtitle}
+            {currentStepSubtitle}
           </p>
         )}
         <div
           className={groupClassName}
-          aria-labelledby={stepTitle != null ? `step-${currentStepId}-title` : undefined}
-          aria-describedby={stepSubtitle != null ? `step-${currentStepId}-subtitle` : undefined}
+          aria-labelledby={currentStepTitle != null ? `step-${currentStepId}-title` : undefined}
+          aria-describedby={currentStepSubtitle != null ? `step-${currentStepId}-subtitle` : undefined}
         >
           {currentStepFields.map((field) => (
             <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
           ))}
         </div>
-        {renderStepNavigation ? (
-          renderStepNavigation({
-            canGoPrevious,
-            canGoNext,
-            isStepValid: currentStepIsValid,
-            onPrevious: handlePrevious,
-            onNext: handleNext,
-            stepTitle,
-            stepSubtitle,
-            currentStepIndex: Math.max(currentStepIndex, 0),
-            totalSteps,
-            steps: stepDetails,
-          })
+        {renderStepNavigation && navigationProps ? (
+          renderStepNavigation(navigationProps)
         ) : (
           <div className="mt-6 flex gap-3">
             {canGoPrevious && (

@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { AdaptiveForm } from '../adaptive-form';
-import { AdaptiveFormProvider, useFormInfo } from '../adaptive-form-context';
+import { AdaptiveFormProvider, useFormInfo, useStepNavigation } from '../adaptive-form-context';
 
 afterEach(cleanup);
 
@@ -279,5 +279,211 @@ describe('adaptiveFormProvider + useFormInfo', () => {
       expect(capturedSteps![0]!.isCurrent).toBeTruthy();
       expect(capturedSteps![1]!.isCurrent).toBeFalsy();
     });
+  });
+});
+
+/** Sibling component that reads navigation state via useStepNavigation. */
+function CustomNavDisplay({ onCapture }: { onCapture?: (onNext: () => void) => void } = {}) {
+  const nav = useStepNavigation();
+  if (!nav.initialised) {
+    return <div data-testid="nav-state">uninitialised</div>;
+  }
+  onCapture?.(nav.onNext);
+  return (
+    <div data-testid="nav-state">
+      <span data-testid="nav-initialised">true</span>
+      <span data-testid="nav-current-step-id">{nav.currentStepId}</span>
+      <span data-testid="nav-current-step-index">{String(nav.currentStepIndex)}</span>
+      <span data-testid="nav-total-steps">{String(nav.totalSteps)}</span>
+      <span data-testid="nav-can-go-next">{String(nav.canGoNext)}</span>
+      <span data-testid="nav-can-go-previous">{String(nav.canGoPrevious)}</span>
+      <span data-testid="nav-is-step-valid">{String(nav.isStepValid)}</span>
+      <span data-testid="nav-step-title">{nav.stepTitle ?? ''}</span>
+      <span data-testid="nav-steps-count">{String(nav.steps.length)}</span>
+      <button type="button" data-testid="nav-next" onClick={() => nav.onNext()}>
+        Custom next
+      </button>
+      <button type="button" data-testid="nav-prev" onClick={() => nav.onPrevious()}>
+        Custom prev
+      </button>
+    </div>
+  );
+}
+
+describe('useStepNavigation', () => {
+  describe('provider boundary', () => {
+    it('throws when used outside AdaptiveFormProvider', () => {
+      expect(() => {
+        render(<CustomNavDisplay />);
+      }).toThrow('useStepNavigation must be used within an AdaptiveFormProvider');
+    });
+
+    it('returns { initialised: false } when no AdaptiveForm is mounted', () => {
+      render(
+        <AdaptiveFormProvider requirements={schema}>
+          <CustomNavDisplay />
+        </AdaptiveFormProvider>,
+      );
+      expect(screen.getByTestId('nav-state').textContent).toBe('uninitialised');
+    });
+  });
+
+  describe('with AdaptiveForm mounted', () => {
+    function FormWithCustomNav({ initialData = medicalClaimData }: { initialData?: FormData } = {}) {
+      const [data, setData] = useState<FormData>(initialData);
+      return (
+        <AdaptiveFormProvider requirements={schema}>
+          <CustomNavDisplay />
+          <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    it('exposes initialised navigation state', () => {
+      render(<FormWithCustomNav />);
+      expect(screen.getByTestId('nav-initialised').textContent).toBe('true');
+      expect(screen.getByTestId('nav-current-step-id').textContent).toBe('claim_info');
+      expect(screen.getByTestId('nav-current-step-index').textContent).toBe('0');
+      expect(screen.getByTestId('nav-total-steps').textContent).toBe('4');
+      expect(screen.getByTestId('nav-steps-count').textContent).toBe('4');
+    });
+
+    it('reflects step validity in canGoNext / isStepValid', () => {
+      render(<FormWithCustomNav />);
+      // medicalClaimData has all step 1 fields filled — should be valid + nextable
+      expect(screen.getByTestId('nav-is-step-valid').textContent).toBe('true');
+      expect(screen.getByTestId('nav-can-go-next').textContent).toBe('true');
+    });
+
+    it('blocks canGoNext when current step has invalid fields', () => {
+      render(<FormWithCustomNav initialData={{}} />);
+      expect(screen.getByTestId('nav-is-step-valid').textContent).toBe('false');
+      expect(screen.getByTestId('nav-can-go-next').textContent).toBe('false');
+    });
+
+    it('canGoPrevious is false on first step, true after navigating forward', () => {
+      render(<FormWithCustomNav />);
+      expect(screen.getByTestId('nav-can-go-previous').textContent).toBe('false');
+
+      fireEvent.click(screen.getByTestId('nav-next'));
+
+      expect(screen.getByTestId('nav-can-go-previous').textContent).toBe('true');
+    });
+
+    it('clicking onNext from custom nav advances the form', () => {
+      render(<FormWithCustomNav />);
+      expect(screen.getByTestId('nav-current-step-id').textContent).toBe('claim_info');
+
+      fireEvent.click(screen.getByTestId('nav-next'));
+
+      expect(screen.getByTestId('nav-current-step-id').textContent).toBe('treatment_details');
+      expect(screen.getByTestId('nav-current-step-index').textContent).toBe('1');
+    });
+
+    it('clicking onPrevious from custom nav steps back', () => {
+      render(<FormWithCustomNav />);
+
+      fireEvent.click(screen.getByTestId('nav-next'));
+      expect(screen.getByTestId('nav-current-step-id').textContent).toBe('treatment_details');
+
+      fireEvent.click(screen.getByTestId('nav-prev'));
+      expect(screen.getByTestId('nav-current-step-id').textContent).toBe('claim_info');
+    });
+
+    it('exposes step title from current step', () => {
+      render(<FormWithCustomNav />);
+      expect(screen.getByTestId('nav-step-title').textContent).toBe('Claim information');
+
+      fireEvent.click(screen.getByTestId('nav-next'));
+
+      expect(screen.getByTestId('nav-step-title').textContent).toBe('Treatment details');
+    });
+  });
+
+  describe('handler identity stability', () => {
+    it('preserves onNext reference across renders that do not change deps', () => {
+      const captured: (() => void)[] = [];
+      function FormWithCapturingNav() {
+        const [data, setData] = useState<FormData>(medicalClaimData);
+        return (
+          <AdaptiveFormProvider requirements={schema}>
+            <CustomNavDisplay onCapture={(onNext) => captured.push(onNext)} />
+            <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+          </AdaptiveFormProvider>
+        );
+      }
+
+      const { rerender } = render(<FormWithCapturingNav />);
+      rerender(<FormWithCapturingNav />);
+      rerender(<FormWithCapturingNav />);
+
+      // CustomNavDisplay re-renders each time the parent re-renders, but the
+      // onNext reference should be stable as long as the underlying state
+      // (current step, validity, nextStepId) does not change.
+      expect(captured.length).toBeGreaterThanOrEqual(2);
+      const first = captured[0];
+      expect(first).toBeDefined();
+      for (const fn of captured) {
+        expect(fn).toBe(first);
+      }
+    });
+  });
+
+  describe('unmount cleanup', () => {
+    it('returns to { initialised: false } when AdaptiveForm unmounts', () => {
+      function ToggleableForm({ showForm }: { showForm: boolean }) {
+        const [data, setData] = useState<FormData>(medicalClaimData);
+        return (
+          <AdaptiveFormProvider requirements={schema}>
+            <CustomNavDisplay />
+            {showForm && <AdaptiveForm value={data} onChange={setData} components={testComponents} />}
+          </AdaptiveFormProvider>
+        );
+      }
+
+      const { rerender } = render(<ToggleableForm showForm />);
+      expect(screen.getByTestId('nav-initialised').textContent).toBe('true');
+
+      rerender(<ToggleableForm showForm={false} />);
+      expect(screen.getByTestId('nav-state').textContent).toBe('uninitialised');
+    });
+  });
+});
+
+describe('useFormInfo back-compat after the navigationState refactor', () => {
+  it('returns baseline step info when no AdaptiveForm is mounted', () => {
+    render(
+      <AdaptiveFormProvider requirements={schema}>
+        <StepperInfoDisplay />
+      </AdaptiveFormProvider>,
+    );
+    expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
+    expect(screen.getByTestId('total-steps').textContent).toBe('4');
+    expect(screen.getByTestId('step-claim_info-current').textContent).toBe('true');
+    expect(screen.getByTestId('step-claim_info-visited').textContent).toBe('true');
+    // No form to validate against → all steps default to invalid
+    expect(screen.getByTestId('step-claim_info-valid').textContent).toBe('false');
+  });
+
+  it('reverts to baseline step info when AdaptiveForm unmounts', () => {
+    function ToggleableForm({ showForm }: { showForm: boolean }) {
+      const [data, setData] = useState<FormData>(medicalClaimData);
+      return (
+        <AdaptiveFormProvider requirements={schema}>
+          <StepperInfoDisplay />
+          {showForm && <AdaptiveForm value={data} onChange={setData} components={testComponents} />}
+        </AdaptiveFormProvider>
+      );
+    }
+
+    const { rerender } = render(<ToggleableForm showForm />);
+    // Form mounted: medicalClaimData makes step 1 valid
+    expect(screen.getByTestId('step-claim_info-valid').textContent).toBe('true');
+
+    rerender(<ToggleableForm showForm={false} />);
+    // Form unmounted: validity reverts to baseline (false)
+    expect(screen.getByTestId('step-claim_info-valid').textContent).toBe('false');
+    // But identity and visited state are preserved from the provider's own state
+    expect(screen.getByTestId('current-step-id').textContent).toBe('claim_info');
   });
 });

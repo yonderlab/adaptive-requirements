@@ -1,4 +1,4 @@
-import type { RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type { Flow, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { getInitialStepId, resolveLabel } from '@kotaio/adaptive-requirements-engine';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,6 +27,43 @@ export interface StepperInfo {
   readonly steps: readonly StepDetail[];
 }
 
+/**
+ * Step navigation props (used when `requirements.flow` is defined).
+ *
+ * Receives the same payload as `AdaptiveForm.renderStepNavigation`. Available
+ * via `useStepNavigation()` once an `AdaptiveForm` is mounted.
+ */
+export interface StepNavigationProps {
+  canGoPrevious: boolean;
+  /** True when there is a next step and current step fields pass validation */
+  canGoNext: boolean;
+  /** True when all visible fields in the current step pass validation (use to disable Next when false) */
+  isStepValid: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+  stepTitle?: string;
+  stepSubtitle?: string;
+  currentStepId: string;
+  currentStepIndex: number;
+  totalSteps: number;
+  /** Read-only details for all steps in the flow (id, title, validity, visited state) */
+  steps: readonly StepDetail[];
+}
+
+/**
+ * Discriminated union returned by `useStepNavigation()`.
+ *
+ * - `{ initialised: false }` — no `AdaptiveForm` is currently rendered inside the
+ *   provider, so navigation handlers and validation state are not available.
+ * - `{ initialised: true, ...StepNavigationProps }` — an `AdaptiveForm` is mounted
+ *   and has published its current navigation state.
+ *
+ * Consumers must narrow on `initialised: true` before accessing handlers.
+ */
+export type StepNavigationState =
+  | { readonly initialised: false }
+  | ({ readonly initialised: true } & StepNavigationProps);
+
 export type FieldId = string;
 
 /**
@@ -52,15 +89,16 @@ export interface AdaptiveFormContextValue {
   visitedSteps: ReadonlySet<string>;
   markStepVisited: (id: string) => void;
   replaceVisitedSteps: (ids: Set<string>) => void;
-  stepInfo: StepperInfo;
-  _setStepperInfo: (info: StepperInfo) => void;
+  navigationState: StepNavigationState;
+  _setNavigationState: (s: StepNavigationState) => void;
 }
 
 export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null>(null);
 
 /**
  * Required provider that supplies `requirements` to `AdaptiveForm` and enables
- * sibling components to read step information via the `useFormInfo()` hook.
+ * sibling components to read step state via `useStepNavigation()` (or the
+ * deprecated `useFormInfo()`).
  *
  * @example
  * ```tsx
@@ -80,28 +118,7 @@ export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
 
   const [visitedSteps, setVisitedSteps] = useState<Set<string>>(() => new Set(currentStepId ? [currentStepId] : []));
 
-  const [stepInfo, setStepperInfo] = useState<StepperInfo>(() => {
-    if (!flow) {
-      return { currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] };
-    }
-    const initialId = getInitialStepId(flow);
-    return {
-      currentStepId: initialId,
-      currentStepIndex: Math.max(
-        flow.steps.findIndex((s) => s.id === initialId),
-        0,
-      ),
-      totalSteps: flow.steps.length,
-      steps: flow.steps.map((step) => ({
-        id: step.id,
-        title: resolveLabel(step.title),
-        subtitle: resolveLabel(step.subtitle),
-        isCurrent: step.id === initialId,
-        isValid: false,
-        hasBeenVisited: step.id === initialId,
-      })),
-    };
-  });
+  const [navigationState, setNavigationState] = useState<StepNavigationState>({ initialised: false });
 
   // Reset all step state when the flow reference changes (e.g. switching schemas)
   const prevFlowRef = useRef(flow);
@@ -113,26 +130,7 @@ export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
     const newInitialId = flow ? getInitialStepId(flow) : '';
     setCurrentStepId(newInitialId);
     setVisitedSteps(new Set(newInitialId ? [newInitialId] : []));
-    if (!flow) {
-      setStepperInfo({ currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] });
-    } else {
-      setStepperInfo({
-        currentStepId: newInitialId,
-        currentStepIndex: Math.max(
-          flow.steps.findIndex((s) => s.id === newInitialId),
-          0,
-        ),
-        totalSteps: flow.steps.length,
-        steps: flow.steps.map((step) => ({
-          id: step.id,
-          title: resolveLabel(step.title),
-          subtitle: resolveLabel(step.subtitle),
-          isCurrent: step.id === newInitialId,
-          isValid: false,
-          hasBeenVisited: step.id === newInitialId,
-        })),
-      });
-    }
+    setNavigationState({ initialised: false });
   }, [flow]);
 
   const markStepVisited = useCallback((id: string) => {
@@ -158,26 +156,99 @@ export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
       visitedSteps,
       markStepVisited,
       replaceVisitedSteps,
-      stepInfo,
-      _setStepperInfo: setStepperInfo,
+      navigationState,
+      _setNavigationState: setNavigationState,
     }),
-    [requirements, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
+    [requirements, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, navigationState],
   );
 
   return <AdaptiveFormContext.Provider value={value}>{children}</AdaptiveFormContext.Provider>;
 }
 
 /**
+ * Compute the baseline `StepperInfo` from the provider's flow + step state.
+ * Used as the fallback for `useFormInfo()` when no `AdaptiveForm` is mounted.
+ * Validity is `false` for all steps because we have no form data to validate.
+ */
+function computeBaselineStepperInfo(
+  flow: Flow | undefined,
+  currentStepId: string,
+  visitedSteps: ReadonlySet<string>,
+): StepperInfo {
+  if (!flow) {
+    return { currentStepId: '', currentStepIndex: 0, totalSteps: 0, steps: [] };
+  }
+  return {
+    currentStepId,
+    currentStepIndex: Math.max(
+      flow.steps.findIndex((s) => s.id === currentStepId),
+      0,
+    ),
+    totalSteps: flow.steps.length,
+    steps: flow.steps.map((step) => ({
+      id: step.id,
+      title: resolveLabel(step.title),
+      subtitle: resolveLabel(step.subtitle),
+      isCurrent: step.id === currentStepId,
+      isValid: false,
+      hasBeenVisited: visitedSteps.has(step.id),
+    })),
+  };
+}
+
+/**
  * Returns read-only step information for the current form flow.
  * Must be used within an `AdaptiveFormProvider`.
  *
- * Always returns a `StepperInfo` object — validity and visited state are refined
- * once `AdaptiveForm` mounts and pushes computed state into context.
+ * @deprecated Use `useStepNavigation()` instead. It returns the same step
+ * descriptor data plus navigation handlers (`onNext`, `onPrevious`) and
+ * validation flags (`canGoNext`, `isStepValid`), with a discriminated union
+ * for safe access before any `AdaptiveForm` is mounted.
  */
 export function useFormInfo(): StepperInfo {
   const ctx = useContext(AdaptiveFormContext);
   if (!ctx) {
     throw new Error('useFormInfo must be used within an AdaptiveFormProvider');
   }
-  return ctx.stepInfo;
+  const { navigationState: nav, requirements, currentStepId, visitedSteps } = ctx;
+  return useMemo(() => {
+    if (nav.initialised) {
+      return {
+        currentStepId: nav.currentStepId,
+        currentStepIndex: nav.currentStepIndex,
+        totalSteps: nav.totalSteps,
+        steps: nav.steps,
+      };
+    }
+    return computeBaselineStepperInfo(requirements.flow, currentStepId, visitedSteps);
+  }, [nav, requirements.flow, currentStepId, visitedSteps]);
+}
+
+/**
+ * Returns the current step navigation state for components rendered inside
+ * `AdaptiveFormProvider`. Must be used within a provider.
+ *
+ * Returns a discriminated union — narrow on `initialised: true` to access
+ * navigation handlers and validation state. When no `AdaptiveForm` is rendered,
+ * returns `{ initialised: false }`.
+ *
+ * @example
+ * ```tsx
+ * function CustomFooter() {
+ *   const nav = useStepNavigation();
+ *   if (!nav.initialised) return null;
+ *   return (
+ *     <button disabled={!nav.canGoNext} onClick={nav.onNext}>
+ *       Continue
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
+export function useStepNavigation(): StepNavigationState {
+  const ctx = useContext(AdaptiveFormContext);
+  if (!ctx) {
+    throw new Error('useStepNavigation must be used within an AdaptiveFormProvider');
+  }
+  return ctx.navigationState;
 }
