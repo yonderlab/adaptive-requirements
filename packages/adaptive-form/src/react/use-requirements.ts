@@ -1,16 +1,18 @@
-import type { FieldMapping, FieldState, FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type {
+  EngineOptions,
+  FieldMapping,
+  FieldState,
+  FormData,
+  RequirementsObject,
+} from '@kotaio/adaptive-requirements-engine';
 
 import { createAdapter } from '@kotaio/adaptive-requirements-engine';
 import { useCallback, useMemo } from 'react';
 
 export interface UseRequirementsOptions {
   mapping?: FieldMapping;
-  /**
-   * Additional JSON Logic operations to register on the underlying engine.
-   * Available inside `validation.rules`, `visibleWhen`, `excludeWhen`,
-   * `computed` formulas, and async validator `when` guards.
-   */
-  customOperations?: Record<string, (...args: unknown[]) => unknown>;
+  /** Engine options for custom validators and localization */
+  engine?: EngineOptions;
 }
 
 /**
@@ -24,13 +26,8 @@ export function useRequirements<TFieldId extends string = string>(
 ) {
   // Create adapter with memoization
   const adapter = useMemo(
-    () =>
-      createAdapter(
-        requirements,
-        options?.mapping,
-        options?.customOperations ? { customOperations: options.customOperations } : undefined,
-      ),
-    [requirements, options?.mapping, options?.customOperations],
+    () => createAdapter(requirements, options?.mapping, options?.engine),
+    [requirements, options?.mapping, options?.engine],
   );
 
   // Calculate computed field values
@@ -111,13 +108,8 @@ export function useFieldState<TFieldId extends string = string>(
   options?: UseRequirementsOptions,
 ): FieldState<TFieldId> {
   const adapter = useMemo(
-    () =>
-      createAdapter(
-        requirements,
-        options?.mapping,
-        options?.customOperations ? { customOperations: options.customOperations } : undefined,
-      ),
-    [requirements, options?.mapping, options?.customOperations],
+    () => createAdapter(requirements, options?.mapping, options?.engine),
+    [requirements, options?.mapping, options?.engine],
   );
 
   const calculatedData = useMemo(() => adapter.calculateData(data), [adapter, data]);
@@ -137,14 +129,9 @@ export function useFieldState<TFieldId extends string = string>(
 export function useCalculatedData<TFieldId extends string = string>(
   requirements: RequirementsObject<TFieldId>,
   inputData: FormData,
-  options?: UseRequirementsOptions,
 ): FormData {
   return useMemo(() => {
-    const adapter = createAdapter(
-      requirements,
-      options?.mapping,
-      options?.customOperations ? { customOperations: options.customOperations } : undefined,
-    );
+    const adapter = createAdapter(requirements);
     return adapter.calculateData(inputData);
-  }, [requirements, inputData, options?.mapping, options?.customOperations]);
+  }, [requirements, inputData]);
 }
