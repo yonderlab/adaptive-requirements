@@ -1,5 +1,11 @@
 # @kotaio/adaptive-form
 
+## 1.3.0
+
+### Minor Changes
+
+- [#55](https://github.com/yonderlab/adaptive-requirements/pull/55) [`a42256c`](https://github.com/yonderlab/adaptive-requirements/commit/a42256ca7d1633e19fea9bd63c2cc4127c3a1aa5) Thanks [@Artmann](https://github.com/Artmann)! - Expose `customOperations` prop on `AdaptiveFormProvider` for registering additional JSON Logic operations available throughout the schema — validation rules, `visibleWhen`/`excludeWhen` conditions, `computed` field formulas, and async validator `when` guards. The provider's `customOperations` are forwarded into both the sync validation pass and `useAsyncValidation`'s sync gating.
+
 ## 1.2.2
 
 ### Patch Changes
