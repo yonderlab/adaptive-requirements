@@ -39,12 +39,6 @@ export type AdaptiveFormRequirements<TFieldId extends FieldId = FieldId> = Requi
  */
 export interface AdaptiveFormProviderProps<TFieldId extends FieldId = FieldId> {
   requirements: AdaptiveFormRequirements<TFieldId>;
-  /**
-   * Additional JSON Logic operations to register on the underlying engine.
-   * Available inside `validation.rules`, `visibleWhen`, `excludeWhen`,
-   * `computed` formulas, and async validator `when` guards.
-   */
-  customOperations?: Record<string, (...args: unknown[]) => unknown>;
   children: React.ReactNode;
 }
 
@@ -53,7 +47,6 @@ export interface AdaptiveFormProviderProps<TFieldId extends FieldId = FieldId> {
  */
 export interface AdaptiveFormContextValue {
   requirements: RequirementsObject;
-  customOperations?: Record<string, (...args: unknown[]) => unknown>;
   currentStepId: string;
   setCurrentStepId: (id: string) => void;
   visitedSteps: ReadonlySet<string>;
@@ -79,7 +72,6 @@ export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null
  */
 export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
   requirements,
-  customOperations,
   children,
 }: AdaptiveFormProviderProps<TFieldId>) {
   const { flow } = requirements;
@@ -161,7 +153,6 @@ export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
   const value = useMemo<AdaptiveFormContextValue>(
     () => ({
       requirements,
-      customOperations,
       currentStepId,
       setCurrentStepId,
       visitedSteps,
@@ -170,7 +161,7 @@ export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
       stepInfo,
       _setStepperInfo: setStepperInfo,
     }),
-    [requirements, customOperations, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
+    [requirements, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, stepInfo],
   );
 
   return <AdaptiveFormContext.Provider value={value}>{children}</AdaptiveFormContext.Provider>;
