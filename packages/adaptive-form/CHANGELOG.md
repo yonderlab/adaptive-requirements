@@ -1,5 +1,13 @@
 # @kotaio/adaptive-form
 
+## 1.4.0
+
+### Minor Changes
+
+- [#59](https://github.com/yonderlab/adaptive-requirements/pull/59) [`b832c8d`](https://github.com/yonderlab/adaptive-requirements/commit/b832c8d2543ca64aa1e18218744326ecd10b5581) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Expose step navigation state to sibling components via the new `useStepNavigation()` hook. Custom step navigation UIs can now be rendered anywhere inside `AdaptiveFormProvider`, not only as a child of `AdaptiveForm.renderStepNavigation`. The hook returns a discriminated union — narrow on `initialised: true` to access handlers (`onNext`, `onPrevious`) and validation state (`canGoNext`, `isStepValid`). Soft-deprecates `useFormInfo()` in favour of `useStepNavigation()`; existing consumers continue to work unchanged.
+
+- [#57](https://github.com/yonderlab/adaptive-requirements/pull/57) [`e0a807d`](https://github.com/yonderlab/adaptive-requirements/commit/e0a807daca988d3954ceb98fb7f23d29b9e41f21) Thanks [@Artmann](https://github.com/Artmann)! - Revert the `customOperations` prop on `AdaptiveFormProvider` introduced in #55.
+
 ## 1.3.0
 
 ### Minor Changes
