@@ -501,19 +501,22 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
   ]);
 
   // Publish navigation state so siblings of AdaptiveForm can subscribe via useStepNavigation().
-  // Reset to { initialised: false } when AdaptiveForm unmounts so consumers don't see stale state.
   // Depend on the setter (stable per useState contract), not the whole ctx — otherwise the ctx
   // re-memoization triggered by our own setNavigationState call would cause an infinite loop.
   const setNavigationState = ctx._setNavigationState;
   useEffect(() => {
-    if (!navigationProps) {
-      return;
-    }
-    setNavigationState({ initialised: true, ...navigationProps });
-    return () => {
-      setNavigationState({ initialised: false });
-    };
+    setNavigationState(navigationProps ? { initialised: true, ...navigationProps } : { initialised: false });
   }, [setNavigationState, navigationProps]);
+
+  // Reset only on actual unmount so consumers don't see stale state after the form is gone.
+  // Kept separate from the publish effect above to avoid cycling navigationState through
+  // { initialised: false } on every navigation update.
+  useEffect(
+    () => () => {
+      setNavigationState({ initialised: false });
+    },
+    [setNavigationState],
+  );
 
   const handleFieldChange = useCallback(
     (fieldId: string, newValue: FieldValue) => {

@@ -347,7 +347,7 @@ To render all steps as sections on a single page (no navigation), set `showAllSt
 
 Use `useStepNavigation()` from any component inside `AdaptiveFormProvider` to render custom step navigation UI anywhere in the tree — sticky footers, sidebars, or alongside a progress bar — not just as a child of `AdaptiveForm`.
 
-The hook returns a discriminated union. Narrow on `initialised: true` to access handlers and validation state. Before any `AdaptiveForm` is mounted (or after it unmounts), the hook returns `{ initialised: false }`.
+The hook returns either `{ initialised: false }` (when no `AdaptiveForm` is mounted yet) or `{ initialised: true, ... }` with the full navigation state. Always check `initialised` before using the handlers.
 
 ```tsx
 import { useState } from 'react';
