@@ -343,26 +343,30 @@ To render all steps as sections on a single page (no navigation), set `showAllSt
 </AdaptiveFormProvider>
 ```
 
-### Accessing step information from outside AdaptiveForm
+### Custom step navigation outside `renderStepNavigation`
 
-Wrap `AdaptiveForm` in an `AdaptiveFormProvider` to expose step information to sibling components (e.g. a progress stepper or breadcrumbs) via the `useFormInfo()` hook.
+Use `useStepNavigation()` from any component inside `AdaptiveFormProvider` to render custom step navigation UI anywhere in the tree — sticky footers, sidebars, or alongside a progress bar — not just as a child of `AdaptiveForm`.
+
+The hook returns either `{ initialised: false }` (when no `AdaptiveForm` is mounted yet) or `{ initialised: true, ... }` with the full navigation state. Always check `initialised` before using the handlers.
 
 ```tsx
 import { useState } from 'react';
-import { AdaptiveFormProvider, AdaptiveForm, useFormInfo } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm, useStepNavigation } from '@kotaio/adaptive-form/react';
 
-function ProgressStepper() {
-  const stepInfo = useFormInfo();
+function StickyFooter() {
+  const nav = useStepNavigation();
+  if (!nav.initialised) return null;
 
   return (
-    <nav>
-      {stepInfo.steps.map((step) => (
-        <span key={step.id} data-active={step.isCurrent} data-visited={step.hasBeenVisited}>
-          {step.title}
-          {step.isValid && ' ✓'}
-        </span>
-      ))}
-    </nav>
+    <footer className="sticky-footer">
+      <span>
+        {nav.stepTitle} ({nav.currentStepIndex + 1} of {nav.totalSteps})
+      </span>
+      {nav.canGoPrevious && <button onClick={nav.onPrevious}>Back</button>}
+      <button onClick={nav.onNext} disabled={!nav.canGoNext}>
+        Continue
+      </button>
+    </footer>
   );
 }
 
@@ -371,23 +375,28 @@ function MyForm({ requirements }) {
 
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <ProgressStepper />
       <AdaptiveForm value={formData} onChange={setFormData} components={myComponents} />
+      <StickyFooter />
     </AdaptiveFormProvider>
   );
 }
 ```
 
-`AdaptiveForm` must be rendered inside an `AdaptiveFormProvider`. The provider supplies `requirements` via context and enables siblings to read step state via `useFormInfo()`.
+When `initialised: true`, the hook returns the same payload as `renderStepNavigation`:
 
-`useFormInfo()` returns a `StepperInfo` object:
-
-| Property           | Type                        | Description                  |
-| ------------------ | --------------------------- | ---------------------------- |
-| `currentStepId`    | `string`                    | ID of the active step        |
-| `currentStepIndex` | `number`                    | 0-based index of active step |
-| `totalSteps`       | `number`                    | Total number of steps        |
-| `steps`            | `ReadonlyArray<StepDetail>` | Details for every step       |
+| Property           | Type                        | Description                                              |
+| ------------------ | --------------------------- | -------------------------------------------------------- |
+| `canGoPrevious`    | `boolean`                   | Whether a previous step exists                           |
+| `canGoNext`        | `boolean`                   | Next step exists AND current step fields pass validation |
+| `isStepValid`      | `boolean`                   | All visible fields in the current step pass validation   |
+| `onPrevious`       | `() => void`                | Step backward (no validation gate)                       |
+| `onNext`           | `() => void`                | Step forward (validates and reveals errors when invalid) |
+| `stepTitle`        | `string \| undefined`       | Current step title (after localization)                  |
+| `stepSubtitle`     | `string \| undefined`       | Current step subtitle (after localization)               |
+| `currentStepId`    | `string`                    | ID of the active step                                    |
+| `currentStepIndex` | `number`                    | 0-based index of the active step                         |
+| `totalSteps`       | `number`                    | Total number of steps                                    |
+| `steps`            | `ReadonlyArray<StepDetail>` | Details for every step (same as `useFormInfo().steps`)   |
 
 Each `StepDetail` contains:
 
@@ -395,11 +404,12 @@ Each `StepDetail` contains:
 | ---------------- | --------------------- | ----------------------------------------------- |
 | `id`             | `string`              | Step ID                                         |
 | `title`          | `string \| undefined` | Step title (after localization)                 |
+| `subtitle`       | `string \| undefined` | Step subtitle (after localization)              |
 | `isCurrent`      | `boolean`             | Whether this is the active step                 |
 | `isValid`        | `boolean`             | All visible fields in this step pass validation |
 | `hasBeenVisited` | `boolean`             | Whether the user has navigated to this step     |
 
-Step information is also available via `renderStepNavigation` — the callback now receives a `steps` array with the same `StepDetail` objects, alongside the existing navigation props.
+> **`useFormInfo()` is deprecated** in favour of `useStepNavigation()`. It still works and returns the same step descriptor data, but new code should use `useStepNavigation()` for access to navigation handlers and validation state. Existing `useFormInfo()` consumers can keep working — the hook still returns a `StepperInfo` object and is safe to call anywhere inside the provider.
 
 ## Field mapping
 
