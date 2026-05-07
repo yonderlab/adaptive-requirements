@@ -357,7 +357,7 @@ Some flows need to halt online progression when a user gives a particular answer
 This is fully expressible with two existing primitives — no new schema concepts and no new code:
 
 1. A **validation rule** on the triggering field whose predicate is true (= valid) when *not* blocked, and false (= blocked). Because validation rules use the convention `truthy = valid, falsy = error`, you negate the block condition.
-2. A conditionally-visible **`notice_danger` field** carrying the rich message and CTA, with a `visibleWhen` matching the blocking condition.
+2. A conditionally-visible **`notice_danger` field** carrying the rich message in its `description` (required body text) and an optional `label` heading, with a `visibleWhen` matching the blocking condition.
 
 When the rule fails, the field carries an error → the form's aggregate `currentStepIsValid` flips to false → the Next button auto-disables. When the user changes their answer back, the rule passes, the notice hides, and Next re-enables. Reversibility is automatic.
 
@@ -384,10 +384,11 @@ When the rule fails, the field carries an error → the form's aggregate `curren
 {
   id: 'no_prev_insurance_block',
   type: 'notice_danger',
-  label: {
-    default:
-      "We can't complete this application online. Please call 020-XXX-XXXX and we'll continue with you over the phone.",
-  },
+  // `description` is the body of the notice (required for notice fields).
+  description:
+    "Please call 020-XXX-XXXX and we'll continue with you over the phone.",
+  // `label` is an optional heading shown above the description.
+  label: { default: "We can't complete this application online" },
   visibleWhen: { '==': [{ var: 'previous_insurance' }, 'no'] },
 },
 {

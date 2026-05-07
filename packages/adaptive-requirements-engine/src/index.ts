@@ -47,8 +47,9 @@ export {
   getPreviousStepId,
   getInitialStepId,
   createAdapter,
+  NOTICE_FIELD_TYPES,
 } from './engine';
-export type { RuleContext, AsyncValidatorFn, EngineOptions } from './engine';
+export type { RuleContext, AsyncValidatorFn, EngineOptions, NoticeFieldType } from './engine';
 export { isReservedOperationName } from './operations';
 
 // Validate

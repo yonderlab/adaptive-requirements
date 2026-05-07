@@ -1,4 +1,4 @@
-import type { FieldComputedProps, FieldInputProps, FieldRenderProps } from './adaptive-form';
+import type { FieldInputProps, FieldNoticeProps, FieldRenderProps } from './adaptive-form';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -957,18 +957,22 @@ describe('adaptiveForm async validation integration', () => {
   });
 });
 
-/** Test renderer for notice fields — renders FieldComputedProps */
-function TestNotice({ field, isVisible }: FieldComputedProps) {
+/** Test renderer for notice fields — renders FieldNoticeProps */
+function TestNotice({ field, isVisible, label, description }: FieldNoticeProps) {
   if (!isVisible) {
     return null;
   }
-  return <div data-testid={`notice-${field.id}`}>{field.type}</div>;
+  return (
+    <div data-testid={`notice-${field.id}`} data-label={label} data-description={description ?? ''}>
+      {field.type}
+    </div>
+  );
 }
 
 describe('notice field types', () => {
   it('renders a notice field when visibleWhen is not set', () => {
     const requirements = makeRequirements([
-      { id: 'danger_msg', type: 'notice_danger', label: { default: 'Enrolment closed' } },
+      { id: 'danger_msg', type: 'notice_danger', description: 'Enrolment closed' },
     ]);
 
     render(
@@ -987,7 +991,7 @@ describe('notice field types', () => {
       {
         id: 'warn_msg',
         type: 'notice_warning',
-        label: { default: 'Coverage may be affected' },
+        description: 'Coverage may be affected',
         visibleWhen: { '!=': [{ var: 'status' }, 'active'] },
       },
     ]);
@@ -1007,7 +1011,7 @@ describe('notice field types', () => {
   it('does not include notice fields in form data on controlled onChange', () => {
     const requirements = makeRequirements([
       { id: 'name', type: 'text' },
-      { id: 'info_msg', type: 'notice_info', label: { default: 'Your scheme starts Jan 1' } },
+      { id: 'info_msg', type: 'notice_info', description: 'Your scheme starts Jan 1' },
     ]);
 
     let lastData: FormData = {};
@@ -1035,10 +1039,129 @@ describe('notice field types', () => {
     expect(lastData).not.toHaveProperty('info_msg');
   });
 
-  it('logs a dev warning when no renderer is provided for a notice type', () => {
+  it('renders an unstyled accessible fallback when no renderer is provided for a notice type', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
 
-    const requirements = makeRequirements([{ id: 'info_msg', type: 'notice_info', label: { default: 'Info' } }]);
+    const requirements = makeRequirements([
+      { id: 'info_msg', type: 'notice_info', description: 'Heads up' },
+      { id: 'warn_msg', type: 'notice_warning', description: 'Caution' },
+      { id: 'danger_msg', type: 'notice_danger', description: 'Cannot continue online' },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{}} />
+      </AdaptiveFormProvider>,
+    );
+
+    // notice_info / notice_warning fall back to role="status"; notice_danger to role="alert"
+    const info = document.querySelector('[data-adaptive-form-default-renderer="notice_info"]')!;
+    const warn = document.querySelector('[data-adaptive-form-default-renderer="notice_warning"]')!;
+    const danger = document.querySelector('[data-adaptive-form-default-renderer="notice_danger"]')!;
+
+    expect(info).not.toBeNull();
+    expect(warn).not.toBeNull();
+    expect(danger).not.toBeNull();
+    expect(info.getAttribute('role')).toBe('status');
+    expect(warn.getAttribute('role')).toBe('status');
+    expect(danger.getAttribute('role')).toBe('alert');
+    expect(info.textContent).toBe('Heads up');
+    expect(warn.textContent).toBe('Caution');
+    expect(danger.textContent).toBe('Cannot continue online');
+
+    // Fallback is a deliberate built-in default, not an error — should not log a warning.
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  it('consumer-supplied notice renderer wins over the built-in fallback', () => {
+    const requirements = makeRequirements([
+      { id: 'danger_msg', type: 'notice_danger', description: 'Cannot continue' },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{ notice_danger: TestNotice }} />
+      </AdaptiveFormProvider>,
+    );
+
+    // Consumer renderer rendered (uses data-testid)
+    expect(screen.getByTestId('notice-danger_msg').textContent).toBe('notice_danger');
+    // Fallback element is NOT in the DOM
+    expect(document.querySelector('[data-adaptive-form-default-renderer="notice_danger"]')).toBeNull();
+  });
+
+  it('notice fallback respects visibleWhen — hidden notice does not render', () => {
+    const requirements = makeRequirements([
+      { id: 'trigger', type: 'text', defaultValue: 'no-block' },
+      {
+        id: 'danger_msg',
+        type: 'notice_danger',
+        description: 'Cannot continue',
+        visibleWhen: { '==': [{ var: 'trigger' }, 'block'] },
+      },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{ text: (props: FieldInputProps) => <TestTextInput {...props} /> }} />
+      </AdaptiveFormProvider>,
+    );
+
+    expect(document.querySelector('[data-adaptive-form-default-renderer="notice_danger"]')).toBeNull();
+  });
+
+  it('notice fallback includes description body text when present', () => {
+    const requirements = makeRequirements([
+      {
+        id: 'danger_msg',
+        type: 'notice_danger',
+        label: { default: 'Cannot continue online' },
+        description: 'Please call 020-XXX-XXXX to finish over the phone.',
+      },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{}} />
+      </AdaptiveFormProvider>,
+    );
+
+    const fallback = document.querySelector('[data-adaptive-form-default-renderer="notice_danger"]')!;
+    expect(fallback).not.toBeNull();
+    // Fallback joins label + description with a separator so screen readers get both.
+    expect(fallback.textContent).toContain('Cannot continue online');
+    expect(fallback.textContent).toContain('Please call 020-XXX-XXXX to finish over the phone.');
+  });
+
+  it('consumer-supplied notice renderer receives label and description props', () => {
+    const requirements = makeRequirements([
+      {
+        id: 'danger_msg',
+        type: 'notice_danger',
+        label: { default: 'Cannot continue online' },
+        description: 'Please call 020-XXX-XXXX.',
+      },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{ notice_danger: TestNotice }} />
+      </AdaptiveFormProvider>,
+    );
+
+    const node = screen.getByTestId('notice-danger_msg');
+    expect(node.getAttribute('data-label')).toBe('Cannot continue online');
+    expect(node.getAttribute('data-description')).toBe('Please call 020-XXX-XXXX.');
+  });
+
+  it('still logs a dev warning for genuinely unknown (non-notice) field types', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
+
+    const requirements = makeRequirements([
+      { id: 'mystery', type: 'mystery_widget', label: { default: 'Unknown' } },
+    ]);
 
     render(
       <AdaptiveFormProvider requirements={requirements}>
@@ -1047,17 +1170,17 @@ describe('notice field types', () => {
     );
 
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('No render function found for field type: "notice_info"'),
+      expect.stringContaining('No render function found for field type: "mystery_widget"'),
     );
 
     warnSpy.mockRestore();
   });
 
-  it('renders all three notice variants with FieldComputedProps', () => {
+  it('renders all three notice variants with FieldNoticeProps', () => {
     const requirements = makeRequirements([
-      { id: 'info', type: 'notice_info', label: { default: 'Info message' } },
-      { id: 'warn', type: 'notice_warning', label: { default: 'Warning message' } },
-      { id: 'danger', type: 'notice_danger', label: { default: 'Danger message' } },
+      { id: 'info', type: 'notice_info', description: 'Info message' },
+      { id: 'warn', type: 'notice_warning', description: 'Warning message' },
+      { id: 'danger', type: 'notice_danger', description: 'Danger message' },
     ]);
 
     render(

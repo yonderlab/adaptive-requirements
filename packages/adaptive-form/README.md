@@ -128,10 +128,10 @@ The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`
 
 > **Tip:** In controlled mode, define your `components` object outside the component or memoize it with `useMemo` to keep stable references. Inline arrow functions create new component identities each render, which causes React to remount fields (losing focus and internal state).
 
-If you need explicit annotations (e.g. for standalone variables or helper functions), `FieldInputProps`, `FieldComputedProps`, and `FieldOption` are exported for typing component renderers and selectable options:
+If you need explicit annotations (e.g. for standalone variables or helper functions), `FieldInputProps`, `FieldComputedProps`, `FieldNoticeProps`, and `FieldOption` are exported for typing component renderers and selectable options:
 
 ```tsx
-import type { FieldComputedProps, FieldInputProps, FieldOption } from '@kotaio/adaptive-form/react';
+import type { FieldComputedProps, FieldInputProps, FieldNoticeProps, FieldOption } from '@kotaio/adaptive-form/react';
 ```
 
 ### `FieldInputProps`
@@ -218,9 +218,9 @@ const components = {
 };
 ```
 
-### Notice fields — `FieldComputedProps`
+### Notice fields — `FieldNoticeProps`
 
-Notice fields (`notice_info`, `notice_warning`, `notice_danger`) are display-only fields for showing contextual messages. They receive `FieldComputedProps` (same as `computed`) — no `onChange`, no validation, no form submission data.
+Notice fields (`notice_info`, `notice_warning`, `notice_danger`) are display-only fields for showing contextual messages. They receive `FieldNoticeProps` — no `onChange`, no validation, no form submission data, no `value` (notices don't carry form values).
 
 | Type             | Purpose                                                   |
 | ---------------- | --------------------------------------------------------- |
@@ -228,31 +228,59 @@ Notice fields (`notice_info`, `notice_warning`, `notice_danger`) are display-onl
 | `notice_warning` | Caution the user should be aware of                       |
 | `notice_danger`  | Blocker or critical info (e.g. "Enrolment window closed") |
 
+| Prop          | Type                                            | Description                                                                                                                            |
+| ------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `field`       | `Field & { type: NoticeFieldType }`             | The field definition with `type` narrowed to `'notice_info' \| 'notice_warning' \| 'notice_danger'`                                    |
+| `isVisible`   | `boolean`                                       | Whether the field should be rendered                                                                                                   |
+| `description` | `string`                                        | **Required** body text from the schema's `Field.description` — the notice's primary content                                            |
+| `label`       | `string \| undefined`                           | Optional resolved heading/title (after localization), shown above the description                                                      |
+
 ```tsx
-function NoticeInfo({ field, isVisible }: FieldComputedProps) {
+import type { FieldNoticeProps } from '@kotaio/adaptive-form/react';
+
+function NoticeInfo({ isVisible, label, description }: FieldNoticeProps) {
   if (!isVisible) return null;
-  const label = typeof field.label === 'object' ? field.label.default : field.label;
-  return <div className="notice notice-info">{label}</div>;
+  return (
+    <div className="notice notice-info">
+      {label && <strong>{label}</strong>}
+      <p>{description}</p>
+    </div>
+  );
 }
 
 const components = {
   text: (props: FieldInputProps) => <TextInput {...props} />,
-  notice_info: (props: FieldComputedProps) => <NoticeInfo {...props} />,
-  notice_warning: (props: FieldComputedProps) => <NoticeWarning {...props} />,
-  notice_danger: (props: FieldComputedProps) => <NoticeDanger {...props} />,
+  notice_info: (props: FieldNoticeProps) => <NoticeInfo {...props} />,
+  notice_warning: (props: FieldNoticeProps) => <NoticeWarning {...props} />,
+  notice_danger: (props: FieldNoticeProps) => <NoticeDanger {...props} />,
 };
 ```
 
-Notice fields support `visibleWhen` for conditional visibility (driven by JSON Logic rules evaluated by the engine):
+Notice fields support `visibleWhen` for conditional visibility (driven by JSON Logic rules evaluated by the engine), `label` for the message, and `description` for body text:
 
 ```json
 {
   "id": "enrolment_closed_notice",
   "type": "notice_danger",
-  "label": { "default": "The enrolment window is closed." },
+  "description": "Please contact your HR team to discuss your options.",
+  "label": { "default": "Enrolment window is closed" },
   "visibleWhen": { "==": [{ "var": "has_active_policy" }, "no"] }
 }
 ```
+
+`description` is **required** for notice fields — it's the message body, the primary thing the notice says. The schema validator (`validateRequirementsObject`) errors on notice fields without one. `label` is optional — use it when you want a separate heading above the body. The `FieldNoticeProps` shape is designed to grow without affecting other display renderers — future additions like actions or dismissibility will land here, not on `FieldComputedProps`.
+
+#### Built-in fallback
+
+If you don't supply a renderer for a notice type, AdaptiveForm renders a deliberately unstyled accessible fallback so a notice never silently disappears (which matters most for [blocking states](#blocking-states), where a missing notice would leave the user staring at a disabled Continue button with no explanation):
+
+```html
+<div role="alert" data-adaptive-form-default-renderer="notice_danger">{label} — {description}</div>
+```
+
+`notice_danger` uses `role="alert"` (assertive); `notice_info` and `notice_warning` use `role="status"` (polite). The fallback joins the `label` and (optional) `description` so screen readers announce both. The element carries no styling — wire up your own `notice_*` renderer in the `components` prop to match your design system. The fallback is intended as a safety net, not a polished default.
+
+You can target the fallback globally with CSS if you want a quick baseline (e.g. `[data-adaptive-form-default-renderer] { padding: 12px; border: 1px solid; }`), but a real renderer in `components` is the recommended path.
 
 ## Custom render function
 
@@ -557,23 +585,25 @@ Halt forward progression based on an answer (e.g. "if the user has no previous i
 
 The schema mechanics — including the negated-rule convention, reversibility, and variants like hiding subsequent questions — live in the engine package. See [`@kotaio/adaptive-requirements-engine` → Recipes → Blocking states](../adaptive-requirements-engine/README.md#blocking-states) for the full schema example.
 
-On the React side, you only need to make sure your `notice_danger` renderer reflects the visual treatment you want for blocked states (e.g. a callout with an icon, a phone number CTA, or — for a takeover layout — a full-bleed message). The library does not impose a visual style:
+On the React side, you only need to make sure your `notice_danger` renderer reflects the visual treatment you want for blocked states (e.g. a callout with an icon, a phone number CTA, or — for a takeover layout — a full-bleed message). The library does not impose a visual style.
+
+> **Important:** if you skip wiring up `notice_danger` in your `components` prop, AdaptiveForm renders a deliberately unstyled [built-in fallback](#built-in-fallback) so users still see the message. The fallback is a safety net, not a polished default — supply your own renderer to match your design system.
 
 ```tsx
-function NoticeDanger({ field, isVisible }: FieldComputedProps) {
+function NoticeDanger({ isVisible, label, description }: FieldNoticeProps) {
   if (!isVisible) return null;
-  const message = typeof field.label === 'object' ? field.label.default : field.label;
   return (
     <div className="callout callout-danger">
       <Icon name="warning" />
-      <p>{message}</p>
+      {label && <strong>{label}</strong>}
+      <p>{description}</p>
     </div>
   );
 }
 
 const components = {
   // ...
-  notice_danger: (props: FieldComputedProps) => <NoticeDanger {...props} />,
+  notice_danger: (props: FieldNoticeProps) => <NoticeDanger {...props} />,
 };
 ```
 

@@ -20,8 +20,8 @@ import { validateRequirementsObject } from '../validate';
  * No engine or form-package code changes required. This test locks the pattern in as a
  * supported usage so a future refactor can't regress it.
  */
-const blockMessage =
-  "We can't complete this application online. Please call 020-XXX-XXXX and we'll continue with you over the phone.";
+const blockHeading = "We can't complete this online";
+const blockBody = "Please call 020-XXX-XXXX and we'll continue with you over the phone.";
 
 const fallbackErrorMessage = "We can't complete this online — see message below.";
 
@@ -54,7 +54,8 @@ const schema: RequirementsObject = {
     {
       id: 'no_prev_insurance_block',
       type: 'notice_danger',
-      label: { default: blockMessage },
+      label: { default: blockHeading },
+      description: blockBody,
       visibleWhen: { '==': [{ var: 'previous_insurance' }, 'no'] },
     },
     {

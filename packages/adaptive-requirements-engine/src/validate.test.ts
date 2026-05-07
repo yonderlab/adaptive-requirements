@@ -620,6 +620,51 @@ describe('unknown operation validation', () => {
   });
 });
 
+describe('notice field description requirement', () => {
+  it.each([['notice_info'], ['notice_warning'], ['notice_danger']])(
+    'rejects %s field with no description',
+    (type) => {
+      const result = validateRequirementsObject({
+        fields: [{ id: 'msg', type, label: { default: 'Heads up' } }],
+      });
+      expect(result.success).toBeFalsy();
+      if (!result.success) {
+        expect(result.errors.some((e) => e.path === 'fields[0].description')).toBeTruthy();
+      }
+    },
+  );
+
+  it('rejects notice field with empty-string description', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type: 'notice_danger', label: { default: 'Heads up' }, description: '' }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].description')).toBeTruthy();
+    }
+  });
+
+  it('accepts notice field with non-empty description', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'msg',
+          type: 'notice_danger',
+          description: 'Cannot continue online — please call us.',
+        },
+      ],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('does not require description on non-notice fields', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'name', type: 'text', label: 'Name' }],
+    });
+    expect(result.success).toBeTruthy();
+  });
+});
+
 describe(validateDatasetItems, () => {
   it('accepts valid dataset items', () => {
     const result = validateDatasetItems([

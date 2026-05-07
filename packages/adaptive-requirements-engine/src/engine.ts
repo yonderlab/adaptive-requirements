@@ -22,6 +22,18 @@ import { isSupportedCountry, isValidPhoneNumber } from 'libphonenumber-js/min';
 import { isReservedOperationName } from './operations';
 
 /**
+ * Field types that represent notice / message-bearing display fields.
+ *
+ * Single source of truth for both the engine's schema validator (which enforces
+ * that notice fields carry a non-empty `description`) and downstream renderers
+ * (e.g. `@kotaio/adaptive-form` re-exports this).
+ */
+export const NOTICE_FIELD_TYPES = ['notice_info', 'notice_warning', 'notice_danger'] as const;
+
+/** Literal union of notice field types. */
+export type NoticeFieldType = (typeof NOTICE_FIELD_TYPES)[number];
+
+/**
  * Context object for rule evaluation
  * Supports multiple path prefixes: data.*, answers.*, and direct access
  */

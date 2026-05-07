@@ -1,6 +1,9 @@
 import type { DatasetItem, RequirementsObject } from './types';
 
+import { NOTICE_FIELD_TYPES } from './engine';
 import { isReservedOperationName } from './operations';
+
+const NOTICE_FIELD_TYPE_SET: Set<string> = new Set(NOTICE_FIELD_TYPES);
 
 /**
  * A single validation error with path and message
@@ -314,6 +317,18 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
       if (!isString(field['type'])) {
         errors.push({ path: `fields[${i}].type`, message: 'Expected field type to be a string' });
         fieldValid = false;
+      }
+
+      // Notice fields require a non-empty description (their primary message body).
+      // The renderer treats description as the main content; without it, the notice is empty.
+      if (isString(field['type']) && NOTICE_FIELD_TYPE_SET.has(field['type'])) {
+        if (!isString(field['description']) || field['description'].length === 0) {
+          errors.push({
+            path: `fields[${i}].description`,
+            message: `Notice fields (${[...NOTICE_FIELD_TYPE_SET].join(', ')}) require a non-empty description (the message body).`,
+          });
+          fieldValid = false;
+        }
       }
 
       // validation (optional)
