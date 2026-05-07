@@ -348,6 +348,67 @@ const adapter = createAdapter(requirements, {
 // They automatically translate between your field IDs and the schema's
 ```
 
+## Recipes
+
+### Blocking states
+
+Some flows need to halt online progression when a user gives a particular answer and direct them to another channel (e.g. a phone-based journey). For example, ONVZ (Netherlands health insurance) requires asking whether the applicant has previous insurance — if they answer "no", the application must stop and a human takes over.
+
+This is fully expressible with two existing primitives — no new schema concepts and no new code:
+
+1. A **validation rule** on the triggering field whose predicate is true (= valid) when *not* blocked, and false (= blocked). Because validation rules use the convention `truthy = valid, falsy = error`, you negate the block condition.
+2. A conditionally-visible **`notice_danger` field** carrying the rich message and CTA, with a `visibleWhen` matching the blocking condition.
+
+When the rule fails, the field carries an error → the form's aggregate `currentStepIsValid` flips to false → the Next button auto-disables. When the user changes their answer back, the rule passes, the notice hides, and Next re-enables. Reversibility is automatic.
+
+```ts
+{
+  id: 'previous_insurance',
+  type: 'radio',
+  label: { default: 'Have you had previous health insurance?' },
+  options: [
+    { value: 'yes', label: { default: 'Yes' } },
+    { value: 'no', label: { default: 'No' } },
+  ],
+  validation: {
+    required: true,
+    rules: [
+      {
+        // Truthy = valid, falsy = blocked. Negate the block condition.
+        rule: { '!=': [{ var: 'previous_insurance' }, 'no'] },
+        message: "We can't complete this online — see message below.",
+      },
+    ],
+  },
+},
+{
+  id: 'no_prev_insurance_block',
+  type: 'notice_danger',
+  label: {
+    default:
+      "We can't complete this application online. Please call 020-XXX-XXXX and we'll continue with you over the phone.",
+  },
+  visibleWhen: { '==': [{ var: 'previous_insurance' }, 'no'] },
+},
+{
+  // Follow-up question only shown when the answer is "yes".
+  id: 'previous_insurer',
+  type: 'text',
+  label: { default: 'Who was your previous insurance with?' },
+  visibleWhen: { '==': [{ var: 'previous_insurance' }, 'yes'] },
+  excludeWhen: { '!=': [{ var: 'previous_insurance' }, 'yes'] },
+  validation: { required: true },
+},
+```
+
+**Variants:**
+
+- **Plain field error (no separate notice):** drop the `notice_danger` field and put the full call-to-action in the validation rule's `message`. The renderer's existing field-error UI handles it.
+- **Hide other questions on the step when blocked:** add `visibleWhen: { '!=': [{ var: 'previous_insurance' }, 'no'] }` to subsequent fields. Pure schema-side; no library changes.
+- **Block based on multiple fields:** use `and` / `or` in the rule and `visibleWhen` — JSON Logic can reference any field via `{ var: 'other_field' }`.
+
+For the React rendering side (`notice_danger` renderer, takeover layout, custom step navigation), see the [adaptive-form package README](../adaptive-form/README.md#blocking-states).
+
 ## JSON Logic reference
 
 Schemas use [JSON Logic](https://jsonlogic.com) expressions for conditional visibility, conditional validation, computed values, and dataset filtering. The engine evaluates these automatically — this reference is for understanding what schemas can express.

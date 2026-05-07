@@ -546,6 +546,53 @@ These are features expressed in the schema that AdaptiveForm handles automatical
 
 **Custom validators** — Schemas can reference built-in validators (date checks, ID format validation, file constraints) with custom error messages.
 
+## Recipes
+
+### Blocking states
+
+Halt forward progression based on an answer (e.g. "if the user has no previous insurance, take them off the online flow and to a phone call instead"). Achieved purely with existing primitives — no new components, no new hooks, no new props:
+
+1. Author a **validation rule on the triggering field** in the schema. Failing rules make the step invalid and the default Next button auto-disables (custom `renderStepNavigation` consumers see `isStepValid: false`).
+2. Author a **conditionally-visible `notice_danger` field** in the schema with `visibleWhen` matching the blocking condition. Render it with your existing `notice_danger` component — that's the UI for the message and any CTA (phone number, link to a different flow, etc.).
+
+The schema mechanics — including the negated-rule convention, reversibility, and variants like hiding subsequent questions — live in the engine package. See [`@kotaio/adaptive-requirements-engine` → Recipes → Blocking states](../adaptive-requirements-engine/README.md#blocking-states) for the full schema example.
+
+On the React side, you only need to make sure your `notice_danger` renderer reflects the visual treatment you want for blocked states (e.g. a callout with an icon, a phone number CTA, or — for a takeover layout — a full-bleed message). The library does not impose a visual style:
+
+```tsx
+function NoticeDanger({ field, isVisible }: FieldComputedProps) {
+  if (!isVisible) return null;
+  const message = typeof field.label === 'object' ? field.label.default : field.label;
+  return (
+    <div className="callout callout-danger">
+      <Icon name="warning" />
+      <p>{message}</p>
+    </div>
+  );
+}
+
+const components = {
+  // ...
+  notice_danger: (props: FieldComputedProps) => <NoticeDanger {...props} />,
+};
+```
+
+If you use a custom `renderStepNavigation` and want the navigation to reflect the blocked state (e.g. a different button label or a tooltip), read `isStepValid` from the props — it already accounts for the failing validation rule. No new state to thread through.
+
+```tsx
+<AdaptiveForm
+  components={myComponents}
+  renderStepNavigation={({ canGoNext, isStepValid, onNext, onPrevious }) => (
+    <>
+      <button onClick={onPrevious}>Back</button>
+      <button onClick={onNext} disabled={!canGoNext} title={!isStepValid ? "Resolve the highlighted issue to continue" : undefined}>
+        Continue
+      </button>
+    </>
+  )}
+/>
+```
+
 ## AdaptiveForm props
 
 | Prop                      | Type                                   | Default         | Description                                                                                   |
