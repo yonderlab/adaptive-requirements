@@ -49,7 +49,7 @@ export {
   createAdapter,
   NOTICE_FIELD_TYPES,
 } from './engine';
-export type { RuleContext, AsyncValidatorFn, EngineOptions, NoticeFieldType } from './engine';
+export type { RuleContext, AsyncValidatorFn, EngineOptions, NoticeField, NoticeFieldType } from './engine';
 export { isReservedOperationName } from './operations';
 
 // Validate

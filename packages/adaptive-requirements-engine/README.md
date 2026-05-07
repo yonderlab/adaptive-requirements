@@ -357,7 +357,7 @@ Some flows need to halt online progression when a user gives a particular answer
 This is fully expressible with two existing primitives — no new schema concepts and no new code:
 
 1. A **validation rule** on the triggering field whose predicate is true (= valid) when *not* blocked, and false (= blocked). Because validation rules use the convention `truthy = valid, falsy = error`, you negate the block condition.
-2. A conditionally-visible **`notice_danger` field** carrying the rich message in its `description` (required body text) and an optional `label` heading, with a `visibleWhen` matching the blocking condition.
+2. A conditionally-visible **`notice_danger` field** carrying the rich message in its `description` (required body text) and an optional `heading` title, with a `visibleWhen` matching the blocking condition.
 
 When the rule fails, the field carries an error → the form's aggregate `currentStepIsValid` flips to false → the Next button auto-disables. When the user changes their answer back, the rule passes, the notice hides, and Next re-enables. Reversibility is automatic.
 
@@ -387,8 +387,9 @@ When the rule fails, the field carries an error → the form's aggregate `curren
   // `description` is the body of the notice (required for notice fields).
   description:
     "Please call 020-XXX-XXXX and we'll continue with you over the phone.",
-  // `label` is an optional heading shown above the description.
-  label: { default: "We can't complete this application online" },
+  // `heading` is an optional title shown above the description.
+  // Notice fields use `heading` instead of `label` — the validator rejects `label`.
+  heading: { default: "We can't complete this application online" },
   visibleWhen: { '==': [{ var: 'previous_insurance' }, 'no'] },
 },
 {
@@ -453,6 +454,9 @@ Key types exported for use in custom integrations:
 | --------------------- | ---------------------------------------------------------------------------- |
 | `RequirementsObject`  | Top-level schema: fields, datasets, and optional flow                        |
 | `Field`               | Single field definition: id, type, label, validation, visibility rules, etc. |
+| `NoticeField`         | Narrowed field shape for notices: required `description`, optional `heading` |
+| `NoticeFieldType`     | Literal union: `'notice_info' \| 'notice_warning' \| 'notice_danger'`        |
+| `NOTICE_FIELD_TYPES`  | Runtime constant — readonly tuple of the three notice type strings           |
 | `FieldState`          | Runtime state for a field: visibility, errors, value, options                |
 | `FormData`            | `Record<string, FieldValue>` — the current form data                         |
 | `FieldValue`          | `string \| number \| boolean \| null \| undefined` or array thereof          |

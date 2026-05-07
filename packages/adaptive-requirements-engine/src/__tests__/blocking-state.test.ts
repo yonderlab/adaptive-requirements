@@ -54,7 +54,7 @@ const schema: RequirementsObject = {
     {
       id: 'no_prev_insurance_block',
       type: 'notice_danger',
-      label: { default: blockHeading },
+      heading: { default: blockHeading },
       description: blockBody,
       visibleWhen: { '==': [{ var: 'previous_insurance' }, 'no'] },
     },

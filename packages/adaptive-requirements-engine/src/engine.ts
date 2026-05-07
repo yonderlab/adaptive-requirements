@@ -34,6 +34,29 @@ export const NOTICE_FIELD_TYPES = ['notice_info', 'notice_warning', 'notice_dang
 export type NoticeFieldType = (typeof NOTICE_FIELD_TYPES)[number];
 
 /**
+ * A notice / message-bearing field in a requirements schema.
+ *
+ * Notice fields are display-only — they don't collect input. They carry a
+ * required `description` (the body of the message) and an optional `heading`
+ * (a title above the description). They never use `label` (that's an input
+ * concept); the schema validator enforces this.
+ *
+ * Use this type when authoring schemas with strong typing for notices, or
+ * when writing reusable notice helpers / fixtures. A `NoticeField` is
+ * structurally assignable to `Field` so it fits in `RequirementsObject.fields`.
+ */
+export interface NoticeField<TFieldId extends string = string> {
+  id: TFieldId;
+  type: NoticeFieldType;
+  /** Required body text — the notice's primary content. */
+  description: string;
+  /** Optional heading/title shown above the description. */
+  heading?: LocalizedLabel;
+  /** Conditional visibility rule (JSON Logic). */
+  visibleWhen?: Rule;
+}
+
+/**
  * Context object for rule evaluation
  * Supports multiple path prefixes: data.*, answers.*, and direct access
  */

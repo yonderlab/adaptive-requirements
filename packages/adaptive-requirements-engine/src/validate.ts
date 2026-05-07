@@ -319,13 +319,20 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
         fieldValid = false;
       }
 
-      // Notice fields require a non-empty description (their primary message body).
-      // The renderer treats description as the main content; without it, the notice is empty.
+      // Notice fields use heading (optional) + description (required) — not label.
+      // Description is the message body. Heading is an optional title above it.
       if (isString(field['type']) && NOTICE_FIELD_TYPE_SET.has(field['type'])) {
         if (!isString(field['description']) || field['description'].length === 0) {
           errors.push({
             path: `fields[${i}].description`,
             message: `Notice fields (${[...NOTICE_FIELD_TYPE_SET].join(', ')}) require a non-empty description (the message body).`,
+          });
+          fieldValid = false;
+        }
+        if (field['label'] !== undefined) {
+          errors.push({
+            path: `fields[${i}].label`,
+            message: `Notice fields use "heading" instead of "label". Move the heading text from "label" to "heading".`,
           });
           fieldValid = false;
         }

@@ -958,12 +958,12 @@ describe('adaptiveForm async validation integration', () => {
 });
 
 /** Test renderer for notice fields — renders FieldNoticeProps */
-function TestNotice({ field, isVisible, label, description }: FieldNoticeProps) {
+function TestNotice({ field, isVisible, heading, description }: FieldNoticeProps) {
   if (!isVisible) {
     return null;
   }
   return (
-    <div data-testid={`notice-${field.id}`} data-label={label} data-description={description ?? ''}>
+    <div data-testid={`notice-${field.id}`} data-heading={heading} data-description={description}>
       {field.type}
     </div>
   );
@@ -1112,12 +1112,12 @@ describe('notice field types', () => {
     expect(document.querySelector('[data-adaptive-form-default-renderer="notice_danger"]')).toBeNull();
   });
 
-  it('notice fallback includes description body text when present', () => {
+  it('notice fallback includes heading and description when both present', () => {
     const requirements = makeRequirements([
       {
         id: 'danger_msg',
         type: 'notice_danger',
-        label: { default: 'Cannot continue online' },
+        heading: { default: 'Cannot continue online' },
         description: 'Please call 020-XXX-XXXX to finish over the phone.',
       },
     ]);
@@ -1130,17 +1130,17 @@ describe('notice field types', () => {
 
     const fallback = document.querySelector('[data-adaptive-form-default-renderer="notice_danger"]')!;
     expect(fallback).not.toBeNull();
-    // Fallback joins label + description with a separator so screen readers get both.
+    // Fallback joins heading + description so screen readers get both.
     expect(fallback.textContent).toContain('Cannot continue online');
     expect(fallback.textContent).toContain('Please call 020-XXX-XXXX to finish over the phone.');
   });
 
-  it('consumer-supplied notice renderer receives label and description props', () => {
+  it('consumer-supplied notice renderer receives heading and description props', () => {
     const requirements = makeRequirements([
       {
         id: 'danger_msg',
         type: 'notice_danger',
-        label: { default: 'Cannot continue online' },
+        heading: { default: 'Cannot continue online' },
         description: 'Please call 020-XXX-XXXX.',
       },
     ]);
@@ -1152,7 +1152,7 @@ describe('notice field types', () => {
     );
 
     const node = screen.getByTestId('notice-danger_msg');
-    expect(node.getAttribute('data-label')).toBe('Cannot continue online');
+    expect(node.getAttribute('data-heading')).toBe('Cannot continue online');
     expect(node.getAttribute('data-description')).toBe('Please call 020-XXX-XXXX.');
   });
 

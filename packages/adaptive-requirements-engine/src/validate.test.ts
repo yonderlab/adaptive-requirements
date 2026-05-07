@@ -663,6 +663,44 @@ describe('notice field description requirement', () => {
     });
     expect(result.success).toBeTruthy();
   });
+
+  it('rejects notice field that sets label (must use heading)', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'msg',
+          type: 'notice_danger',
+          label: { default: 'Cannot continue' },
+          description: 'Please call us.',
+        },
+      ],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].label' && e.message.includes('heading'))).toBeTruthy();
+    }
+  });
+
+  it('accepts notice field with heading and description', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'msg',
+          type: 'notice_danger',
+          heading: { default: 'Cannot continue' },
+          description: 'Please call 020-XXX-XXXX.',
+        },
+      ],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('still allows label on non-notice fields', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'name', type: 'text', label: { default: 'Name' } }],
+    });
+    expect(result.success).toBeTruthy();
+  });
 });
 
 describe(validateDatasetItems, () => {

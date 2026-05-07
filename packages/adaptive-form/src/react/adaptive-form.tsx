@@ -6,7 +6,7 @@ import type {
   FieldValue,
   FlowStep,
   FormData,
-  NoticeFieldType,
+  NoticeField,
   RequirementsObject,
   ResolvedFieldOption,
 } from '@kotaio/adaptive-requirements-engine';
@@ -76,20 +76,22 @@ export interface FieldComputedProps<TFieldId extends FieldId = FieldId> {
  * Props for notice / message-bearing display field components.
  * Used for `notice_info`, `notice_warning`, and `notice_danger` field types.
  *
- * Notices carry a body message (`description`) and an optional heading (`label`) —
+ * Notices carry a body message (`description`) and an optional heading (`heading`) —
  * they don't have a form value. `description` is required because a notice without
- * a body has nothing to say; the schema validator enforces this. The shape is
- * designed to grow (e.g. actions, dismissibility) without affecting non-notice
- * display renderers.
+ * a body has nothing to say; the schema validator enforces this. Notice fields use
+ * `heading` instead of `label` — the validator rejects `label` on notice schemas.
+ *
+ * The shape is designed to grow (e.g. actions, dismissibility) without affecting
+ * non-notice display renderers.
  */
 export interface FieldNoticeProps<TFieldId extends FieldId = FieldId> {
-  /** Schema field, with `type` narrowed to one of the notice types. */
-  field: Field<TFieldId> & { type: NoticeFieldType };
+  /** Notice schema field — see `NoticeField` for the shape. */
+  field: NoticeField<TFieldId>;
   isVisible: boolean;
-  /** Body text from the schema's `Field.description`. The notice's primary content. */
+  /** Body text from the schema's `description`. The notice's primary content. */
   description: string;
   /** Optional resolved heading/title (after localization), shown above the description. */
-  label?: string;
+  heading?: string;
 }
 
 /**
@@ -626,11 +628,11 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
           // (e.g. blocking-state UIs where Continue is disabled and the notice is the only explanation).
           // Consumers override by supplying components[fieldType].
           const role = fieldType === 'notice_danger' ? 'alert' : 'status';
-          const label = fieldState.label;
+          const heading = resolveLabel(field.heading);
           const description = field.description ?? '';
           return (
             <div role={role} data-adaptive-form-default-renderer={fieldType}>
-              {label ? `${label} — ${description}` : description}
+              {heading ? `${heading} — ${description}` : description}
             </div>
           );
         }
@@ -644,12 +646,12 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       }
 
       if (isNoticeField) {
-        const NoticeField = renderFn as React.ComponentType<FieldNoticeProps<TFieldId>>;
+        const Notice = renderFn as React.ComponentType<FieldNoticeProps<TFieldId>>;
         return (
-          <NoticeField
-            field={field as Field<TFieldId> & { type: NoticeFieldType }}
+          <Notice
+            field={field as NoticeField<TFieldId>}
             isVisible={fieldState.isVisible}
-            label={fieldState.label}
+            heading={resolveLabel(field.heading)}
             description={field.description ?? ''}
           />
         );

@@ -128,10 +128,16 @@ The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`
 
 > **Tip:** In controlled mode, define your `components` object outside the component or memoize it with `useMemo` to keep stable references. Inline arrow functions create new component identities each render, which causes React to remount fields (losing focus and internal state).
 
-If you need explicit annotations (e.g. for standalone variables or helper functions), `FieldInputProps`, `FieldComputedProps`, `FieldNoticeProps`, and `FieldOption` are exported for typing component renderers and selectable options:
+If you need explicit annotations (e.g. for standalone variables or helper functions), `FieldInputProps`, `FieldComputedProps`, `FieldNoticeProps`, `NoticeField`, and `FieldOption` are exported for typing component renderers, schema authoring, and selectable options:
 
 ```tsx
-import type { FieldComputedProps, FieldInputProps, FieldNoticeProps, FieldOption } from '@kotaio/adaptive-form/react';
+import type {
+  FieldComputedProps,
+  FieldInputProps,
+  FieldNoticeProps,
+  FieldOption,
+  NoticeField,
+} from '@kotaio/adaptive-form/react';
 ```
 
 ### `FieldInputProps`
@@ -228,21 +234,21 @@ Notice fields (`notice_info`, `notice_warning`, `notice_danger`) are display-onl
 | `notice_warning` | Caution the user should be aware of                       |
 | `notice_danger`  | Blocker or critical info (e.g. "Enrolment window closed") |
 
-| Prop          | Type                                            | Description                                                                                                                            |
-| ------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `field`       | `Field & { type: NoticeFieldType }`             | The field definition with `type` narrowed to `'notice_info' \| 'notice_warning' \| 'notice_danger'`                                    |
-| `isVisible`   | `boolean`                                       | Whether the field should be rendered                                                                                                   |
-| `description` | `string`                                        | **Required** body text from the schema's `Field.description` — the notice's primary content                                            |
-| `label`       | `string \| undefined`                           | Optional resolved heading/title (after localization), shown above the description                                                      |
+| Prop          | Type                  | Description                                                                                            |
+| ------------- | --------------------- | ------------------------------------------------------------------------------------------------------ |
+| `field`       | `NoticeField`         | Notice schema field — narrowed shape with `type` of `'notice_info' \| 'notice_warning' \| 'notice_danger'` |
+| `isVisible`   | `boolean`             | Whether the field should be rendered                                                                   |
+| `description` | `string`              | **Required** body text from the schema's `description` — the notice's primary content                  |
+| `heading`     | `string \| undefined` | Optional resolved heading/title (after localization), shown above the description                      |
 
 ```tsx
 import type { FieldNoticeProps } from '@kotaio/adaptive-form/react';
 
-function NoticeInfo({ isVisible, label, description }: FieldNoticeProps) {
+function NoticeInfo({ isVisible, heading, description }: FieldNoticeProps) {
   if (!isVisible) return null;
   return (
     <div className="notice notice-info">
-      {label && <strong>{label}</strong>}
+      {heading && <strong>{heading}</strong>}
       <p>{description}</p>
     </div>
   );
@@ -256,29 +262,29 @@ const components = {
 };
 ```
 
-Notice fields support `visibleWhen` for conditional visibility (driven by JSON Logic rules evaluated by the engine), `label` for the message, and `description` for body text:
+Notice fields support `visibleWhen` for conditional visibility (driven by JSON Logic rules evaluated by the engine), `description` for the body text, and `heading` for an optional title above it:
 
 ```json
 {
   "id": "enrolment_closed_notice",
   "type": "notice_danger",
   "description": "Please contact your HR team to discuss your options.",
-  "label": { "default": "Enrolment window is closed" },
+  "heading": { "default": "Enrolment window is closed" },
   "visibleWhen": { "==": [{ "var": "has_active_policy" }, "no"] }
 }
 ```
 
-`description` is **required** for notice fields — it's the message body, the primary thing the notice says. The schema validator (`validateRequirementsObject`) errors on notice fields without one. `label` is optional — use it when you want a separate heading above the body. The `FieldNoticeProps` shape is designed to grow without affecting other display renderers — future additions like actions or dismissibility will land here, not on `FieldComputedProps`.
+`description` is **required** for notice fields — it's the message body, the primary thing the notice says. The schema validator (`validateRequirementsObject`) errors on notice fields without one. `heading` is optional — use it when you want a separate title above the body. Notice fields **do not** use `label` (an input concept); the validator rejects `label` on notice schemas and points you at `heading` instead. The `FieldNoticeProps` shape is designed to grow without affecting other display renderers — future additions like actions or dismissibility will land here, not on `FieldComputedProps`.
 
 #### Built-in fallback
 
 If you don't supply a renderer for a notice type, AdaptiveForm renders a deliberately unstyled accessible fallback so a notice never silently disappears (which matters most for [blocking states](#blocking-states), where a missing notice would leave the user staring at a disabled Continue button with no explanation):
 
 ```html
-<div role="alert" data-adaptive-form-default-renderer="notice_danger">{label} — {description}</div>
+<div role="alert" data-adaptive-form-default-renderer="notice_danger">{heading} — {description}</div>
 ```
 
-`notice_danger` uses `role="alert"` (assertive); `notice_info` and `notice_warning` use `role="status"` (polite). The fallback joins the `label` and (optional) `description` so screen readers announce both. The element carries no styling — wire up your own `notice_*` renderer in the `components` prop to match your design system. The fallback is intended as a safety net, not a polished default.
+`notice_danger` uses `role="alert"` (assertive); `notice_info` and `notice_warning` use `role="status"` (polite). The fallback joins the (optional) `heading` and the `description` so screen readers announce both. The element carries no styling — wire up your own `notice_*` renderer in the `components` prop to match your design system. The fallback is intended as a safety net, not a polished default.
 
 You can target the fallback globally with CSS if you want a quick baseline (e.g. `[data-adaptive-form-default-renderer] { padding: 12px; border: 1px solid; }`), but a real renderer in `components` is the recommended path.
 
@@ -590,12 +596,12 @@ On the React side, you only need to make sure your `notice_danger` renderer refl
 > **Important:** if you skip wiring up `notice_danger` in your `components` prop, AdaptiveForm renders a deliberately unstyled [built-in fallback](#built-in-fallback) so users still see the message. The fallback is a safety net, not a polished default — supply your own renderer to match your design system.
 
 ```tsx
-function NoticeDanger({ isVisible, label, description }: FieldNoticeProps) {
+function NoticeDanger({ isVisible, heading, description }: FieldNoticeProps) {
   if (!isVisible) return null;
   return (
     <div className="callout callout-danger">
       <Icon name="warning" />
-      {label && <strong>{label}</strong>}
+      {heading && <strong>{heading}</strong>}
       <p>{description}</p>
     </div>
   );

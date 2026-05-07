@@ -156,6 +156,12 @@ export interface Field<TFieldId extends string = string> {
   label?: LocalizedLabel;
   placeholder?: string;
   description?: string;
+  /**
+   * Optional heading/title for notice fields (notice_info, notice_warning, notice_danger).
+   * Shown above the description. Notice fields use `heading` instead of `label` —
+   * the schema validator errors if a notice field sets `label`.
+   */
+  heading?: LocalizedLabel;
   options?: FieldOption[];
   /** Options source with dataset reference and optional filter */
   optionsSource?: OptionsSource;
