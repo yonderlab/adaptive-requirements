@@ -7,6 +7,7 @@ import type {
   FlowStep,
   FormData,
   NoticeField,
+  NoticeVariant,
   RequirementsObject,
   ResolvedFieldOption,
 } from '@kotaio/adaptive-requirements-engine';
@@ -18,7 +19,7 @@ import {
   getNextStepId,
   getPreviousStepId,
   initializeFormData,
-  NOTICE_FIELD_TYPES,
+  NOTICE_VARIANTS,
   resolveLabel,
 } from '@kotaio/adaptive-requirements-engine';
 import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -33,7 +34,27 @@ import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
-const NOTICE_FIELD_TYPE_SET = new Set<string>(NOTICE_FIELD_TYPES);
+const NOTICE_VARIANT_SET = new Set<string>(NOTICE_VARIANTS);
+
+/**
+ * Coerce a raw `field.variant` value (which is `unknown` at runtime — schemas
+ * can come from JSON, untrusted APIs, or simply not have been run through
+ * `validateRequirementsObject`) to a valid `NoticeVariant`. Unknown / missing
+ * values fall back to `'info'`, with a dev-mode warning when the value is
+ * present but not recognised, so consumer renderers can rely on the prop type.
+ */
+function coerceNoticeVariant(rawVariant: unknown): NoticeVariant {
+  if (typeof rawVariant === 'string' && NOTICE_VARIANT_SET.has(rawVariant)) {
+    return rawVariant as NoticeVariant;
+  }
+  if (isDev && rawVariant !== undefined) {
+    console.warn(
+      `[AdaptiveForm] Unknown notice variant "${String(rawVariant)}". Falling back to "info". ` +
+        `Valid variants: ${NOTICE_VARIANTS.join(', ')}.`,
+    );
+  }
+  return 'info';
+}
 
 type FieldId = string;
 
@@ -74,11 +95,12 @@ export interface FieldComputedProps<TFieldId extends FieldId = FieldId> {
 
 /**
  * Props for notice / message-bearing display field components.
- * Used for `notice_info`, `notice_warning`, and `notice_danger` field types.
+ * Used for `type: 'notice'` fields.
  *
- * Notices carry a body message (`description`) and an optional heading (`heading`) —
- * they don't have a form value. `description` is required because a notice without
- * a body has nothing to say; the schema validator enforces this. Notice fields use
+ * Notices carry a body message (`description`), a severity `variant` (`'info'`,
+ * `'warning'`, or `'danger'`), and an optional heading — they don't have a
+ * form value. `description` and `variant` are required because a notice without
+ * either is meaningless; the schema validator enforces both. Notice fields use
  * `heading` instead of `label` — the validator rejects `label` on notice schemas.
  *
  * The shape is designed to grow (e.g. actions, dismissibility) without affecting
@@ -88,6 +110,8 @@ export interface FieldNoticeProps<TFieldId extends FieldId = FieldId> {
   /** Notice schema field — see `NoticeField` for the shape. */
   field: NoticeField<TFieldId>;
   isVisible: boolean;
+  /** Severity variant: `'info'`, `'warning'`, or `'danger'`. */
+  variant: NoticeVariant;
   /** Resolved body text (after localization) from the schema's `description`. The notice's primary content. */
   description: string;
   /** Optional resolved heading/title (after localization), shown above the description. */
@@ -162,9 +186,7 @@ export interface AdaptiveFormProps<TFieldId extends FieldId = FieldId> {
     checkbox?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
     radio?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
     computed?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
-    notice_info?: (props: FieldNoticeProps<TFieldId>) => React.ReactNode;
-    notice_warning?: (props: FieldNoticeProps<TFieldId>) => React.ReactNode;
-    notice_danger?: (props: FieldNoticeProps<TFieldId>) => React.ReactNode;
+    notice?: (props: FieldNoticeProps<TFieldId>) => React.ReactNode;
     [key: string]:
       | ((props: FieldInputProps<TFieldId>) => React.ReactNode)
       | ((props: FieldComputedProps<TFieldId>) => React.ReactNode)
@@ -619,7 +641,13 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       const fieldType = field.type;
       const renderFn = components?.[fieldType];
 
-      const isNoticeField = NOTICE_FIELD_TYPE_SET.has(fieldType);
+      const isNoticeField = fieldType === 'notice';
+      // Coerce variant to a valid NoticeVariant — the engine validator enforces this on
+      // type: 'notice' fields, but AdaptiveForm itself doesn't run that validator, so
+      // an unvalidated schema (or runtime-loaded JSON) could still supply garbage.
+      // Falling back to 'info' (with a dev-mode warning) keeps the prop type honest
+      // for consumer `switch (variant)` exhaustiveness checks.
+      const noticeVariant: NoticeVariant = isNoticeField ? coerceNoticeVariant(field.variant) : 'info';
 
       if (!renderFn) {
         if (isNoticeField) {
@@ -628,12 +656,12 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
           }
           // Unstyled accessible default so a missing notice renderer is never a silent dead-end
           // (e.g. blocking-state UIs where Continue is disabled and the notice is the only explanation).
-          // Consumers override by supplying components[fieldType].
-          const role = fieldType === 'notice_danger' ? 'alert' : 'status';
+          // Consumers override by supplying components.notice.
+          const role = noticeVariant === 'danger' ? 'alert' : 'status';
           const heading = resolveLabel(field.heading);
           const description = resolveLabel(field.description) ?? '';
           return (
-            <div role={role} data-adaptive-form-default-renderer={fieldType}>
+            <div role={role} data-adaptive-form-default-renderer="notice" data-variant={noticeVariant}>
               {heading ? `${heading} — ${description}` : description}
             </div>
           );
@@ -649,10 +677,16 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
 
       if (isNoticeField) {
         const Notice = renderFn as React.ComponentType<FieldNoticeProps<TFieldId>>;
+        // Normalize the field we hand to the renderer so its `variant` matches the
+        // coerced one we pass as a prop. Otherwise `props.field.variant` could read
+        // back as 'critical' / undefined while `props.variant` is 'info', breaking
+        // the NoticeField contract for any consumer that prefers `field.*`.
+        const noticeField = { ...field, type: 'notice', variant: noticeVariant } as NoticeField<TFieldId>;
         return (
           <Notice
-            field={field as NoticeField<TFieldId>}
+            field={noticeField}
             isVisible={fieldState.isVisible}
+            variant={noticeVariant}
             heading={resolveLabel(field.heading)}
             description={resolveLabel(field.description) ?? ''}
           />

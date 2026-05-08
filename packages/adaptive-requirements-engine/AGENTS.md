@@ -114,7 +114,10 @@ interface AsyncValidatorRef {
 
 ## Display-Only Field Type Convention
 
-The engine treats `field.type` as an opaque string — it does not restrict or enumerate valid types. By convention, `notice_info`, `notice_warning`, and `notice_danger` are used for display-only notice fields. These carry a `label` for content and optionally `visibleWhen` for conditional visibility, but collect no values and have no validation. Rendering is handled entirely by the consumer (e.g. `@kotaio/adaptive-form`'s `components` prop).
+The engine treats `field.type` as an opaque string for input fields, but enforces structure for two display-only conventions:
+
+- `type: 'computed'` — value is derived from other fields via `compute`. No collection, no validation.
+- `type: 'notice'` — display-only message with required `variant` (`'info'`, `'warning'`, `'danger'`), required `description` (LocalizedLabel), optional `heading`, and optional `visibleWhen`. The validator rejects notices that miss `variant` / `description` or set `label`. See `NoticeField`, `NoticeVariant`, and `NOTICE_VARIANTS`. Rendering is handled by the consumer (e.g. `@kotaio/adaptive-form`'s `components.notice` slot).
 
 ## Anti-patterns
 
