@@ -1,7 +1,22 @@
 import type { Flow, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { getInitialStepId, resolveLabel } from '@kotaio/adaptive-requirements-engine';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+
+// useLayoutEffect runs synchronously after commit (before paint), so a consumer
+// can flip `hasNavigationConsumer` before the browser ever paints the form's
+// default Previous/Next buttons. Falls back to useEffect on the server, where
+// useLayoutEffect would emit a dev warning and there is no paint to race.
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /**
  * Read-only detail for a single step in the flow.
@@ -91,6 +106,10 @@ export interface AdaptiveFormContextValue {
   replaceVisitedSteps: (ids: Set<string>) => void;
   navigationState: StepNavigationState;
   _setNavigationState: (s: StepNavigationState) => void;
+  /** True while at least one component has subscribed via `useStepNavigation()`. */
+  hasNavigationConsumer: boolean;
+  /** Register a `useStepNavigation()` consumer; returns an unregister function. */
+  _registerNavigationConsumer: () => () => void;
 }
 
 export const AdaptiveFormContext = createContext<AdaptiveFormContextValue | null>(null);
@@ -119,6 +138,26 @@ export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
   const [visitedSteps, setVisitedSteps] = useState<Set<string>>(() => new Set(currentStepId ? [currentStepId] : []));
 
   const [navigationState, setNavigationState] = useState<StepNavigationState>({ initialised: false });
+
+  // Tracks how many components have called `useStepNavigation()`. Mirrored into
+  // `hasNavigationConsumer` state so AdaptiveForm can suppress its default nav
+  // when external nav UI is taking over. The ref carries the live count;
+  // the state flag flips only on 0↔1 transitions to avoid spurious re-renders.
+  const navigationConsumerCountRef = useRef(0);
+  const [hasNavigationConsumer, setHasNavigationConsumer] = useState(false);
+
+  const registerNavigationConsumer = useCallback(() => {
+    navigationConsumerCountRef.current += 1;
+    if (navigationConsumerCountRef.current === 1) {
+      setHasNavigationConsumer(true);
+    }
+    return () => {
+      navigationConsumerCountRef.current -= 1;
+      if (navigationConsumerCountRef.current === 0) {
+        setHasNavigationConsumer(false);
+      }
+    };
+  }, []);
 
   // Reset all step state when the flow reference changes (e.g. switching schemas)
   const prevFlowRef = useRef(flow);
@@ -158,8 +197,19 @@ export function AdaptiveFormProvider<TFieldId extends FieldId = FieldId>({
       replaceVisitedSteps,
       navigationState,
       _setNavigationState: setNavigationState,
+      hasNavigationConsumer,
+      _registerNavigationConsumer: registerNavigationConsumer,
     }),
-    [requirements, currentStepId, visitedSteps, markStepVisited, replaceVisitedSteps, navigationState],
+    [
+      requirements,
+      currentStepId,
+      visitedSteps,
+      markStepVisited,
+      replaceVisitedSteps,
+      navigationState,
+      hasNavigationConsumer,
+      registerNavigationConsumer,
+    ],
   );
 
   return <AdaptiveFormContext.Provider value={value}>{children}</AdaptiveFormContext.Provider>;
@@ -232,6 +282,10 @@ export function useFormInfo(): StepperInfo {
  * navigation handlers and validation state. When no `AdaptiveForm` is rendered,
  * returns `{ initialised: false }`.
  *
+ * Calling this hook automatically signals to `AdaptiveForm` that step navigation
+ * is being rendered elsewhere. The form's built-in Previous/Next buttons are
+ * suppressed for as long as at least one component is using the hook.
+ *
  * @example
  * ```tsx
  * function CustomFooter() {
@@ -250,5 +304,7 @@ export function useStepNavigation(): StepNavigationState {
   if (!ctx) {
     throw new Error('useStepNavigation must be used within an AdaptiveFormProvider');
   }
+  const register = ctx._registerNavigationConsumer;
+  useIsomorphicLayoutEffect(() => register(), [register]);
   return ctx.navigationState;
 }

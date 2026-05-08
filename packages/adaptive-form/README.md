@@ -334,7 +334,7 @@ When the API returns a schema with a `flow` property, AdaptiveForm automatically
 
 ### Default navigation
 
-AdaptiveForm renders default Previous/Next buttons. The Next button is disabled until all visible fields in the current step pass validation.
+AdaptiveForm renders default Previous/Next buttons. The Next button is disabled until all visible fields in the current step pass validation. The defaults are automatically suppressed when you supply `renderStepNavigation` (see below) or when any sibling component reads navigation state via `useStepNavigation()` — no opt-out flag required.
 
 ### Custom navigation UI
 
@@ -383,7 +383,7 @@ To render all steps as sections on a single page (no navigation), set `showAllSt
 
 ### Custom step navigation outside `renderStepNavigation`
 
-Use `useStepNavigation()` from any component inside `AdaptiveFormProvider` to render custom step navigation UI anywhere in the tree — sticky footers, sidebars, or alongside a progress bar — not just as a child of `AdaptiveForm`.
+Use `useStepNavigation()` from any component inside `AdaptiveFormProvider` to render custom step navigation UI anywhere in the tree — sticky footers, sidebars, or alongside a progress bar — not just as a child of `AdaptiveForm`. While at least one component is using the hook, `AdaptiveForm` automatically suppresses its own default Previous/Next buttons, so you don't need to pass `renderStepNavigation={() => null}` or any other opt-out.
 
 The hook returns either `{ initialised: false }` (when no `AdaptiveForm` is mounted yet) or `{ initialised: true, ... }` with the full navigation state. Always check `initialised` before using the handlers.
 
