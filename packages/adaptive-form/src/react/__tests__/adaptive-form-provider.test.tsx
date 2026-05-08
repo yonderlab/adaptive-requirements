@@ -452,9 +452,7 @@ describe('useStepNavigation', () => {
 
 describe('default step navigation auto-suppression', () => {
   function findDefaultNextButton() {
-    return screen
-      .queryAllByRole('button', { name: 'Next' })
-      .find((el) => el.className.includes('bg-primary'));
+    return screen.queryAllByRole('button', { name: 'Next' }).find((el) => el.className.includes('bg-primary'));
   }
 
   it('renders default buttons when no useStepNavigation consumer is mounted', () => {

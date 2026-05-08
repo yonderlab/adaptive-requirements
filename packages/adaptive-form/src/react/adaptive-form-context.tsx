@@ -1,16 +1,7 @@
 import type { Flow, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { getInitialStepId, resolveLabel } from '@kotaio/adaptive-requirements-engine';
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 // useLayoutEffect runs synchronously after commit (before paint), so a consumer
 // can flip `hasNavigationConsumer` before the browser ever paints the form's
