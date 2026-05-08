@@ -1168,6 +1168,75 @@ describe('notice field types', () => {
     expect(node.dataset['description']).toBe('Please call 020-XXX-XXXX.');
   });
 
+  it('coerces a missing variant to "info" without warning (validator catches this separately)', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
+
+    const requirements = makeRequirements([
+      // No `variant` set — schema is invalid per the engine validator, but AdaptiveForm
+      // doesn't run the validator itself; it must still produce a valid NoticeVariant
+      // so consumer renderers' `switch (variant)` exhaustiveness checks aren't broken.
+      { id: 'msg', type: 'notice', description: 'Body' },
+    ]);
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{ notice: TestNotice }} />
+      </AdaptiveFormProvider>,
+    );
+
+    const node = screen.getByTestId('notice-msg') as HTMLElement;
+    expect(node.dataset['variant']).toBe('info');
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  it('coerces an unknown variant string to "info" and warns in dev', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
+
+    // 'critical' isn't a valid NoticeVariant. The cast through unknown deliberately
+    // simulates an unvalidated schema (e.g. JSON loaded at runtime) where the type
+    // system can't help. Without coercion in the renderer, this would flow through
+    // to consumers as NoticeVariant and break exhaustive `switch (variant)` checks.
+    const requirements = {
+      fields: [{ id: 'msg', type: 'notice', variant: 'critical', description: 'Body' }],
+    } as unknown as RequirementsObject;
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{ notice: TestNotice }} />
+      </AdaptiveFormProvider>,
+    );
+
+    const node = screen.getByTestId('notice-msg') as HTMLElement;
+    expect(node.dataset['variant']).toBe('info');
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Unknown notice variant "critical"'));
+
+    warnSpy.mockRestore();
+  });
+
+  it('coerces variant for the fallback path too — unknown variant uses role="status"', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
+
+    const requirements = {
+      fields: [{ id: 'msg', type: 'notice', variant: 'critical', description: 'Body' }],
+    } as unknown as RequirementsObject;
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{}} />
+      </AdaptiveFormProvider>,
+    );
+
+    const fallback = document.querySelector('[data-adaptive-form-default-renderer="notice"]') as HTMLElement;
+    expect(fallback).not.toBeNull();
+    // Coerced to 'info' → role="status" (not 'alert')
+    expect(fallback.getAttribute('role')).toBe('status');
+    expect(fallback.dataset['variant']).toBe('info');
+
+    warnSpy.mockRestore();
+  });
+
   it('still logs a dev warning for genuinely unknown (non-notice) field types', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
 

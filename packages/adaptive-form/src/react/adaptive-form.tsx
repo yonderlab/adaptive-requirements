@@ -19,6 +19,7 @@ import {
   getNextStepId,
   getPreviousStepId,
   initializeFormData,
+  NOTICE_VARIANTS,
   resolveLabel,
 } from '@kotaio/adaptive-requirements-engine';
 import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -32,6 +33,28 @@ import { usePhoneHome } from './use-phone-home';
 import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
+
+const NOTICE_VARIANT_SET = new Set<string>(NOTICE_VARIANTS);
+
+/**
+ * Coerce a raw `field.variant` value (which is `unknown` at runtime — schemas
+ * can come from JSON, untrusted APIs, or simply not have been run through
+ * `validateRequirementsObject`) to a valid `NoticeVariant`. Unknown / missing
+ * values fall back to `'info'`, with a dev-mode warning when the value is
+ * present but not recognised, so consumer renderers can rely on the prop type.
+ */
+function coerceNoticeVariant(rawVariant: unknown): NoticeVariant {
+  if (typeof rawVariant === 'string' && NOTICE_VARIANT_SET.has(rawVariant)) {
+    return rawVariant as NoticeVariant;
+  }
+  if (isDev && rawVariant !== undefined) {
+    console.warn(
+      `[AdaptiveForm] Unknown notice variant "${String(rawVariant)}". Falling back to "info". ` +
+        `Valid variants: ${NOTICE_VARIANTS.join(', ')}.`,
+    );
+  }
+  return 'info';
+}
 
 type FieldId = string;
 
@@ -619,10 +642,12 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       const renderFn = components?.[fieldType];
 
       const isNoticeField = fieldType === 'notice';
-      // Variant comes from the schema; cast is safe because the engine validator
-      // enforces a valid variant on `type: 'notice'` fields. Default to 'info' for
-      // the rare case of an un-validated schema slipping through.
-      const noticeVariant: NoticeVariant = (field.variant as NoticeVariant) ?? 'info';
+      // Coerce variant to a valid NoticeVariant — the engine validator enforces this on
+      // type: 'notice' fields, but AdaptiveForm itself doesn't run that validator, so
+      // an unvalidated schema (or runtime-loaded JSON) could still supply garbage.
+      // Falling back to 'info' (with a dev-mode warning) keeps the prop type honest
+      // for consumer `switch (variant)` exhaustiveness checks.
+      const noticeVariant: NoticeVariant = isNoticeField ? coerceNoticeVariant(field.variant) : 'info';
 
       if (!renderFn) {
         if (isNoticeField) {
