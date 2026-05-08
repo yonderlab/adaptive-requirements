@@ -14,7 +14,8 @@ import { validateRequirementsObject } from '../validate';
  *
  * Achieved purely with existing primitives:
  *   1. A validation rule on the triggering field (truthy = valid, falsy = blocked).
- *      The failing rule makes the step invalid → existing currentStepIsValid logic disables Next.
+ *      The failing rule makes the step invalid → existing step-validity logic (exposed as
+ *      `isStepValid`/`canGoNext` in `renderStepNavigation`) prevents forward navigation.
  *   2. A conditionally-visible notice_danger field carrying the rich message and CTA.
  *
  * No engine or form-package code changes required. This test locks the pattern in as a
@@ -112,9 +113,9 @@ describe('blocking-state pattern (ONVZ-style)', () => {
     const dataWithoutInsurer: FormData = { previous_insurance: 'yes' };
     const dataWithInsurer: FormData = { previous_insurance: 'yes', previous_insurer: 'AnotherInsurer Ltd' };
 
-    it('triggering field has no blocking error', () => {
+    it('triggering field is fully valid (no errors at all, not just absence of the blocking message)', () => {
       const state = checkField(schema, 'previous_insurance', dataWithoutInsurer);
-      expect(state.errors).not.toContain(fallbackErrorMessage);
+      expect(state.errors).toHaveLength(0);
     });
 
     it('notice_danger is hidden', () => {
@@ -145,7 +146,8 @@ describe('blocking-state pattern (ONVZ-style)', () => {
   describe('reversibility — toggling the answer flips state', () => {
     it('"yes" → "no" re-blocks the step and re-shows the notice', () => {
       const yesState = checkField(schema, 'previous_insurance', { previous_insurance: 'yes' });
-      expect(yesState.errors).not.toContain(fallbackErrorMessage);
+      // Strong assertion: no errors at all, so the step is genuinely unblocked.
+      expect(yesState.errors).toHaveLength(0);
 
       const noState = checkField(schema, 'previous_insurance', { previous_insurance: 'no' });
       expect(noState.errors).toContain(fallbackErrorMessage);
@@ -159,7 +161,8 @@ describe('blocking-state pattern (ONVZ-style)', () => {
       expect(noState.errors).toContain(fallbackErrorMessage);
 
       const yesState = checkField(schema, 'previous_insurance', { previous_insurance: 'yes' });
-      expect(yesState.errors).not.toContain(fallbackErrorMessage);
+      // Strong assertion: no errors at all, so the step is genuinely unblocked.
+      expect(yesState.errors).toHaveLength(0);
 
       const followUp = checkField(schema, 'previous_insurer', { previous_insurance: 'yes' });
       expect(followUp.isVisible).toBeTruthy();

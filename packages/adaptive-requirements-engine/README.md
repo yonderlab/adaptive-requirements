@@ -354,12 +354,12 @@ const adapter = createAdapter(requirements, {
 
 Some flows need to halt online progression when a user gives a particular answer and direct them to another channel (e.g. a phone-based journey). For example, ONVZ (Netherlands health insurance) requires asking whether the applicant has previous insurance — if they answer "no", the application must stop and a human takes over.
 
-This is fully expressible with two existing primitives — no new schema concepts and no new code:
+This is fully expressible by composing two existing schema primitives — no new schema constructs are required:
 
 1. A **validation rule** on the triggering field whose predicate is true (= valid) when *not* blocked, and false (= blocked). Because validation rules use the convention `truthy = valid, falsy = error`, you negate the block condition.
 2. A conditionally-visible **`notice_danger` field** carrying the rich message in its `description` (required body text) and an optional `heading` title, with a `visibleWhen` matching the blocking condition.
 
-When the rule fails, the field carries an error → the form's aggregate `currentStepIsValid` flips to false → the Next button auto-disables. When the user changes their answer back, the rule passes, the notice hides, and Next re-enables. Reversibility is automatic.
+When the rule fails, the field carries an error → the step's aggregate validity (`isStepValid` / `canGoNext` exposed to `renderStepNavigation`) flips to false → the default Next button is marked `aria-disabled` and its click handler refuses to advance. When the user changes their answer back, the rule passes, the notice hides, and forward navigation re-opens. Reversibility is automatic.
 
 ```ts
 {
@@ -384,9 +384,12 @@ When the rule fails, the field carries an error → the form's aggregate `curren
 {
   id: 'no_prev_insurance_block',
   type: 'notice_danger',
-  // `description` is the body of the notice (required for notice fields).
-  description:
-    "Please call 020-XXX-XXXX and we'll continue with you over the phone.",
+  // `description` is the body of the notice (required for notice fields). It is a
+  // `LocalizedLabel`, so you can pass a plain string or `{ default, key }` for i18n.
+  description: {
+    default: "Please call 020-XXX-XXXX and we'll continue with you over the phone.",
+    key: 'onvz.no_prev_insurance.body',
+  },
   // `heading` is an optional title shown above the description.
   // Notice fields use `heading` instead of `label` — the validator rejects `label`.
   heading: { default: "We can't complete this application online" },

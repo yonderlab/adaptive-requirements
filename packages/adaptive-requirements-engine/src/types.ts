@@ -148,6 +148,18 @@ export interface FileConfig {
 }
 
 /**
+ * Field types that represent notice / message-bearing display fields.
+ *
+ * Single source of truth for both the engine's schema validator (which enforces
+ * that notice fields carry a non-empty `description`) and downstream renderers
+ * (e.g. `@kotaio/adaptive-form` re-exports this).
+ */
+export const NOTICE_FIELD_TYPES = ['notice_info', 'notice_warning', 'notice_danger'] as const;
+
+/** Literal union of notice field types. */
+export type NoticeFieldType = (typeof NOTICE_FIELD_TYPES)[number];
+
+/**
  * Field definition in the requirements object
  */
 export interface Field<TFieldId extends string = string> {
@@ -155,7 +167,14 @@ export interface Field<TFieldId extends string = string> {
   type: string;
   label?: LocalizedLabel;
   placeholder?: string;
-  description?: string;
+  /**
+   * Field description. For input fields, this is hint/help text shown alongside the input.
+   * For notice fields (notice_info, notice_warning, notice_danger), this is the body text
+   * (the notice's primary content) and is required by the schema validator.
+   *
+   * Localizable via `LocalizedLabel`; renderers should call `resolveLabel` before display.
+   */
+  description?: LocalizedLabel;
   /**
    * Optional heading/title for notice fields (notice_info, notice_warning, notice_danger).
    * Shown above the description. Notice fields use `heading` instead of `label` —
@@ -177,6 +196,29 @@ export interface Field<TFieldId extends string = string> {
   readOnly?: boolean;
   /** File field configuration (accepted types, size limits, multi-file) */
   fileConfig?: FileConfig;
+}
+
+/**
+ * A notice / message-bearing field in a requirements schema.
+ *
+ * Notice fields are display-only — they don't collect input. They carry a
+ * required `description` (the body of the message) and an optional `heading`
+ * (a title above the description). They never use `label` (that's an input
+ * concept); the schema validator enforces this.
+ *
+ * Use this type when authoring schemas with strong typing for notices, or
+ * when writing reusable notice helpers / fixtures. A `NoticeField` is
+ * structurally assignable to `Field` so it fits in `RequirementsObject.fields`.
+ */
+export interface NoticeField<TFieldId extends string = string> {
+  id: TFieldId;
+  type: NoticeFieldType;
+  /** Required body text — the notice's primary content. */
+  description: LocalizedLabel;
+  /** Optional heading/title shown above the description. */
+  heading?: LocalizedLabel;
+  /** Conditional visibility rule (JSON Logic). */
+  visibleWhen?: Rule;
 }
 
 /**

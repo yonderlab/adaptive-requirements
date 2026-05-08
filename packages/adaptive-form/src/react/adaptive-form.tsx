@@ -33,7 +33,7 @@ import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
-const NOTICE_FIELD_TYPE_SET: Set<string> = new Set(NOTICE_FIELD_TYPES);
+const NOTICE_FIELD_TYPE_SET = new Set<string>(NOTICE_FIELD_TYPES);
 
 type FieldId = string;
 
@@ -88,7 +88,7 @@ export interface FieldNoticeProps<TFieldId extends FieldId = FieldId> {
   /** Notice schema field — see `NoticeField` for the shape. */
   field: NoticeField<TFieldId>;
   isVisible: boolean;
-  /** Body text from the schema's `description`. The notice's primary content. */
+  /** Resolved body text (after localization) from the schema's `description`. The notice's primary content. */
   description: string;
   /** Optional resolved heading/title (after localization), shown above the description. */
   heading?: string;
@@ -623,13 +623,15 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
 
       if (!renderFn) {
         if (isNoticeField) {
-          if (!fieldState.isVisible) return null;
+          if (!fieldState.isVisible) {
+            return null;
+          }
           // Unstyled accessible default so a missing notice renderer is never a silent dead-end
           // (e.g. blocking-state UIs where Continue is disabled and the notice is the only explanation).
           // Consumers override by supplying components[fieldType].
           const role = fieldType === 'notice_danger' ? 'alert' : 'status';
           const heading = resolveLabel(field.heading);
-          const description = field.description ?? '';
+          const description = resolveLabel(field.description) ?? '';
           return (
             <div role={role} data-adaptive-form-default-renderer={fieldType}>
               {heading ? `${heading} — ${description}` : description}
@@ -652,7 +654,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
             field={field as NoticeField<TFieldId>}
             isVisible={fieldState.isVisible}
             heading={resolveLabel(field.heading)}
-            description={field.description ?? ''}
+            description={resolveLabel(field.description) ?? ''}
           />
         );
       }

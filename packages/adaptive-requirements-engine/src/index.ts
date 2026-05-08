@@ -14,6 +14,8 @@ export type {
   OptionsSource,
   FileConfig,
   Field,
+  NoticeField,
+  NoticeFieldType,
   DatasetItem,
   Dataset,
   FlowStep,
@@ -28,6 +30,7 @@ export type {
   FieldMapping,
   FieldState,
 } from './types';
+export { NOTICE_FIELD_TYPES } from './types';
 
 // Engine
 export {
@@ -47,9 +50,8 @@ export {
   getPreviousStepId,
   getInitialStepId,
   createAdapter,
-  NOTICE_FIELD_TYPES,
 } from './engine';
-export type { RuleContext, AsyncValidatorFn, EngineOptions, NoticeField, NoticeFieldType } from './engine';
+export type { RuleContext, AsyncValidatorFn, EngineOptions } from './engine';
 export { isReservedOperationName } from './operations';
 
 // Validate

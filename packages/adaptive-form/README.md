@@ -186,7 +186,7 @@ function TextInput({ field, value, onChange, onBlur, errors, isRequired, isVisib
           {error}
         </p>
       ))}
-      {field.description && <p className="hint">{field.description}</p>}
+      {field.description && <p className="hint">{resolveLabel(field.description)}</p>}
     </div>
   );
 }
@@ -268,17 +268,17 @@ Notice fields support `visibleWhen` for conditional visibility (driven by JSON L
 {
   "id": "enrolment_closed_notice",
   "type": "notice_danger",
-  "description": "Please contact your HR team to discuss your options.",
-  "heading": { "default": "Enrolment window is closed" },
+  "description": { "default": "Please contact your HR team to discuss your options.", "key": "enrolment_closed.body" },
+  "heading": { "default": "Enrolment window is closed", "key": "enrolment_closed.title" },
   "visibleWhen": { "==": [{ "var": "has_active_policy" }, "no"] }
 }
 ```
 
-`description` is **required** for notice fields — it's the message body, the primary thing the notice says. The schema validator (`validateRequirementsObject`) errors on notice fields without one. `heading` is optional — use it when you want a separate title above the body. Notice fields **do not** use `label` (an input concept); the validator rejects `label` on notice schemas and points you at `heading` instead. The `FieldNoticeProps` shape is designed to grow without affecting other display renderers — future additions like actions or dismissibility will land here, not on `FieldComputedProps`.
+`description` is **required** for notice fields — it's the message body, the primary thing the notice says. The schema validator (`validateRequirementsObject`) errors on notice fields without one. `description` is a `LocalizedLabel`, so you can pass either a plain string or an object with `default` (and optional `key`) for translation lookup; AdaptiveForm resolves it to a string before passing it to your renderer. `heading` is optional — use it when you want a separate title above the body. Notice fields **do not** use `label` (an input concept); the validator rejects `label` on notice schemas and points you at `heading` instead. The `FieldNoticeProps` shape is designed to grow without affecting other display renderers — future additions like actions or dismissibility will land here, not on `FieldComputedProps`.
 
 #### Built-in fallback
 
-If you don't supply a renderer for a notice type, AdaptiveForm renders a deliberately unstyled accessible fallback so a notice never silently disappears (which matters most for [blocking states](#blocking-states), where a missing notice would leave the user staring at a disabled Continue button with no explanation):
+If you don't supply a renderer for a notice type, AdaptiveForm renders a deliberately unstyled accessible fallback so a notice never silently disappears (which matters most for [blocking states](#blocking-states), where a missing notice would leave the user unable to advance with no explanation):
 
 ```html
 <div role="alert" data-adaptive-form-default-renderer="notice_danger">{heading} — {description}</div>
@@ -584,9 +584,9 @@ These are features expressed in the schema that AdaptiveForm handles automatical
 
 ### Blocking states
 
-Halt forward progression based on an answer (e.g. "if the user has no previous insurance, take them off the online flow and to a phone call instead"). Achieved purely with existing primitives — no new components, no new hooks, no new props:
+Halt forward progression based on an answer (e.g. "if the user has no previous insurance, take them off the online flow and to a phone call instead"). Achieved by composing two existing schema primitives — a validation rule and a conditional `notice_danger` field — with no new schema constructs and no bespoke React state:
 
-1. Author a **validation rule on the triggering field** in the schema. Failing rules make the step invalid and the default Next button auto-disables (custom `renderStepNavigation` consumers see `isStepValid: false`).
+1. Author a **validation rule on the triggering field** in the schema. Failing rules make the step invalid; the default Next button is then marked `aria-disabled` and its click handler short-circuits, so users cannot advance. Custom `renderStepNavigation` consumers receive `isStepValid: false` and `canGoNext: false` and can render the navigation accordingly.
 2. Author a **conditionally-visible `notice_danger` field** in the schema with `visibleWhen` matching the blocking condition. Render it with your existing `notice_danger` component — that's the UI for the message and any CTA (phone number, link to a different flow, etc.).
 
 The schema mechanics — including the negated-rule convention, reversibility, and variants like hiding subsequent questions — live in the engine package. See [`@kotaio/adaptive-requirements-engine` → Recipes → Blocking states](../adaptive-requirements-engine/README.md#blocking-states) for the full schema example.
@@ -616,17 +616,23 @@ const components = {
 If you use a custom `renderStepNavigation` and want the navigation to reflect the blocked state (e.g. a different button label or a tooltip), read `isStepValid` from the props — it already accounts for the failing validation rule. No new state to thread through.
 
 ```tsx
-<AdaptiveForm
-  components={myComponents}
-  renderStepNavigation={({ canGoNext, isStepValid, onNext, onPrevious }) => (
-    <>
-      <button onClick={onPrevious}>Back</button>
-      <button onClick={onNext} disabled={!canGoNext} title={!isStepValid ? "Resolve the highlighted issue to continue" : undefined}>
-        Continue
-      </button>
-    </>
-  )}
-/>
+<AdaptiveFormProvider requirements={requirements}>
+  <AdaptiveForm
+    components={myComponents}
+    renderStepNavigation={({ canGoNext, isStepValid, onNext, onPrevious }) => (
+      <>
+        <button onClick={onPrevious}>Back</button>
+        <button
+          onClick={onNext}
+          disabled={!canGoNext}
+          title={!isStepValid ? 'Resolve the highlighted issue to continue' : undefined}
+        >
+          Continue
+        </button>
+      </>
+    )}
+  />
+</AdaptiveFormProvider>
 ```
 
 ## AdaptiveForm props

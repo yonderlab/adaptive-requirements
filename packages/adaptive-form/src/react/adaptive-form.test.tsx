@@ -1151,9 +1151,9 @@ describe('notice field types', () => {
       </AdaptiveFormProvider>,
     );
 
-    const node = screen.getByTestId('notice-danger_msg');
-    expect(node.getAttribute('data-heading')).toBe('Cannot continue online');
-    expect(node.getAttribute('data-description')).toBe('Please call 020-XXX-XXXX.');
+    const node = screen.getByTestId('notice-danger_msg') as HTMLElement;
+    expect(node.dataset['heading']).toBe('Cannot continue online');
+    expect(node.dataset['description']).toBe('Please call 020-XXX-XXXX.');
   });
 
   it('still logs a dev warning for genuinely unknown (non-notice) field types', () => {

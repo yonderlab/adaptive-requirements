@@ -624,8 +624,10 @@ describe('notice field description requirement', () => {
   it.each([['notice_info'], ['notice_warning'], ['notice_danger']])(
     'rejects %s field with no description',
     (type) => {
+      // Fixture deliberately omits `label` so the only failing rule is the
+      // description requirement — the assertion locks in that requirement specifically.
       const result = validateRequirementsObject({
-        fields: [{ id: 'msg', type, label: { default: 'Heads up' } }],
+        fields: [{ id: 'msg', type }],
       });
       expect(result.success).toBeFalsy();
       if (!result.success) {
@@ -635,8 +637,9 @@ describe('notice field description requirement', () => {
   );
 
   it('rejects notice field with empty-string description', () => {
+    // No `label` here so the failure is unambiguously due to the empty `description`.
     const result = validateRequirementsObject({
-      fields: [{ id: 'msg', type: 'notice_danger', label: { default: 'Heads up' }, description: '' }],
+      fields: [{ id: 'msg', type: 'notice_danger', description: '' }],
     });
     expect(result.success).toBeFalsy();
     if (!result.success) {
@@ -644,13 +647,36 @@ describe('notice field description requirement', () => {
     }
   });
 
-  it('accepts notice field with non-empty description', () => {
+  it('rejects notice field with empty-default LocalizedLabel description', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type: 'notice_danger', description: { default: '' } }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].description')).toBeTruthy();
+    }
+  });
+
+  it('accepts notice field with non-empty description (string)', () => {
     const result = validateRequirementsObject({
       fields: [
         {
           id: 'msg',
           type: 'notice_danger',
           description: 'Cannot continue online — please call us.',
+        },
+      ],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('accepts notice field with non-empty description (LocalizedLabel object)', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'msg',
+          type: 'notice_danger',
+          description: { default: 'Cannot continue online — please call us.', key: 'block_msg' },
         },
       ],
     });
