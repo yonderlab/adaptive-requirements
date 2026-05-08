@@ -16,7 +16,7 @@ import { validateRequirementsObject } from '../validate';
  *   1. A validation rule on the triggering field (truthy = valid, falsy = blocked).
  *      The failing rule makes the step invalid → existing step-validity logic (exposed as
  *      `isStepValid`/`canGoNext` in `renderStepNavigation`) prevents forward navigation.
- *   2. A conditionally-visible notice_danger field carrying the rich message and CTA.
+ *   2. A conditionally-visible notice field (variant: 'danger') carrying the message and CTA.
  *
  * No engine or form-package code changes required. This test locks the pattern in as a
  * supported usage so a future refactor can't regress it.
@@ -54,7 +54,8 @@ const schema: RequirementsObject = {
     },
     {
       id: 'no_prev_insurance_block',
-      type: 'notice_danger',
+      type: 'notice',
+      variant: 'danger',
       heading: { default: blockHeading },
       description: blockBody,
       visibleWhen: { '==': [{ var: 'previous_insurance' }, 'no'] },
@@ -93,7 +94,7 @@ describe('blocking-state pattern (ONVZ-style)', () => {
       expect(state.errors).toContain(fallbackErrorMessage);
     });
 
-    it('notice_danger is visible', () => {
+    it('notice (variant: danger) is visible', () => {
       const state = checkField(schema, 'no_prev_insurance_block', data);
       expect(state.isVisible).toBeTruthy();
     });
@@ -118,7 +119,7 @@ describe('blocking-state pattern (ONVZ-style)', () => {
       expect(state.errors).toHaveLength(0);
     });
 
-    it('notice_danger is hidden', () => {
+    it('notice (variant: danger) is hidden', () => {
       const state = checkField(schema, 'no_prev_insurance_block', dataWithoutInsurer);
       expect(state.isVisible).toBeFalsy();
     });

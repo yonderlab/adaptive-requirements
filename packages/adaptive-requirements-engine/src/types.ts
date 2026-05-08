@@ -148,16 +148,18 @@ export interface FileConfig {
 }
 
 /**
- * Field types that represent notice / message-bearing display fields.
+ * Severity variants for `notice` fields. Drives both the renderer's visual
+ * treatment (info / warning / danger) and the accessible role chosen by the
+ * fallback (`alert` for danger, `status` for info / warning).
  *
- * Single source of truth for both the engine's schema validator (which enforces
- * that notice fields carry a non-empty `description`) and downstream renderers
- * (e.g. `@kotaio/adaptive-form` re-exports this).
+ * Single source of truth for both the engine's schema validator (which
+ * enforces a valid variant on `type: 'notice'` fields) and downstream
+ * renderers (e.g. `@kotaio/adaptive-form` re-exports these).
  */
-export const NOTICE_FIELD_TYPES = ['notice_info', 'notice_warning', 'notice_danger'] as const;
+export const NOTICE_VARIANTS = ['info', 'warning', 'danger'] as const;
 
-/** Literal union of notice field types. */
-export type NoticeFieldType = (typeof NOTICE_FIELD_TYPES)[number];
+/** Literal union of notice variants. */
+export type NoticeVariant = (typeof NOTICE_VARIANTS)[number];
 
 /**
  * Field definition in the requirements object
@@ -169,18 +171,26 @@ export interface Field<TFieldId extends string = string> {
   placeholder?: string;
   /**
    * Field description. For input fields, this is hint/help text shown alongside the input.
-   * For notice fields (notice_info, notice_warning, notice_danger), this is the body text
-   * (the notice's primary content) and is required by the schema validator.
+   * For notice fields (`type: 'notice'`), this is the body text — the notice's primary
+   * content — and is required by the schema validator.
    *
    * Localizable via `LocalizedLabel`; renderers should call `resolveLabel` before display.
    */
   description?: LocalizedLabel;
   /**
-   * Optional heading/title for notice fields (notice_info, notice_warning, notice_danger).
-   * Shown above the description. Notice fields use `heading` instead of `label` —
-   * the schema validator errors if a notice field sets `label`.
+   * Optional heading/title for notice fields (`type: 'notice'`). Shown above the
+   * description. Notice fields use `heading` instead of `label` — the schema
+   * validator errors if a notice field sets `label`.
    */
   heading?: LocalizedLabel;
+  /**
+   * Severity variant for notice fields (`type: 'notice'`). One of `'info'`,
+   * `'warning'`, or `'danger'`. Required for notice fields — the schema
+   * validator errors if a notice field omits or misuses this. Drives both the
+   * renderer's visual treatment and the accessible role chosen by the fallback
+   * (`alert` for danger, `status` otherwise).
+   */
+  variant?: NoticeVariant;
   options?: FieldOption[];
   /** Options source with dataset reference and optional filter */
   optionsSource?: OptionsSource;
@@ -202,9 +212,10 @@ export interface Field<TFieldId extends string = string> {
  * A notice / message-bearing field in a requirements schema.
  *
  * Notice fields are display-only — they don't collect input. They carry a
- * required `description` (the body of the message) and an optional `heading`
- * (a title above the description). They never use `label` (that's an input
- * concept); the schema validator enforces this.
+ * required `description` (the body of the message), a required `variant`
+ * (`'info'` | `'warning'` | `'danger'`), and an optional `heading` (a title
+ * above the description). They never use `label` (that's an input concept);
+ * the schema validator enforces this.
  *
  * Use this type when authoring schemas with strong typing for notices, or
  * when writing reusable notice helpers / fixtures. A `NoticeField` is
@@ -212,7 +223,9 @@ export interface Field<TFieldId extends string = string> {
  */
 export interface NoticeField<TFieldId extends string = string> {
   id: TFieldId;
-  type: NoticeFieldType;
+  type: 'notice';
+  /** Severity variant — drives visual treatment and accessible role. */
+  variant: NoticeVariant;
   /** Required body text — the notice's primary content. */
   description: LocalizedLabel;
   /** Optional heading/title shown above the description. */

@@ -35,7 +35,7 @@ Required provider that owns `requirements` and step state. `AdaptiveForm` must b
 ## AdaptiveForm Component
 
 - Pluggable component system: `components` prop maps field type strings to render functions (typed as `(props) => ReactNode` for autocomplete, rendered via JSX internally to preserve component boundaries)
-- Two rendering interfaces: `FieldInputProps` (interactive fields) and `FieldComputedProps` (display-only fields: `computed`, `notice_info`, `notice_warning`, `notice_danger`). Display-only types are tracked in `DISPLAY_ONLY_TYPES` set at module scope.
+- Three rendering interfaces: `FieldInputProps` (interactive fields), `FieldComputedProps` (`type: 'computed'`), and `FieldNoticeProps` (`type: 'notice'` — carries required `variant`, resolved `description`, optional resolved `heading`). The renderer dispatches on `field.type`: `'computed'` and `'notice'` go through their dedicated branches; everything else is treated as an input.
 - `renderField` prop for full per-field rendering control
 - `renderStepNavigation` prop for custom step navigation UI
 

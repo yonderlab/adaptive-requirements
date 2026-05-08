@@ -230,28 +230,29 @@ const components = {
 
 ### Notice fields — `FieldNoticeProps`
 
-Notice fields (`notice_info`, `notice_warning`, `notice_danger`) are display-only fields for showing contextual messages. They receive `FieldNoticeProps` — no `onChange`, no validation, no form submission data, no `value` (notices don't carry form values).
+Notice fields (`type: 'notice'`) are display-only fields for showing contextual messages. They receive `FieldNoticeProps` — no `onChange`, no validation, no form submission data, no `value` (notices don't carry form values). A single `notice` renderer handles all severities; the `variant` prop tells you which one to render.
 
-| Type             | Purpose                                                   |
-| ---------------- | --------------------------------------------------------- |
-| `notice_info`    | Informational context (e.g. "Your scheme begins Jan 1")   |
-| `notice_warning` | Caution the user should be aware of                       |
-| `notice_danger`  | Blocker or critical info (e.g. "Enrolment window closed") |
+| Variant     | Purpose                                                   |
+| ----------- | --------------------------------------------------------- |
+| `'info'`    | Informational context (e.g. "Your scheme begins Jan 1")   |
+| `'warning'` | Caution the user should be aware of                       |
+| `'danger'`  | Blocker or critical info (e.g. "Enrolment window closed") |
 
-| Prop          | Type                  | Description                                                                                                |
-| ------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `field`       | `NoticeField`         | Notice schema field — narrowed shape with `type` of `'notice_info' \| 'notice_warning' \| 'notice_danger'` |
-| `isVisible`   | `boolean`             | Whether the field should be rendered                                                                       |
-| `description` | `string`              | **Required** body text from the schema's `description` — the notice's primary content                      |
-| `heading`     | `string \| undefined` | Optional resolved heading/title (after localization), shown above the description                          |
+| Prop          | Type                  | Description                                                                                  |
+| ------------- | --------------------- | -------------------------------------------------------------------------------------------- |
+| `field`       | `NoticeField`         | Notice schema field — narrowed shape with `type: 'notice'` and a required `variant`          |
+| `isVisible`   | `boolean`             | Whether the field should be rendered                                                         |
+| `variant`     | `NoticeVariant`       | Severity: `'info'`, `'warning'`, or `'danger'` — drives visual treatment and accessible role |
+| `description` | `string`              | **Required** body text from the schema's `description` — the notice's primary content        |
+| `heading`     | `string \| undefined` | Optional resolved heading/title (after localization), shown above the description            |
 
 ```tsx
 import type { FieldNoticeProps } from '@kotaio/adaptive-form/react';
 
-function NoticeInfo({ isVisible, heading, description }: FieldNoticeProps) {
+function Notice({ isVisible, variant, heading, description }: FieldNoticeProps) {
   if (!isVisible) return null;
   return (
-    <div className="notice notice-info">
+    <div className={`notice notice-${variant}`}>
       {heading && <strong>{heading}</strong>}
       <p>{description}</p>
     </div>
@@ -260,37 +261,36 @@ function NoticeInfo({ isVisible, heading, description }: FieldNoticeProps) {
 
 const components = {
   text: (props: FieldInputProps) => <TextInput {...props} />,
-  notice_info: (props: FieldNoticeProps) => <NoticeInfo {...props} />,
-  notice_warning: (props: FieldNoticeProps) => <NoticeWarning {...props} />,
-  notice_danger: (props: FieldNoticeProps) => <NoticeDanger {...props} />,
+  notice: (props: FieldNoticeProps) => <Notice {...props} />,
 };
 ```
 
-Notice fields support `visibleWhen` for conditional visibility (driven by JSON Logic rules evaluated by the engine), `description` for the body text, and `heading` for an optional title above it:
+Notice fields support `visibleWhen` for conditional visibility (driven by JSON Logic rules evaluated by the engine), `variant` for severity, `description` for the body text, and `heading` for an optional title above it:
 
 ```json
 {
   "id": "enrolment_closed_notice",
-  "type": "notice_danger",
+  "type": "notice",
+  "variant": "danger",
   "description": { "default": "Please contact your HR team to discuss your options.", "key": "enrolment_closed.body" },
   "heading": { "default": "Enrolment window is closed", "key": "enrolment_closed.title" },
   "visibleWhen": { "==": [{ "var": "has_active_policy" }, "no"] }
 }
 ```
 
-`description` is **required** for notice fields — it's the message body, the primary thing the notice says. The schema validator (`validateRequirementsObject`) errors on notice fields without one. `description` is a `LocalizedLabel`, so you can pass either a plain string or an object with `default` (and optional `key`) for translation lookup; AdaptiveForm resolves it to a string before passing it to your renderer. `heading` is optional — use it when you want a separate title above the body. Notice fields **do not** use `label` (an input concept); the validator rejects `label` on notice schemas and points you at `heading` instead. The `FieldNoticeProps` shape is designed to grow without affecting other display renderers — future additions like actions or dismissibility will land here, not on `FieldComputedProps`.
+`variant` and `description` are **required** on notice fields — `variant` drives the visual + accessibility treatment, and `description` is the message body. The schema validator (`validateRequirementsObject`) errors on notice fields missing either. `description` is a `LocalizedLabel`, so you can pass either a plain string or an object with `default` (and optional `key`) for translation lookup; AdaptiveForm resolves it to a string before passing it to your renderer. `heading` is optional — use it when you want a separate title above the body. Notice fields **do not** use `label` (an input concept); the validator rejects `label` on notice schemas and points you at `heading` instead. The `FieldNoticeProps` shape is designed to grow without affecting other display renderers — future additions like actions or dismissibility will land here, not on `FieldComputedProps`.
 
 #### Built-in fallback
 
-If you don't supply a renderer for a notice type, AdaptiveForm renders a deliberately unstyled accessible fallback so a notice never silently disappears (which matters most for [blocking states](#blocking-states), where a missing notice would leave the user unable to advance with no explanation):
+If you don't supply a `notice` renderer, AdaptiveForm renders a deliberately unstyled accessible fallback so a notice never silently disappears (which matters most for [blocking states](#blocking-states), where a missing notice would leave the user unable to advance with no explanation):
 
 ```html
-<div role="alert" data-adaptive-form-default-renderer="notice_danger">{heading} — {description}</div>
+<div role="alert" data-adaptive-form-default-renderer="notice" data-variant="danger">{heading} — {description}</div>
 ```
 
-`notice_danger` uses `role="alert"` (assertive); `notice_info` and `notice_warning` use `role="status"` (polite). The fallback joins the (optional) `heading` and the `description` so screen readers announce both. The element carries no styling — wire up your own `notice_*` renderer in the `components` prop to match your design system. The fallback is intended as a safety net, not a polished default.
+`variant: 'danger'` uses `role="alert"` (assertive); `variant: 'info'` and `variant: 'warning'` use `role="status"` (polite). The fallback joins the (optional) `heading` and the `description` so screen readers announce both. The element carries no styling — wire up your own `notice` renderer in the `components` prop to match your design system. The fallback is intended as a safety net, not a polished default.
 
-You can target the fallback globally with CSS if you want a quick baseline (e.g. `[data-adaptive-form-default-renderer] { padding: 12px; border: 1px solid; }`), but a real renderer in `components` is the recommended path.
+You can target the fallback globally with CSS if you want a quick baseline (e.g. `[data-adaptive-form-default-renderer="notice"] { padding: 12px; border: 1px solid; }`), but a real renderer in `components` is the recommended path.
 
 ## Custom render function
 
@@ -588,23 +588,23 @@ These are features expressed in the schema that AdaptiveForm handles automatical
 
 ### Blocking states
 
-Halt forward progression based on an answer (e.g. "if the user has no previous insurance, take them off the online flow and to a phone call instead"). Achieved by composing two existing schema primitives — a validation rule and a conditional `notice_danger` field — with no new schema constructs and no bespoke React state:
+Halt forward progression based on an answer (e.g. "if the user has no previous insurance, take them off the online flow and to a phone call instead"). Achieved by composing two existing schema primitives — a validation rule and a conditional `notice` field with `variant: 'danger'` — with no new schema constructs and no bespoke React state:
 
 1. Author a **validation rule on the triggering field** in the schema. Failing rules make the step invalid; the default Next button is then marked `aria-disabled` and its click handler short-circuits, so users cannot advance. Custom `renderStepNavigation` consumers receive `isStepValid: false` and `canGoNext: false` and can render the navigation accordingly.
-2. Author a **conditionally-visible `notice_danger` field** in the schema with `visibleWhen` matching the blocking condition. Render it with your existing `notice_danger` component — that's the UI for the message and any CTA (phone number, link to a different flow, etc.).
+2. Author a **conditionally-visible notice field** (`type: 'notice'`, `variant: 'danger'`) in the schema with `visibleWhen` matching the blocking condition. Render it with your `notice` component — that's the UI for the message and any CTA (phone number, link to a different flow, etc.).
 
 The schema mechanics — including the negated-rule convention, reversibility, and variants like hiding subsequent questions — live in the engine package. See [`@kotaio/adaptive-requirements-engine` → Recipes → Blocking states](../adaptive-requirements-engine/README.md#blocking-states) for the full schema example.
 
-On the React side, you only need to make sure your `notice_danger` renderer reflects the visual treatment you want for blocked states (e.g. a callout with an icon, a phone number CTA, or — for a takeover layout — a full-bleed message). The library does not impose a visual style.
+On the React side, you only need to make sure your `notice` renderer reflects the visual treatment you want for each variant (info / warning / danger). The library does not impose a visual style; for blocked states you'd typically style `variant: 'danger'` as a callout with an icon, a phone number CTA, or — for a takeover layout — a full-bleed message.
 
-> **Important:** if you skip wiring up `notice_danger` in your `components` prop, AdaptiveForm renders a deliberately unstyled [built-in fallback](#built-in-fallback) so users still see the message. The fallback is a safety net, not a polished default — supply your own renderer to match your design system.
+> **Important:** if you skip wiring up `notice` in your `components` prop, AdaptiveForm renders a deliberately unstyled [built-in fallback](#built-in-fallback) so users still see the message. The fallback is a safety net, not a polished default — supply your own renderer to match your design system.
 
 ```tsx
-function NoticeDanger({ isVisible, heading, description }: FieldNoticeProps) {
+function Notice({ isVisible, variant, heading, description }: FieldNoticeProps) {
   if (!isVisible) return null;
   return (
-    <div className="callout callout-danger">
-      <Icon name="warning" />
+    <div className={`callout callout-${variant}`}>
+      {variant === 'danger' && <Icon name="warning" />}
       {heading && <strong>{heading}</strong>}
       <p>{description}</p>
     </div>
@@ -613,7 +613,7 @@ function NoticeDanger({ isVisible, heading, description }: FieldNoticeProps) {
 
 const components = {
   // ...
-  notice_danger: (props: FieldNoticeProps) => <NoticeDanger {...props} />,
+  notice: (props: FieldNoticeProps) => <Notice {...props} />,
 };
 ```
 

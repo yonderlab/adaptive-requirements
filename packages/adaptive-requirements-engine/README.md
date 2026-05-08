@@ -357,7 +357,7 @@ Some flows need to halt online progression when a user gives a particular answer
 This is fully expressible by composing two existing schema primitives — no new schema constructs are required:
 
 1. A **validation rule** on the triggering field whose predicate is true (= valid) when _not_ blocked, and false (= blocked). Because validation rules use the convention `truthy = valid, falsy = error`, you negate the block condition.
-2. A conditionally-visible **`notice_danger` field** carrying the rich message in its `description` (required body text) and an optional `heading` title, with a `visibleWhen` matching the blocking condition.
+2. A conditionally-visible **`notice` field with `variant: 'danger'`** carrying the rich message in its `description` (required body text) and an optional `heading` title, with a `visibleWhen` matching the blocking condition.
 
 When the rule fails, the field carries an error → the step's aggregate validity (`isStepValid` / `canGoNext` exposed to `renderStepNavigation`) flips to false → the default Next button is marked `aria-disabled` and its click handler refuses to advance. When the user changes their answer back, the rule passes, the notice hides, and forward navigation re-opens. Reversibility is automatic.
 
@@ -383,7 +383,11 @@ When the rule fails, the field carries an error → the step's aggregate validit
 },
 {
   id: 'no_prev_insurance_block',
-  type: 'notice_danger',
+  type: 'notice',
+  // `variant` is required ('info' | 'warning' | 'danger') and drives the renderer's
+  // visual treatment plus the accessible role chosen by the fallback ('alert' for
+  // 'danger', 'status' otherwise).
+  variant: 'danger',
   // `description` is the body of the notice (required for notice fields). It is a
   // `LocalizedLabel`, so you can pass a plain string or `{ default, key }` for i18n.
   description: {
@@ -408,11 +412,11 @@ When the rule fails, the field carries an error → the step's aggregate validit
 
 **Variants:**
 
-- **Plain field error (no separate notice):** drop the `notice_danger` field and put the full call-to-action in the validation rule's `message`. The renderer's existing field-error UI handles it.
+- **Plain field error (no separate notice):** drop the notice field and put the full call-to-action in the validation rule's `message`. The renderer's existing field-error UI handles it.
 - **Hide other questions on the step when blocked:** add `visibleWhen: { '!=': [{ var: 'previous_insurance' }, 'no'] }` to subsequent fields. Pure schema-side; no library changes.
 - **Block based on multiple fields:** use `and` / `or` in the rule and `visibleWhen` — JSON Logic can reference any field via `{ var: 'other_field' }`.
 
-For the React rendering side (`notice_danger` renderer, takeover layout, custom step navigation), see the [adaptive-form package README](../adaptive-form/README.md#blocking-states).
+For the React rendering side (the single `notice` renderer that switches on `variant`, takeover layout, custom step navigation), see the [adaptive-form package README](../adaptive-form/README.md#blocking-states).
 
 ## JSON Logic reference
 
@@ -458,8 +462,8 @@ Key types exported for use in custom integrations:
 | `RequirementsObject`  | Top-level schema: fields, datasets, and optional flow                        |
 | `Field`               | Single field definition: id, type, label, validation, visibility rules, etc. |
 | `NoticeField`         | Narrowed field shape for notices: required `description`, optional `heading` |
-| `NoticeFieldType`     | Literal union: `'notice_info' \| 'notice_warning' \| 'notice_danger'`        |
-| `NOTICE_FIELD_TYPES`  | Runtime constant — readonly tuple of the three notice type strings           |
+| `NoticeVariant`       | Literal union: `'info' \| 'warning' \| 'danger'` — the notice severity       |
+| `NOTICE_VARIANTS`     | Runtime constant — readonly tuple of the three variant strings               |
 | `FieldState`          | Runtime state for a field: visibility, errors, value, options                |
 | `FormData`            | `Record<string, FieldValue>` — the current form data                         |
 | `FieldValue`          | `string \| number \| boolean \| null \| undefined` or array thereof          |

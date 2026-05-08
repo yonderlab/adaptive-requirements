@@ -621,11 +621,11 @@ describe('unknown operation validation', () => {
 });
 
 describe('notice field description requirement', () => {
-  it.each([['notice_info'], ['notice_warning'], ['notice_danger']])('rejects %s field with no description', (type) => {
+  it('rejects notice field with no description', () => {
     // Fixture deliberately omits `label` so the only failing rule is the
     // description requirement — the assertion locks in that requirement specifically.
     const result = validateRequirementsObject({
-      fields: [{ id: 'msg', type }],
+      fields: [{ id: 'msg', type: 'notice', variant: 'danger' }],
     });
     expect(result.success).toBeFalsy();
     if (!result.success) {
@@ -636,7 +636,7 @@ describe('notice field description requirement', () => {
   it('rejects notice field with empty-string description', () => {
     // No `label` here so the failure is unambiguously due to the empty `description`.
     const result = validateRequirementsObject({
-      fields: [{ id: 'msg', type: 'notice_danger', description: '' }],
+      fields: [{ id: 'msg', type: 'notice', variant: 'danger', description: '' }],
     });
     expect(result.success).toBeFalsy();
     if (!result.success) {
@@ -646,7 +646,7 @@ describe('notice field description requirement', () => {
 
   it('rejects notice field with empty-default LocalizedLabel description', () => {
     const result = validateRequirementsObject({
-      fields: [{ id: 'msg', type: 'notice_danger', description: { default: '' } }],
+      fields: [{ id: 'msg', type: 'notice', variant: 'danger', description: { default: '' } }],
     });
     expect(result.success).toBeFalsy();
     if (!result.success) {
@@ -659,7 +659,8 @@ describe('notice field description requirement', () => {
       fields: [
         {
           id: 'msg',
-          type: 'notice_danger',
+          type: 'notice',
+          variant: 'danger',
           description: 'Cannot continue online — please call us.',
         },
       ],
@@ -672,7 +673,8 @@ describe('notice field description requirement', () => {
       fields: [
         {
           id: 'msg',
-          type: 'notice_danger',
+          type: 'notice',
+          variant: 'danger',
           description: { default: 'Cannot continue online — please call us.', key: 'block_msg' },
         },
       ],
@@ -692,7 +694,8 @@ describe('notice field description requirement', () => {
       fields: [
         {
           id: 'msg',
-          type: 'notice_danger',
+          type: 'notice',
+          variant: 'danger',
           label: { default: 'Cannot continue' },
           description: 'Please call us.',
         },
@@ -709,7 +712,8 @@ describe('notice field description requirement', () => {
       fields: [
         {
           id: 'msg',
-          type: 'notice_danger',
+          type: 'notice',
+          variant: 'danger',
           heading: { default: 'Cannot continue' },
           description: 'Please call 020-XXX-XXXX.',
         },
@@ -721,6 +725,45 @@ describe('notice field description requirement', () => {
   it('still allows label on non-notice fields', () => {
     const result = validateRequirementsObject({
       fields: [{ id: 'name', type: 'text', label: { default: 'Name' } }],
+    });
+    expect(result.success).toBeTruthy();
+  });
+});
+
+describe('notice field variant requirement', () => {
+  it('rejects notice field with no variant', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type: 'notice', description: 'A body.' }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].variant')).toBeTruthy();
+    }
+  });
+
+  it('rejects notice field with non-string variant', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type: 'notice', variant: 42, description: 'A body.' }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].variant')).toBeTruthy();
+    }
+  });
+
+  it('rejects notice field with unknown variant', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type: 'notice', variant: 'critical', description: 'A body.' }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].variant')).toBeTruthy();
+    }
+  });
+
+  it.each([['info'], ['warning'], ['danger']])('accepts variant: %s', (variant) => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type: 'notice', variant, description: 'A body.' }],
     });
     expect(result.success).toBeTruthy();
   });
