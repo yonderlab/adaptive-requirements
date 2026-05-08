@@ -1,9 +1,9 @@
 import type { DatasetItem, RequirementsObject } from './types';
 
 import { isReservedOperationName } from './operations';
-import { NOTICE_FIELD_TYPES } from './types';
+import { NOTICE_VARIANTS } from './types';
 
-const NOTICE_FIELD_TYPE_SET = new Set<string>(NOTICE_FIELD_TYPES);
+const NOTICE_VARIANT_SET = new Set<string>(NOTICE_VARIANTS);
 
 /**
  * A single validation error with path and message
@@ -333,21 +333,26 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
         fieldValid = false;
       }
 
-      // Notice fields use heading (optional) + description (required) — not label.
-      // Description is the message body (LocalizedLabel: string or { default: string; key? }).
-      // Heading is an optional title above it.
-      if (isString(field['type']) && NOTICE_FIELD_TYPE_SET.has(field['type'])) {
+      // Notice fields: type === 'notice' with required variant + description, optional heading.
+      if (field['type'] === 'notice') {
+        if (!isString(field['variant']) || !NOTICE_VARIANT_SET.has(field['variant'])) {
+          errors.push({
+            path: `fields[${i}].variant`,
+            message: `Notice fields require variant to be one of: ${NOTICE_VARIANTS.map((v) => `"${v}"`).join(', ')}.`,
+          });
+          fieldValid = false;
+        }
         if (!isNonEmptyLocalizedLabel(field['description'])) {
           errors.push({
             path: `fields[${i}].description`,
-            message: `Notice fields (${NOTICE_FIELD_TYPES.join(', ')}) require a non-empty description (the message body).`,
+            message: 'Notice fields (type: "notice") require a non-empty description (the message body).',
           });
           fieldValid = false;
         }
         if (field['label'] !== undefined) {
           errors.push({
             path: `fields[${i}].label`,
-            message: `Notice fields use "heading" instead of "label". Move the heading text from "label" to "heading".`,
+            message: 'Notice fields use "heading" instead of "label". Move the heading text from "label" to "heading".',
           });
           fieldValid = false;
         }
