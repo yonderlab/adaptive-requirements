@@ -348,6 +348,72 @@ const adapter = createAdapter(requirements, {
 // They automatically translate between your field IDs and the schema's
 ```
 
+## Recipes
+
+### Blocking states
+
+Some flows need to halt online progression when a user gives a particular answer and direct them to another channel (e.g. a phone-based journey). For example, ONVZ (Netherlands health insurance) requires asking whether the applicant has previous insurance — if they answer "no", the application must stop and a human takes over.
+
+This is fully expressible by composing two existing schema primitives — no new schema constructs are required:
+
+1. A **validation rule** on the triggering field whose predicate is true (= valid) when _not_ blocked, and false (= blocked). Because validation rules use the convention `truthy = valid, falsy = error`, you negate the block condition.
+2. A conditionally-visible **`notice_danger` field** carrying the rich message in its `description` (required body text) and an optional `heading` title, with a `visibleWhen` matching the blocking condition.
+
+When the rule fails, the field carries an error → the step's aggregate validity (`isStepValid` / `canGoNext` exposed to `renderStepNavigation`) flips to false → the default Next button is marked `aria-disabled` and its click handler refuses to advance. When the user changes their answer back, the rule passes, the notice hides, and forward navigation re-opens. Reversibility is automatic.
+
+```ts
+{
+  id: 'previous_insurance',
+  type: 'radio',
+  label: { default: 'Have you had previous health insurance?' },
+  options: [
+    { value: 'yes', label: { default: 'Yes' } },
+    { value: 'no', label: { default: 'No' } },
+  ],
+  validation: {
+    required: true,
+    rules: [
+      {
+        // Truthy = valid, falsy = blocked. Negate the block condition.
+        rule: { '!=': [{ var: 'previous_insurance' }, 'no'] },
+        message: "We can't complete this online — see message below.",
+      },
+    ],
+  },
+},
+{
+  id: 'no_prev_insurance_block',
+  type: 'notice_danger',
+  // `description` is the body of the notice (required for notice fields). It is a
+  // `LocalizedLabel`, so you can pass a plain string or `{ default, key }` for i18n.
+  description: {
+    default: "Please call 020-XXX-XXXX and we'll continue with you over the phone.",
+    key: 'onvz.no_prev_insurance.body',
+  },
+  // `heading` is an optional title shown above the description.
+  // Notice fields use `heading` instead of `label` — the validator rejects `label`.
+  heading: { default: "We can't complete this application online" },
+  visibleWhen: { '==': [{ var: 'previous_insurance' }, 'no'] },
+},
+{
+  // Follow-up question only shown when the answer is "yes".
+  id: 'previous_insurer',
+  type: 'text',
+  label: { default: 'Who was your previous insurance with?' },
+  visibleWhen: { '==': [{ var: 'previous_insurance' }, 'yes'] },
+  excludeWhen: { '!=': [{ var: 'previous_insurance' }, 'yes'] },
+  validation: { required: true },
+},
+```
+
+**Variants:**
+
+- **Plain field error (no separate notice):** drop the `notice_danger` field and put the full call-to-action in the validation rule's `message`. The renderer's existing field-error UI handles it.
+- **Hide other questions on the step when blocked:** add `visibleWhen: { '!=': [{ var: 'previous_insurance' }, 'no'] }` to subsequent fields. Pure schema-side; no library changes.
+- **Block based on multiple fields:** use `and` / `or` in the rule and `visibleWhen` — JSON Logic can reference any field via `{ var: 'other_field' }`.
+
+For the React rendering side (`notice_danger` renderer, takeover layout, custom step navigation), see the [adaptive-form package README](../adaptive-form/README.md#blocking-states).
+
 ## JSON Logic reference
 
 Schemas use [JSON Logic](https://jsonlogic.com) expressions for conditional visibility, conditional validation, computed values, and dataset filtering. The engine evaluates these automatically — this reference is for understanding what schemas can express.
@@ -391,6 +457,9 @@ Key types exported for use in custom integrations:
 | --------------------- | ---------------------------------------------------------------------------- |
 | `RequirementsObject`  | Top-level schema: fields, datasets, and optional flow                        |
 | `Field`               | Single field definition: id, type, label, validation, visibility rules, etc. |
+| `NoticeField`         | Narrowed field shape for notices: required `description`, optional `heading` |
+| `NoticeFieldType`     | Literal union: `'notice_info' \| 'notice_warning' \| 'notice_danger'`        |
+| `NOTICE_FIELD_TYPES`  | Runtime constant — readonly tuple of the three notice type strings           |
 | `FieldState`          | Runtime state for a field: visibility, errors, value, options                |
 | `FormData`            | `Record<string, FieldValue>` — the current form data                         |
 | `FieldValue`          | `string \| number \| boolean \| null \| undefined` or array thereof          |

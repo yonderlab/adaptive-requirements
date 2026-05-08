@@ -1,6 +1,9 @@
 import type { DatasetItem, RequirementsObject } from './types';
 
 import { isReservedOperationName } from './operations';
+import { NOTICE_FIELD_TYPES } from './types';
+
+const NOTICE_FIELD_TYPE_SET = new Set<string>(NOTICE_FIELD_TYPES);
 
 /**
  * A single validation error with path and message
@@ -23,6 +26,20 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';
+}
+
+/**
+ * Accepts a `LocalizedLabel`: either a non-empty string, or an object with a non-empty `default`
+ * (and optional `key`). Used to validate notice `description` (the body text).
+ */
+function isNonEmptyLocalizedLabel(value: unknown): boolean {
+  if (isString(value)) {
+    return value.length > 0;
+  }
+  if (isObject(value) && isString(value['default']) && value['default'].length > 0) {
+    return true;
+  }
+  return false;
 }
 
 // ── Deep-validation helpers ─────────────────────────────────────────────
@@ -314,6 +331,26 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
       if (!isString(field['type'])) {
         errors.push({ path: `fields[${i}].type`, message: 'Expected field type to be a string' });
         fieldValid = false;
+      }
+
+      // Notice fields use heading (optional) + description (required) — not label.
+      // Description is the message body (LocalizedLabel: string or { default: string; key? }).
+      // Heading is an optional title above it.
+      if (isString(field['type']) && NOTICE_FIELD_TYPE_SET.has(field['type'])) {
+        if (!isNonEmptyLocalizedLabel(field['description'])) {
+          errors.push({
+            path: `fields[${i}].description`,
+            message: `Notice fields (${NOTICE_FIELD_TYPES.join(', ')}) require a non-empty description (the message body).`,
+          });
+          fieldValid = false;
+        }
+        if (field['label'] !== undefined) {
+          errors.push({
+            path: `fields[${i}].label`,
+            message: `Notice fields use "heading" instead of "label". Move the heading text from "label" to "heading".`,
+          });
+          fieldValid = false;
+        }
       }
 
       // validation (optional)

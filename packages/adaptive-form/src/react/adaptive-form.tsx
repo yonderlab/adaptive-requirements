@@ -6,6 +6,7 @@ import type {
   FieldValue,
   FlowStep,
   FormData,
+  NoticeField,
   RequirementsObject,
   ResolvedFieldOption,
 } from '@kotaio/adaptive-requirements-engine';
@@ -17,6 +18,7 @@ import {
   getNextStepId,
   getPreviousStepId,
   initializeFormData,
+  NOTICE_FIELD_TYPES,
   resolveLabel,
 } from '@kotaio/adaptive-requirements-engine';
 import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -31,8 +33,7 @@ import { useRequirements } from './use-requirements';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
-/** Field types that receive FieldComputedProps (display-only, no onChange/onBlur) */
-const DISPLAY_ONLY_TYPES = new Set(['computed', 'notice_info', 'notice_warning', 'notice_danger']);
+const NOTICE_FIELD_TYPE_SET = new Set<string>(NOTICE_FIELD_TYPES);
 
 type FieldId = string;
 
@@ -62,12 +63,35 @@ export interface FieldInputProps<TFieldId extends FieldId = FieldId> {
 }
 
 /**
- * Props for computed field display components
+ * Props for computed field display components.
+ * Used for `type: 'computed'` fields whose value is derived from other fields.
  */
 export interface FieldComputedProps<TFieldId extends FieldId = FieldId> {
   field: Field<TFieldId>;
   value: FieldValue;
   isVisible: boolean;
+}
+
+/**
+ * Props for notice / message-bearing display field components.
+ * Used for `notice_info`, `notice_warning`, and `notice_danger` field types.
+ *
+ * Notices carry a body message (`description`) and an optional heading (`heading`) —
+ * they don't have a form value. `description` is required because a notice without
+ * a body has nothing to say; the schema validator enforces this. Notice fields use
+ * `heading` instead of `label` — the validator rejects `label` on notice schemas.
+ *
+ * The shape is designed to grow (e.g. actions, dismissibility) without affecting
+ * non-notice display renderers.
+ */
+export interface FieldNoticeProps<TFieldId extends FieldId = FieldId> {
+  /** Notice schema field — see `NoticeField` for the shape. */
+  field: NoticeField<TFieldId>;
+  isVisible: boolean;
+  /** Resolved body text (after localization) from the schema's `description`. The notice's primary content. */
+  description: string;
+  /** Optional resolved heading/title (after localization), shown above the description. */
+  heading?: string;
 }
 
 /**
@@ -138,12 +162,13 @@ export interface AdaptiveFormProps<TFieldId extends FieldId = FieldId> {
     checkbox?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
     radio?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
     computed?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
-    notice_info?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
-    notice_warning?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
-    notice_danger?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
+    notice_info?: (props: FieldNoticeProps<TFieldId>) => React.ReactNode;
+    notice_warning?: (props: FieldNoticeProps<TFieldId>) => React.ReactNode;
+    notice_danger?: (props: FieldNoticeProps<TFieldId>) => React.ReactNode;
     [key: string]:
       | ((props: FieldInputProps<TFieldId>) => React.ReactNode)
       | ((props: FieldComputedProps<TFieldId>) => React.ReactNode)
+      | ((props: FieldNoticeProps<TFieldId>) => React.ReactNode)
       | undefined;
   };
 
@@ -594,7 +619,25 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       const fieldType = field.type;
       const renderFn = components?.[fieldType];
 
+      const isNoticeField = NOTICE_FIELD_TYPE_SET.has(fieldType);
+
       if (!renderFn) {
+        if (isNoticeField) {
+          if (!fieldState.isVisible) {
+            return null;
+          }
+          // Unstyled accessible default so a missing notice renderer is never a silent dead-end
+          // (e.g. blocking-state UIs where Continue is disabled and the notice is the only explanation).
+          // Consumers override by supplying components[fieldType].
+          const role = fieldType === 'notice_danger' ? 'alert' : 'status';
+          const heading = resolveLabel(field.heading);
+          const description = resolveLabel(field.description) ?? '';
+          return (
+            <div role={role} data-adaptive-form-default-renderer={fieldType}>
+              {heading ? `${heading} — ${description}` : description}
+            </div>
+          );
+        }
         if (isDev) {
           console.warn(
             `[AdaptiveForm] No render function found for field type: "${fieldType}". ` +
@@ -604,7 +647,19 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
         return null;
       }
 
-      if (DISPLAY_ONLY_TYPES.has(fieldType)) {
+      if (isNoticeField) {
+        const Notice = renderFn as React.ComponentType<FieldNoticeProps<TFieldId>>;
+        return (
+          <Notice
+            field={field as NoticeField<TFieldId>}
+            isVisible={fieldState.isVisible}
+            heading={resolveLabel(field.heading)}
+            description={resolveLabel(field.description) ?? ''}
+          />
+        );
+      }
+
+      if (fieldType === 'computed') {
         const DisplayField = renderFn as React.ComponentType<FieldComputedProps<TFieldId>>;
         return <DisplayField field={field} value={fieldState.value} isVisible={fieldState.isVisible} />;
       }

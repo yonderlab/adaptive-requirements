@@ -620,6 +620,112 @@ describe('unknown operation validation', () => {
   });
 });
 
+describe('notice field description requirement', () => {
+  it.each([['notice_info'], ['notice_warning'], ['notice_danger']])('rejects %s field with no description', (type) => {
+    // Fixture deliberately omits `label` so the only failing rule is the
+    // description requirement — the assertion locks in that requirement specifically.
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].description')).toBeTruthy();
+    }
+  });
+
+  it('rejects notice field with empty-string description', () => {
+    // No `label` here so the failure is unambiguously due to the empty `description`.
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type: 'notice_danger', description: '' }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].description')).toBeTruthy();
+    }
+  });
+
+  it('rejects notice field with empty-default LocalizedLabel description', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type: 'notice_danger', description: { default: '' } }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].description')).toBeTruthy();
+    }
+  });
+
+  it('accepts notice field with non-empty description (string)', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'msg',
+          type: 'notice_danger',
+          description: 'Cannot continue online — please call us.',
+        },
+      ],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('accepts notice field with non-empty description (LocalizedLabel object)', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'msg',
+          type: 'notice_danger',
+          description: { default: 'Cannot continue online — please call us.', key: 'block_msg' },
+        },
+      ],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('does not require description on non-notice fields', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'name', type: 'text', label: 'Name' }],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('rejects notice field that sets label (must use heading)', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'msg',
+          type: 'notice_danger',
+          label: { default: 'Cannot continue' },
+          description: 'Please call us.',
+        },
+      ],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].label' && e.message.includes('heading'))).toBeTruthy();
+    }
+  });
+
+  it('accepts notice field with heading and description', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'msg',
+          type: 'notice_danger',
+          heading: { default: 'Cannot continue' },
+          description: 'Please call 020-XXX-XXXX.',
+        },
+      ],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('still allows label on non-notice fields', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'name', type: 'text', label: { default: 'Name' } }],
+    });
+    expect(result.success).toBeTruthy();
+  });
+});
+
 describe(validateDatasetItems, () => {
   it('accepts valid dataset items', () => {
     const result = validateDatasetItems([

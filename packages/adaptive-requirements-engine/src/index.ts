@@ -14,6 +14,8 @@ export type {
   OptionsSource,
   FileConfig,
   Field,
+  NoticeField,
+  NoticeFieldType,
   DatasetItem,
   Dataset,
   FlowStep,
@@ -28,6 +30,7 @@ export type {
   FieldMapping,
   FieldState,
 } from './types';
+export { NOTICE_FIELD_TYPES } from './types';
 
 // Engine
 export {
