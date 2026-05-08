@@ -1063,11 +1063,9 @@ describe('notice field types', () => {
     const fallbacks = document.querySelectorAll('[data-adaptive-form-default-renderer="notice"]');
     expect(fallbacks).toHaveLength(3);
 
-    const byVariant = (variant: string) =>
-      document.querySelector(`[data-adaptive-form-default-renderer="notice"][data-variant="${variant}"]`)!;
-    const info = byVariant('info');
-    const warn = byVariant('warning');
-    const danger = byVariant('danger');
+    const info = document.querySelector('[data-adaptive-form-default-renderer="notice"][data-variant="info"]')!;
+    const warn = document.querySelector('[data-adaptive-form-default-renderer="notice"][data-variant="warning"]')!;
+    const danger = document.querySelector('[data-adaptive-form-default-renderer="notice"][data-variant="danger"]')!;
 
     expect(info).not.toBeNull();
     expect(warn).not.toBeNull();
