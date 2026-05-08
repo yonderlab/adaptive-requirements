@@ -162,7 +162,11 @@ A `FieldOption` has `{ value: string | boolean, label: string }`.
 
 ### Example component
 
+`field.description` is a `LocalizedLabel`, so resolve it with `resolveLabel` from the engine package before rendering:
+
 ```tsx
+import { resolveLabel } from '@kotaio/adaptive-requirements-engine';
+
 function TextInput({ field, value, onChange, onBlur, errors, isRequired, isVisible, label }) {
   if (!isVisible) return null;
 
