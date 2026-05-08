@@ -457,24 +457,24 @@ The engine registers these additional operations:
 
 Key types exported for use in custom integrations:
 
-| Type                  | Description                                                                  |
-| --------------------- | ---------------------------------------------------------------------------- |
-| `RequirementsObject`  | Top-level schema: fields, datasets, and optional flow                        |
-| `Field`               | Single field definition: id, type, label, validation, visibility rules, etc. |
-| `NoticeField`         | Narrowed field shape for notices: required `description`, optional `heading` |
-| `NoticeVariant`       | Literal union: `'info' \| 'warning' \| 'danger'` — the notice severity       |
-| `NOTICE_VARIANTS`     | Runtime constant — readonly tuple of the three variant strings               |
-| `FieldState`          | Runtime state for a field: visibility, errors, value, options                |
-| `FormData`            | `Record<string, FieldValue>` — the current form data                         |
-| `FieldValue`          | `string \| number \| boolean \| null \| undefined` or array thereof          |
-| `Rule`                | A JSON Logic expression                                                      |
-| `Dataset`             | A named list of items that fields can reference                              |
-| `Flow`                | Step definitions and optional navigation rules                               |
-| `FieldMapping`        | Field ID remapping configuration                                             |
-| `EngineOptions`       | Options for custom validators, locale, and label resolution                  |
-| `ValidationResult`    | `{ success: true, data } \| { success: false, errors }`                      |
-| `ValidationError`     | `{ path: string, message: string }`                                          |
-| `ResolvedFieldOption` | `{ value: string \| boolean, label: string }`                                |
+| Type                  | Description                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `RequirementsObject`  | Top-level schema: fields, datasets, and optional flow                                                |
+| `Field`               | Single field definition: id, type, label, validation, visibility rules, etc.                         |
+| `NoticeField`         | Narrowed shape for notices: `type: 'notice'`, required `variant` + `description`, optional `heading` |
+| `NoticeVariant`       | Literal union: `'info' \| 'warning' \| 'danger'` — the notice severity                               |
+| `NOTICE_VARIANTS`     | Runtime constant — readonly tuple of the three variant strings                                       |
+| `FieldState`          | Runtime state for a field: visibility, errors, value, options                                        |
+| `FormData`            | `Record<string, FieldValue>` — the current form data                                                 |
+| `FieldValue`          | `string \| number \| boolean \| null \| undefined` or array thereof                                  |
+| `Rule`                | A JSON Logic expression                                                                              |
+| `Dataset`             | A named list of items that fields can reference                                                      |
+| `Flow`                | Step definitions and optional navigation rules                                                       |
+| `FieldMapping`        | Field ID remapping configuration                                                                     |
+| `EngineOptions`       | Options for custom validators, locale, and label resolution                                          |
+| `ValidationResult`    | `{ success: true, data } \| { success: false, errors }`                                              |
+| `ValidationError`     | `{ path: string, message: string }`                                                                  |
+| `ResolvedFieldOption` | `{ value: string \| boolean, label: string }`                                                        |
 
 ## License
 

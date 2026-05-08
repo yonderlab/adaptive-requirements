@@ -966,6 +966,7 @@ function TestNotice({ field, isVisible, variant, heading, description }: FieldNo
     <div
       data-testid={`notice-${field.id}`}
       data-variant={variant}
+      data-field-variant={field.variant}
       data-heading={heading}
       data-description={description}
     >
@@ -1211,6 +1212,30 @@ describe('notice field types', () => {
     const node = screen.getByTestId('notice-msg') as HTMLElement;
     expect(node.dataset['variant']).toBe('info');
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Unknown notice variant "critical"'));
+
+    warnSpy.mockRestore();
+  });
+
+  it('normalizes field.variant to match the coerced variant prop', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
+
+    // 'critical' is invalid; the renderer coerces variant -> 'info'. The field passed
+    // through to consumers must reflect the same coerced value, otherwise consumers
+    // reading props.field.variant would see 'critical' while props.variant is 'info'.
+    const requirements = {
+      fields: [{ id: 'msg', type: 'notice', variant: 'critical', description: 'Body' }],
+    } as unknown as RequirementsObject;
+
+    render(
+      <AdaptiveFormProvider requirements={requirements}>
+        <AdaptiveForm components={{ notice: TestNotice }} />
+      </AdaptiveFormProvider>,
+    );
+
+    const node = screen.getByTestId('notice-msg') as HTMLElement;
+    expect(node.dataset['variant']).toBe('info');
+    // field.variant on the prop is normalized to the coerced value, not the raw 'critical'
+    expect(node.dataset['fieldVariant']).toBe('info');
 
     warnSpy.mockRestore();
   });

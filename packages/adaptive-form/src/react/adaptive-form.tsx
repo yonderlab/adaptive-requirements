@@ -677,9 +677,14 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
 
       if (isNoticeField) {
         const Notice = renderFn as React.ComponentType<FieldNoticeProps<TFieldId>>;
+        // Normalize the field we hand to the renderer so its `variant` matches the
+        // coerced one we pass as a prop. Otherwise `props.field.variant` could read
+        // back as 'critical' / undefined while `props.variant` is 'info', breaking
+        // the NoticeField contract for any consumer that prefers `field.*`.
+        const noticeField = { ...field, type: 'notice', variant: noticeVariant } as NoticeField<TFieldId>;
         return (
           <Notice
-            field={field as NoticeField<TFieldId>}
+            field={noticeField}
             isVisible={fieldState.isVisible}
             variant={noticeVariant}
             heading={resolveLabel(field.heading)}
