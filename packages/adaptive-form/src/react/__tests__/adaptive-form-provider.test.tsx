@@ -450,6 +450,107 @@ describe('useStepNavigation', () => {
   });
 });
 
+describe('default step navigation auto-suppression', () => {
+  function findDefaultNextButton() {
+    return screen.queryAllByRole('button', { name: 'Next' }).find((el) => el.className.includes('bg-primary'));
+  }
+
+  it('renders default buttons when no useStepNavigation consumer is mounted', () => {
+    function FormOnly() {
+      const [data, setData] = useState<FormData>(medicalClaimData);
+      return (
+        <AdaptiveFormProvider requirements={schema}>
+          <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    render(<FormOnly />);
+    expect(findDefaultNextButton()).toBeTruthy();
+  });
+
+  it('suppresses default buttons when a sibling component consumes useStepNavigation', () => {
+    function FormWithCustomNav() {
+      const [data, setData] = useState<FormData>(medicalClaimData);
+      return (
+        <AdaptiveFormProvider requirements={schema}>
+          <CustomNavDisplay />
+          <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    render(<FormWithCustomNav />);
+    // Custom nav (from CustomNavDisplay) is present
+    expect(screen.getByTestId('nav-next')).toBeTruthy();
+    // Default Next button (with bg-primary class) is gone
+    expect(findDefaultNextButton()).toBeUndefined();
+  });
+
+  it('restores default buttons after the only consumer unmounts', () => {
+    function ToggleableConsumer({ showConsumer }: { showConsumer: boolean }) {
+      const [data, setData] = useState<FormData>(medicalClaimData);
+      return (
+        <AdaptiveFormProvider requirements={schema}>
+          {showConsumer && <CustomNavDisplay />}
+          <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    const { rerender } = render(<ToggleableConsumer showConsumer />);
+    expect(findDefaultNextButton()).toBeUndefined();
+
+    rerender(<ToggleableConsumer showConsumer={false} />);
+    expect(findDefaultNextButton()).toBeTruthy();
+  });
+
+  it('still defers to renderStepNavigation when both prop and hook consumer are present', () => {
+    function FormWithBoth() {
+      const [data, setData] = useState<FormData>(medicalClaimData);
+      return (
+        <AdaptiveFormProvider requirements={schema}>
+          <CustomNavDisplay />
+          <AdaptiveForm
+            value={data}
+            onChange={setData}
+            components={testComponents}
+            renderStepNavigation={() => <button data-testid="render-prop-nav">Inline</button>}
+          />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    render(<FormWithBoth />);
+    // The render prop wins
+    expect(screen.getByTestId('render-prop-nav')).toBeTruthy();
+    // Default is gone
+    expect(findDefaultNextButton()).toBeUndefined();
+    // Hook consumer's UI is also still rendered (it's a sibling, not affected by the form's choice)
+    expect(screen.getByTestId('nav-next')).toBeTruthy();
+  });
+
+  it('keeps defaults suppressed while at least one consumer remains', () => {
+    function TwoConsumers({ showSecond }: { showSecond: boolean }) {
+      const [data, setData] = useState<FormData>(medicalClaimData);
+      return (
+        <AdaptiveFormProvider requirements={schema}>
+          <CustomNavDisplay />
+          {showSecond && <CustomNavDisplay />}
+          <AdaptiveForm value={data} onChange={setData} components={testComponents} />
+        </AdaptiveFormProvider>
+      );
+    }
+
+    const { rerender } = render(<TwoConsumers showSecond />);
+    expect(findDefaultNextButton()).toBeUndefined();
+
+    // Unmount one consumer; the other still keeps defaults suppressed
+    rerender(<TwoConsumers showSecond={false} />);
+    expect(findDefaultNextButton()).toBeUndefined();
+  });
+});
+
 describe('useFormInfo back-compat after the navigationState refactor', () => {
   it('returns baseline step info when no AdaptiveForm is mounted', () => {
     render(

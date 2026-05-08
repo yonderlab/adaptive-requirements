@@ -787,7 +787,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
         </div>
         {renderStepNavigation && navigationProps ? (
           renderStepNavigation(navigationProps)
-        ) : (
+        ) : ctx.hasNavigationConsumer ? null : (
           <div className="mt-6 flex gap-3">
             {canGoPrevious && (
               <button
