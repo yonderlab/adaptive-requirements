@@ -234,12 +234,12 @@ Notice fields (`notice_info`, `notice_warning`, `notice_danger`) are display-onl
 | `notice_warning` | Caution the user should be aware of                       |
 | `notice_danger`  | Blocker or critical info (e.g. "Enrolment window closed") |
 
-| Prop          | Type                  | Description                                                                                            |
-| ------------- | --------------------- | ------------------------------------------------------------------------------------------------------ |
+| Prop          | Type                  | Description                                                                                                |
+| ------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `field`       | `NoticeField`         | Notice schema field — narrowed shape with `type` of `'notice_info' \| 'notice_warning' \| 'notice_danger'` |
-| `isVisible`   | `boolean`             | Whether the field should be rendered                                                                   |
-| `description` | `string`              | **Required** body text from the schema's `description` — the notice's primary content                  |
-| `heading`     | `string \| undefined` | Optional resolved heading/title (after localization), shown above the description                      |
+| `isVisible`   | `boolean`             | Whether the field should be rendered                                                                       |
+| `description` | `string`              | **Required** body text from the schema's `description` — the notice's primary content                      |
+| `heading`     | `string \| undefined` | Optional resolved heading/title (after localization), shown above the description                          |
 
 ```tsx
 import type { FieldNoticeProps } from '@kotaio/adaptive-form/react';

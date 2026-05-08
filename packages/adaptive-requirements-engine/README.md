@@ -356,7 +356,7 @@ Some flows need to halt online progression when a user gives a particular answer
 
 This is fully expressible by composing two existing schema primitives — no new schema constructs are required:
 
-1. A **validation rule** on the triggering field whose predicate is true (= valid) when *not* blocked, and false (= blocked). Because validation rules use the convention `truthy = valid, falsy = error`, you negate the block condition.
+1. A **validation rule** on the triggering field whose predicate is true (= valid) when _not_ blocked, and false (= blocked). Because validation rules use the convention `truthy = valid, falsy = error`, you negate the block condition.
 2. A conditionally-visible **`notice_danger` field** carrying the rich message in its `description` (required body text) and an optional `heading` title, with a `visibleWhen` matching the blocking condition.
 
 When the rule fails, the field carries an error → the step's aggregate validity (`isStepValid` / `canGoNext` exposed to `renderStepNavigation`) flips to false → the default Next button is marked `aria-disabled` and its click handler refuses to advance. When the user changes their answer back, the rule passes, the notice hides, and forward navigation re-opens. Reversibility is automatic.

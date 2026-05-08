@@ -1159,9 +1159,7 @@ describe('notice field types', () => {
   it('still logs a dev warning for genuinely unknown (non-notice) field types', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
 
-    const requirements = makeRequirements([
-      { id: 'mystery', type: 'mystery_widget', label: { default: 'Unknown' } },
-    ]);
+    const requirements = makeRequirements([{ id: 'mystery', type: 'mystery_widget', label: { default: 'Unknown' } }]);
 
     render(
       <AdaptiveFormProvider requirements={requirements}>

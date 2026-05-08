@@ -621,20 +621,17 @@ describe('unknown operation validation', () => {
 });
 
 describe('notice field description requirement', () => {
-  it.each([['notice_info'], ['notice_warning'], ['notice_danger']])(
-    'rejects %s field with no description',
-    (type) => {
-      // Fixture deliberately omits `label` so the only failing rule is the
-      // description requirement — the assertion locks in that requirement specifically.
-      const result = validateRequirementsObject({
-        fields: [{ id: 'msg', type }],
-      });
-      expect(result.success).toBeFalsy();
-      if (!result.success) {
-        expect(result.errors.some((e) => e.path === 'fields[0].description')).toBeTruthy();
-      }
-    },
-  );
+  it.each([['notice_info'], ['notice_warning'], ['notice_danger']])('rejects %s field with no description', (type) => {
+    // Fixture deliberately omits `label` so the only failing rule is the
+    // description requirement — the assertion locks in that requirement specifically.
+    const result = validateRequirementsObject({
+      fields: [{ id: 'msg', type }],
+    });
+    expect(result.success).toBeFalsy();
+    if (!result.success) {
+      expect(result.errors.some((e) => e.path === 'fields[0].description')).toBeTruthy();
+    }
+  });
 
   it('rejects notice field with empty-string description', () => {
     // No `label` here so the failure is unambiguously due to the empty `description`.
