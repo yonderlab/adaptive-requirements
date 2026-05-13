@@ -50,11 +50,12 @@ Framework-agnostic core: types, rule engine, validation. Zero React/browser depe
 
 Custom operations registered lazily on first `runRule()` call:
 
-| Operation     | Description                                                                                                                 |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `today`       | Returns current date as `YYYY-MM-DD`                                                                                        |
-| `match`       | Regex test: `{ "match": [value, pattern, flags?] }`                                                                         |
-| `phone_valid` | Phone validation: `{ "phone_valid": [value, countryCode?] }` via libphonenumber-js; E.164 required if `countryCode` omitted |
+| Operation     | Description                                                                                                                                                          |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `today`       | Returns current date as `YYYY-MM-DD`                                                                                                                                 |
+| `match`       | Regex test: `{ "match": [value, pattern, flags?] }`                                                                                                                  |
+| `phone_valid` | Phone validation: `{ "phone_valid": [value, countryCode?] }` via libphonenumber-js; E.164 required if `countryCode` omitted                                          |
+| `iban_valid`  | IBAN validation: `{ "iban_valid": [value, countryCode?] }` via ibantools (per-country length + mod-97 checksum). Tolerates spaces; `countryCode` is case-insensitive |
 
 **Variable resolution:**
 

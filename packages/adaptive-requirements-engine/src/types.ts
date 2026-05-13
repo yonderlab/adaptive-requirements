@@ -56,7 +56,9 @@ export type Rule =
   // Pattern matching
   | { match: [Rule, Rule] | [Rule, Rule, Rule] }
   // Phone validation
-  | { phone_valid: [Rule] | [Rule, Rule] };
+  | { phone_valid: [Rule] | [Rule, Rule] }
+  // IBAN validation
+  | { iban_valid: [Rule] | [Rule, Rule] };
 
 /**
  * Localized label - supports both string and localized object (requirements package shape).
