@@ -230,6 +230,114 @@ describe(runRule, () => {
     });
   });
 
+  describe('iban_valid operation', () => {
+    it('should validate a UK IBAN', () => {
+      const context = { data: { iban: 'GB82WEST12345698765432' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeTruthy();
+    });
+
+    it('should validate an Irish IBAN', () => {
+      const context = { data: { iban: 'IE29AIBK93115212345678' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeTruthy();
+    });
+
+    it('should validate a German IBAN', () => {
+      const context = { data: { iban: 'DE89370400440532013000' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeTruthy();
+    });
+
+    it('should validate a Spanish IBAN', () => {
+      const context = { data: { iban: 'ES9121000418450200051332' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeTruthy();
+    });
+
+    it('should validate a Dutch IBAN', () => {
+      const context = { data: { iban: 'NL91ABNA0417164300' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeTruthy();
+    });
+
+    it('should reject an IBAN with a bad checksum', () => {
+      // GB82 → GB00 changes the check digits to invalid
+      const context = { data: { iban: 'GB00WEST12345698765432' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeFalsy();
+    });
+
+    it('should reject an IBAN that matches the legacy regex but fails mod-97', () => {
+      // Country-agnostic regex passes; mod-97 fails. This is the case the old regex missed.
+      const context = { data: { iban: 'GB99BARC20000055555555' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeFalsy();
+    });
+
+    it('should reject a UK IBAN with the wrong length', () => {
+      // GB IBANs are exactly 22 chars; this one is too short
+      const context = { data: { iban: 'GB82WEST1234569876' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeFalsy();
+    });
+
+    it('should tolerate spaces in the IBAN (paste-from-statement format)', () => {
+      const context = { data: { iban: 'GB82 WEST 1234 5698 7654 32' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeTruthy();
+    });
+
+    it('should validate when a matching country code is supplied (uppercase)', () => {
+      const context = { data: { iban: 'GB82WEST12345698765432' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }, 'GB'] }, context)).toBeTruthy();
+    });
+
+    it('should validate when a matching country code is supplied (lowercase)', () => {
+      const context = { data: { iban: 'GB82WEST12345698765432' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }, 'gb'] }, context)).toBeTruthy();
+    });
+
+    it('should validate when a matching country code is supplied (mixed case)', () => {
+      const context = { data: { iban: 'GB82WEST12345698765432' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }, 'Gb'] }, context)).toBeTruthy();
+    });
+
+    it('should reject a valid IBAN when the country code does not match', () => {
+      // Valid IE IBAN but pinned to GB
+      const context = { data: { iban: 'IE29AIBK93115212345678' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }, 'GB'] }, context)).toBeFalsy();
+    });
+
+    it('should reject a valid IBAN when the lowercase country code does not match', () => {
+      const context = { data: { iban: 'IE29AIBK93115212345678' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }, 'gb'] }, context)).toBeFalsy();
+    });
+
+    it('should return false for non-string value', () => {
+      const context = { data: { iban: 12_345 } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeFalsy();
+    });
+
+    it('should return false for empty string', () => {
+      const context = { data: { iban: '' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeFalsy();
+    });
+
+    it('should return false for undefined value', () => {
+      const context = { data: {} };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeFalsy();
+    });
+
+    it('should return false for a random string', () => {
+      const context = { data: { iban: 'not-an-iban' } };
+      expect(runRule({ iban_valid: [{ var: 'iban' }] }, context)).toBeFalsy();
+    });
+
+    it('should work with runValidationRules', () => {
+      const rules: ValidationRule[] = [
+        {
+          rule: { iban_valid: [{ var: 'iban' }] },
+          message: 'Invalid IBAN',
+        },
+      ];
+      const context = { data: { iban: 'GB00WEST12345698765432' } };
+      const errors = runValidationRules(rules, context);
+      expect(errors).toStrictEqual(['Invalid IBAN']);
+    });
+  });
+
   describe('string operations', () => {
     it('should handle cat operator', () => {
       const context = { data: { first: 'John', last: 'Doe' } };

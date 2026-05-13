@@ -16,6 +16,7 @@ import type {
 } from './types';
 import type { CountryCode } from 'libphonenumber-js/min';
 
+import { electronicFormatIBAN, isValidIBAN } from 'ibantools';
 import jsonLogic from 'json-logic-js';
 import { isSupportedCountry, isValidPhoneNumber } from 'libphonenumber-js/min';
 
@@ -165,6 +166,24 @@ function ensureBuiltInOperationsRegistered() {
         return isValidPhoneNumber(value, countryCode as CountryCode);
       }
       return isValidPhoneNumber(value);
+    } catch {
+      return false;
+    }
+  });
+  jsonLogic.add_operation('iban_valid', (value: unknown, countryCode?: unknown) => {
+    if (typeof value !== 'string' || value === '') {
+      return false;
+    }
+    try {
+      const formatted = electronicFormatIBAN(value);
+      if (!formatted || !isValidIBAN(formatted)) {
+        return false;
+      }
+      // Country pin: case-insensitive on both sides
+      if (typeof countryCode === 'string') {
+        return formatted.slice(0, 2) === countryCode.toUpperCase();
+      }
+      return true;
     } catch {
       return false;
     }

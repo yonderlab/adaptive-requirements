@@ -418,6 +418,38 @@ When the rule fails, the field carries an error → the step's aggregate validit
 
 For the React rendering side (the single `notice` renderer that switches on `variant`, takeover layout, custom step navigation), see the [adaptive-form package README](../adaptive-form/README.md#blocking-states).
 
+### IBAN validation
+
+The `iban_valid` operation validates an IBAN against the ISO 13616 per-country structure (length + format) and the ISO 7064 mod-97-10 checksum. It tolerates user-pasted spaces (`IE21 ANIB 0011 1111 11`).
+
+Migrate a country-agnostic regex rule to a real IBAN check by swapping the rule in place:
+
+```diff
+ {
+   "id": "iban",
+   "type": "text",
+   "label": { "default": "IBAN" },
+   "validation": {
+     "required": true,
+     "rules": [
+       {
+         "rule": {
+-          "match": [{ "var": "iban" }, "^[A-Z]{2}[0-9]{2}[A-Za-z0-9]{11,30}$"]
++          "iban_valid": [{ "var": "iban" }]
+         },
+         "message": "Please enter a valid IBAN"
+       }
+     ]
+   }
+ }
+```
+
+Pin the field to a specific country (rejects e.g. an IE IBAN typed into a GB-only field). The country code is case-insensitive — `"gb"`, `"GB"`, and `"Gb"` all behave identically:
+
+```json
+{ "iban_valid": [{ "var": "iban" }, "GB"] }
+```
+
 ## JSON Logic reference
 
 Schemas use [JSON Logic](https://jsonlogic.com) expressions for conditional visibility, conditional validation, computed values, and dataset filtering. The engine evaluates these automatically — this reference is for understanding what schemas can express.
@@ -447,11 +479,12 @@ Schemas use [JSON Logic](https://jsonlogic.com) expressions for conditional visi
 
 The engine registers these additional operations:
 
-| Operation                                | Description                                                                                |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `{ today: {} }`                          | Current date as `YYYY-MM-DD`                                                               |
-| `{ match: [value, pattern, flags?] }`    | Regex test (returns `true`/`false`)                                                        |
-| `{ phone_valid: [value, countryCode?] }` | Phone number validation via `libphonenumber-js`; E.164 required when `countryCode` omitted |
+| Operation                                | Description                                                                                                                                   |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{ today: {} }`                          | Current date as `YYYY-MM-DD`                                                                                                                  |
+| `{ match: [value, pattern, flags?] }`    | Regex test (returns `true`/`false`)                                                                                                           |
+| `{ phone_valid: [value, countryCode?] }` | Phone number validation via `libphonenumber-js`; E.164 required when `countryCode` omitted                                                    |
+| `{ iban_valid: [value, countryCode?] }`  | IBAN validation via `ibantools` (per-country length, structure, and mod-97 checksum). Spaces are tolerated. `countryCode` is case-insensitive |
 
 ## Key types
 
