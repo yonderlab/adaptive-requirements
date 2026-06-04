@@ -35,7 +35,6 @@
 - [#60](https://github.com/yonderlab/adaptive-requirements/pull/60) [`8c0edbc`](https://github.com/yonderlab/adaptive-requirements/commit/8c0edbcfa000392642f0ba2c647921c9447c5240) Thanks [@cill-i-am](https://github.com/cill-i-am)! - Notice fields collapsed into a single `type: 'notice'` with a required `variant` ('info' | 'warning' | 'danger'), and now use `heading` + `description` instead of `label`.
 
   **Breaking schema change** (engine):
-
   - The pre-2.0 `notice_info`, `notice_warning`, and `notice_danger` field types are removed. Notices are now a single `type: 'notice'` with a required `variant: 'info' | 'warning' | 'danger'`. Schemas using the old types are treated as unknown field types and won't render — migrate them.
   - `validateRequirementsObject` rejects `type: 'notice'` fields without a valid `variant` (one of `'info'`, `'warning'`, `'danger'`).
   - `validateRequirementsObject` rejects `type: 'notice'` fields without a non-empty `description`.
@@ -45,7 +44,6 @@
   - Removed exports: `NoticeFieldType`, `NOTICE_FIELD_TYPES`.
 
   **Breaking React change** (adaptive-form):
-
   - The three `notice_info` / `notice_warning` / `notice_danger` slots in the `components` prop are replaced by a single `notice` slot. One renderer handles all variants; switch on `props.variant` for visual differences.
   - Notice renderers receive `FieldNoticeProps` (was `FieldComputedProps`). The new shape exposes the resolved `heading` and `description` strings directly, plus a `variant` prop, so renderers no longer need to read `field.label` or call `resolveLabel` themselves.
   - AdaptiveForm ships an unstyled accessible fallback for notices when no renderer is supplied (`role="alert"` for `variant: 'danger'`, `role="status"` otherwise). Override by registering a `notice` renderer in `components`.
