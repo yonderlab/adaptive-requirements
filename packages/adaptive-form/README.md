@@ -639,6 +639,64 @@ If you use a custom `renderStepNavigation` and want the navigation to reflect th
 </AdaptiveFormProvider>
 ```
 
+### Staged / partial submission
+
+You don't have to wait until the end of the journey to validate and hand off data. Validation is **per-field** — the engine only validates the fields you ask about — so each step validates independently. That means you can submit one step at a time (identity gates, save-as-you-go, async checks between steps) and the later, unfilled steps won't produce spurious "required" errors. No extra API is needed; it's a composition of controlled mode and `useStepNavigation()`.
+
+In controlled mode you already hold the full `FormData`, and `useStepNavigation()` tells you which step is current and whether it's valid. To hand off just the current step, slice your form data by that step's field IDs (read from `requirements.flow.steps`):
+
+```tsx
+import { AdaptiveFormProvider, AdaptiveForm, useStepNavigation } from '@kotaio/adaptive-form/react';
+import { useState } from 'react';
+
+function StagedForm({ requirements }) {
+  const [formData, setFormData] = useState({});
+
+  return (
+    <AdaptiveFormProvider requirements={requirements}>
+      <AdaptiveForm value={formData} onChange={setFormData} components={myComponents} />
+      <StepFooter requirements={requirements} formData={formData} />
+    </AdaptiveFormProvider>
+  );
+}
+
+function StepFooter({ requirements, formData }) {
+  const nav = useStepNavigation();
+  const [submitting, setSubmitting] = useState(false);
+  if (!nav.initialised) return null;
+
+  async function handleContinue() {
+    if (!nav.isStepValid) {
+      nav.onNext(); // reveals validation errors and stays on the step
+      return;
+    }
+    // Slice the current step's fields out of the (already processed) form data.
+    const fieldIds = requirements.flow.steps.find((s) => s.id === nav.currentStepId).fields;
+    const stepData = Object.fromEntries(fieldIds.map((id) => [id, formData[id]]));
+
+    setSubmitting(true);
+    const ok = await submitStep(nav.currentStepId, stepData); // your API call
+    setSubmitting(false);
+
+    // Advance only on success. Simply NOT calling onNext() keeps the user on the
+    // current step — that's all you need to "block" advancement (e.g. a failed gate).
+    if (ok) nav.onNext();
+  }
+
+  return (
+    <footer>
+      {nav.canGoPrevious && <button onClick={nav.onPrevious}>Back</button>}
+      <button onClick={handleContinue} disabled={submitting}>
+        {submitting ? 'Saving…' : 'Continue'}
+      </button>
+    </footer>
+  );
+}
+```
+
+- `onChange` hands you data with computed values filled and excluded fields resolved, so the slice is submission-ready. Pass `clearHiddenValues` if you also want hidden-field values dropped.
+- The backend validates the same partial payload with the same engine (it's field-scoped — it validates exactly the fields you send), so client and server agree on what "this step is valid" means.
+
 ## AdaptiveForm props
 
 | Prop                      | Type                                   | Default         | Description                                                                                   |
