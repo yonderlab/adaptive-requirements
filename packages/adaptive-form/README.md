@@ -671,8 +671,11 @@ function StepFooter({ requirements, formData }) {
       return;
     }
     // Slice the current step's fields out of the (already processed) form data.
-    const fieldIds = requirements.flow.steps.find((s) => s.id === nav.currentStepId).fields;
-    const stepData = Object.fromEntries(fieldIds.map((id) => [id, formData[id]]));
+    // Guard the lookup — find() returns undefined if the flow is missing or the
+    // current id doesn't match a step, which would otherwise throw on `.fields`.
+    const step = requirements.flow?.steps.find((s) => s.id === nav.currentStepId);
+    if (!step) return;
+    const stepData = Object.fromEntries(step.fields.map((id) => [id, formData[id]]));
 
     setSubmitting(true);
     const ok = await submitStep(nav.currentStepId, stepData); // your API call
