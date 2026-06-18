@@ -5,9 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  brace-expansion: 5.0.6
-  fast-uri: 3.1.2
+  ajv>fast-uri: 3.1.2
   js-yaml@^4.0.0: 4.2.0
+  minimatch>brace-expansion: 5.0.6
 
 importers:
 

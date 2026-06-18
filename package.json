@@ -33,9 +33,9 @@
   "packageManager": "pnpm@9.9.0",
   "pnpm": {
     "overrides": {
-      "brace-expansion": "5.0.6",
-      "fast-uri": "3.1.2",
-      "js-yaml@^4.0.0": "4.2.0"
+      "ajv>fast-uri": "3.1.2",
+      "js-yaml@^4.0.0": "4.2.0",
+      "minimatch>brace-expansion": "5.0.6"
     }
   }
 }
