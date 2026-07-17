@@ -14,11 +14,14 @@ npm install @kotaio/adaptive-form
 
 Fetch a requirements schema from the API, wrap your form in an `AdaptiveFormProvider`, and render `AdaptiveForm`. You provide the UI components — the form handles visibility, validation, computed values, and step navigation automatically.
 
+The Kota Requirements API expects answers as JSON in an `{ "answers": { field_id: value } }` envelope, so hold the form state in controlled mode and submit it as JSON — this keeps value types intact (booleans stay booleans, arrays stay arrays):
+
 ```tsx
 import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
 
 function RequirementsForm({ requirementId }) {
   const [requirements, setRequirements] = useState(null);
+  const [formData, setFormData] = useState({});
 
   useEffect(() => {
     fetch(`/api/requirements/${requirementId}`)
@@ -28,29 +31,26 @@ function RequirementsForm({ requirementId }) {
 
   if (!requirements) return <p>Loading...</p>;
 
+  const submit = () =>
+    fetch(`/api/requirements/${requirementId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: formData }),
+    });
+
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const formData = new FormData(e.currentTarget);
-          fetch(`/api/requirements/${requirementId}`, {
-            method: 'POST',
-            body: formData,
-          });
+      <AdaptiveForm
+        value={formData}
+        onChange={setFormData}
+        components={{
+          text: (props) => <TextInput {...props} />,
+          number: (props) => <NumberInput {...props} />,
+          select: (props) => <SelectInput {...props} />,
+          checkbox: (props) => <CheckboxInput {...props} />,
         }}
-      >
-        <AdaptiveForm
-          defaultValue={{}}
-          components={{
-            text: (props) => <TextInput {...props} />,
-            number: (props) => <NumberInput {...props} />,
-            select: (props) => <SelectInput {...props} />,
-            checkbox: (props) => <CheckboxInput {...props} />,
-          }}
-        />
-        <button type="submit">Submit</button>
-      </form>
+      />
+      <button onClick={submit}>Submit</button>
     </AdaptiveFormProvider>
   );
 }
