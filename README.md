@@ -46,11 +46,14 @@ npm install @kotaio/adaptive-requirements-engine
 
 ## Quick example
 
+The Kota Requirements API expects answers as JSON in an `{ "answers": { field_id: value } }` envelope, so hold the form state in controlled mode and submit it as JSON — this keeps value types intact (booleans stay booleans, arrays stay arrays):
+
 ```tsx
 import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/react';
 
 function RequirementsForm({ requirementId }) {
   const [requirements, setRequirements] = useState(null);
+  const [formData, setFormData] = useState({});
 
   useEffect(() => {
     fetch(`/api/requirements/${requirementId}`)
@@ -60,29 +63,26 @@ function RequirementsForm({ requirementId }) {
 
   if (!requirements) return <p>Loading...</p>;
 
+  const submit = () =>
+    fetch(`/api/requirements/${requirementId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: formData }),
+    });
+
   return (
     <AdaptiveFormProvider requirements={requirements}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const formData = new FormData(e.currentTarget);
-          fetch(`/api/requirements/${requirementId}`, {
-            method: 'POST',
-            body: formData,
-          });
+      <AdaptiveForm
+        value={formData}
+        onChange={setFormData}
+        components={{
+          text: TextInput,
+          number: NumberInput,
+          select: SelectInput,
+          checkbox: CheckboxInput,
         }}
-      >
-        <AdaptiveForm
-          defaultValue={{}}
-          components={{
-            text: TextInput,
-            number: NumberInput,
-            select: SelectInput,
-            checkbox: CheckboxInput,
-          }}
-        />
-        <button type="submit">Submit</button>
-      </form>
+      />
+      <button onClick={submit}>Submit</button>
     </AdaptiveFormProvider>
   );
 }
