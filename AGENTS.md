@@ -87,3 +87,17 @@ Things to be aware of when preparing for open source:
 
 - `packages/adaptive-requirements-engine/AGENTS.md` — Engine types, functions, JSON Logic, validators
 - `packages/adaptive-form/AGENTS.md` — React component, hooks, adapters
+
+## Cursor Cloud specific instructions
+
+This is a pure TypeScript library monorepo (pnpm workspaces) — there is no runnable
+app or long-running service. "Running" it means building and testing the packages.
+Node 22 + pnpm; dependencies install with `pnpm install`. Standard commands are in the
+`## Commands` section above.
+
+- **Build the engine before typecheck/test.** `@kotaio/adaptive-form` imports the sibling
+  `@kotaio/adaptive-requirements-engine` from its built `dist/`. On a fresh checkout,
+  `pnpm typecheck` and `pnpm test` fail with `Cannot find module
+  '@kotaio/adaptive-requirements-engine'` until you run `pnpm build` once (`pnpm install`'s
+  `prepare` hook does not build it). Run `pnpm build`, then `pnpm typecheck` / `pnpm test`
+  (currently 170 passing) / `pnpm lint`.
