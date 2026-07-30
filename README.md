@@ -18,24 +18,25 @@ Client-side companion packages for the Adaptive Requirements API. The API return
 
 1. Your application fetches a requirements schema from the API
 2. The **engine** evaluates field visibility, validation, computed values, and options
-3. **AdaptiveForm** renders the schema using your React components and collects user input
+3. **AdaptiveForm** renders the schema using your React or Vue components and collects user input
 4. Your application submits the completed form data back to the API for server-side validation
 
 Schemas are opaque and can change at any time. You never need to hard-code or inspect their contents — just pass them through.
 
 ## Packages
 
-| Package                                                                            | Description                                                                                                                                                                               |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@kotaio/adaptive-requirements-engine`](./packages/adaptive-requirements-engine/) | Framework-agnostic core: rule evaluation, validation, field state computation. Zero React dependencies. Use this for server-side validation, custom renderers, or non-React integrations. |
-| [`@kotaio/adaptive-form`](./packages/adaptive-form/)                               | React integration: an `AdaptiveForm` component that renders requirement schemas with pluggable UI components, multi-step flows, and form library adapters.                                |
+| Package                                                                            | Description                                                                                                                                                                                                          |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@kotaio/adaptive-requirements-engine`](./packages/adaptive-requirements-engine/) | Framework-agnostic core: rule evaluation, validation, field state computation. Zero React dependencies. Use this for server-side validation, custom renderers, or non-React integrations.                            |
+| [`@kotaio/adaptive-form`](./packages/adaptive-form/)                               | React and Vue integrations: `AdaptiveForm` components with pluggable field renderers, multi-step flows, and (React) form library adapters. Import from `@kotaio/adaptive-form/react` or `@kotaio/adaptive-form/vue`. |
 
 ## Installation
 
-Most React integrations only need the form package (which includes the engine as a dependency):
+Most app integrations only need the form package (which includes the engine as a dependency). Install the peer for your framework (`react` + `react-dom`, or `vue`):
 
 ```bash
 npm install @kotaio/adaptive-form
+npm install react react-dom   # or: npm install vue
 ```
 
 For server-side validation or non-React usage, install the engine directly:
@@ -90,17 +91,18 @@ function RequirementsForm({ requirementId }) {
 
 ### Accessing step information
 
-For multi-step schemas, wrap `AdaptiveForm` in an `AdaptiveFormProvider` to expose step info to sibling components (progress steppers, breadcrumbs):
+For multi-step schemas, wrap `AdaptiveForm` in an `AdaptiveFormProvider` to expose step state to sibling components (progress steppers, breadcrumbs). Prefer `useStepNavigation()` — it includes navigation handlers and live validation state:
 
 ```tsx
-import { AdaptiveFormProvider, AdaptiveForm, useFormInfo } from '@kotaio/adaptive-form/react';
+import { AdaptiveFormProvider, AdaptiveForm, useStepNavigation } from '@kotaio/adaptive-form/react';
 
 function ProgressStepper() {
-  const stepInfo = useFormInfo();
+  const nav = useStepNavigation();
+  if (!nav.initialised) return null;
 
   return (
     <nav>
-      {stepInfo.steps.map((step) => (
+      {nav.steps.map((step) => (
         <span key={step.id} data-active={step.isCurrent}>
           {step.title} {step.isValid && '✓'}
         </span>
@@ -116,7 +118,9 @@ function ProgressStepper() {
 </AdaptiveFormProvider>
 ```
 
-See the [form package README](./packages/adaptive-form/) for component implementation details, controlled mode, multi-step forms, and form library adapters.
+> **`useFormInfo()` is deprecated** — it still returns step descriptors but lacks navigation handlers. Existing code can keep using it; new code should use `useStepNavigation()`.
+
+See the [form package README](./packages/adaptive-form/) for React and Vue usage, controlled mode, multi-step forms, and form library adapters.
 
 ## License
 

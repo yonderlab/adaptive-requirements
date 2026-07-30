@@ -11,5 +11,6 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, 'tests/e2e/**/*', 'tests-examples'],
     reporters: process.env['GITHUB_ACTIONS'] ? ['default', 'github-actions'] : ['default'],
     environment: 'jsdom',
+    setupFiles: ['./src/vue/test-setup.ts'],
   },
 });
