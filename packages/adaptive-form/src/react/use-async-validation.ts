@@ -11,7 +11,8 @@ import type {
 import { checkField, runAsyncValidators } from '@kotaio/adaptive-requirements-engine';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { isEmptyValue } from './is-empty-value';
+// eslint-disable-next-line import/no-relative-parent-imports
+import { isEmptyValue } from '../core/is-empty-value';
 
 /**
  * Per-field async validation state.

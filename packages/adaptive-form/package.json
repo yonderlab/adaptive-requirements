@@ -1,7 +1,7 @@
 {
   "name": "@kotaio/adaptive-form",
   "version": "2.0.1",
-  "description": "A lightweight, type-safe adaptive form system for React with JSON-Logic for conditional fields, dynamic validation, and computed values",
+  "description": "A lightweight, type-safe adaptive form system for React and Vue with JSON-Logic for conditional fields, dynamic validation, and computed values",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -27,6 +27,10 @@
     "./react/adapters/formik": {
       "types": "./dist/react/adapters/formik.d.ts",
       "default": "./dist/react/adapters/formik.js"
+    },
+    "./vue": {
+      "types": "./dist/vue/index.d.ts",
+      "default": "./dist/vue/index.js"
     }
   },
   "publishConfig": {
@@ -45,19 +49,37 @@
   },
   "devDependencies": {
     "@testing-library/react": "16.3.2",
+    "@testing-library/vue": "^8.1.0",
     "@tsconfig/recommended": "^1.0.8",
     "@tsconfig/strictest": "^2.0.5",
     "@types/node": "^25.2.3",
     "@types/react": "18.3.28",
     "@types/react-dom": "18.3.7",
     "@vitest/coverage-v8": "^4.1.5",
+    "@vue/server-renderer": "^3.5.40",
+    "@vue/test-utils": "^2.4.11",
     "jsdom": "^28.1.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "tsdown": "^0.21.9",
     "typescript": "5.9.3",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "vue": "^3.5.40"
   },
   "peerDependencies": {
     "react": ">=18.3.1",
-    "react-dom": ">=18.3.1"
+    "react-dom": ">=18.3.1",
+    "vue": ">=3.5.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
   }
 }

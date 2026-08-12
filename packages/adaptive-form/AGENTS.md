@@ -2,44 +2,48 @@
 
 ## Purpose & Scope
 
-React integration layer and browser utilities: `AdaptiveForm` component, hooks, form library adapters, version checking. Depends on `@kotaio/adaptive-requirements-engine`.
+Multi-framework integration package: React and Vue 3 layers plus shared browser utilities. Depends on `@kotaio/adaptive-requirements-engine`. Framework peers (`react`, `react-dom`, `vue`) are optional — consumers install only the peer they use.
 
 ## Entry Points
 
-- `@kotaio/adaptive-form/react` → `AdaptiveForm` component
+- `@kotaio/adaptive-form/react` → React `AdaptiveForm` component, hooks, types
 - `@kotaio/adaptive-form/react/adapters/react-hook-form` → `useReactHookFormAdapter` hook
 - `@kotaio/adaptive-form/react/adapters/formik` → `useFormikAdapter` hook
+- `@kotaio/adaptive-form/vue` → Vue 3 `AdaptiveForm` component, composables, types
 
 ## Key Files
 
-| File                                    | Purpose                                                                                                |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `src/core/phone-home.ts`                | Version check ("phone home") utility — browser-only, no React dep                                      |
-| `src/core/validate-api.ts`              | Async validation API client and `builtInAsyncValidators` registry                                      |
-| `src/react/index.ts`                    | Public API: exports `AdaptiveForm`, `AdaptiveFormProvider`, `useFormInfo`, `useAsyncValidation`, types |
-| `src/react/adaptive-form-context.tsx`   | `AdaptiveFormProvider`, `useFormInfo` hook, `StepperInfo`/`StepDetail` types, internal context         |
-| `src/react/use-requirements.ts`         | React hooks (internal): `useRequirements`, `useFieldState`                                             |
-| `src/react/use-async-validation.ts`     | React hook: `useAsyncValidation` — debounce, abort, async state                                        |
-| `src/react/use-phone-home.ts`           | React hook (internal): triggers version check on mount                                                 |
-| `src/react/adaptive-form.tsx`           | `AdaptiveForm` component with pluggable field rendering                                                |
-| `src/react/adapters/react-hook-form.ts` | React Hook Form state bridge adapter                                                                   |
-| `src/react/adapters/formik.ts`          | Formik state bridge adapter                                                                            |
+| File                                  | Purpose                                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/core/phone-home.ts`              | Version check ("phone home") utility — browser-only, no framework dep                 |
+| `src/core/validate-api.ts`            | Async validation API client and `builtInAsyncValidators` registry                     |
+| `src/core/is-empty-value.ts`          | Framework-neutral empty-value helper                                                  |
+| `src/core/navigation-types.ts`        | Shared step/navigation types re-exported by React and Vue                             |
+| `src/react/index.ts`                  | React public API barrel                                                               |
+| `src/react/adaptive-form-context.tsx` | React provider, `useFormInfo`, `useStepNavigation`                                    |
+| `src/react/adaptive-form.tsx`         | React `AdaptiveForm` component                                                        |
+| `src/react/adapters/`                 | React Hook Form and Formik adapters                                                   |
+| `src/vue/index.ts`                    | Vue public API barrel                                                                 |
+| `src/vue/adaptive-form-context.ts`    | Vue provider, `useStepNavigation`, deprecated `useFormInfo`, `useAdaptiveFormContext` |
+| `src/vue/adaptive-form.ts`            | Vue `AdaptiveForm` render-function component                                          |
 
 ## Architecture
 
-Three layers within this package:
+Four layers within this package:
 
-1. **Core** (`src/core/`) — Browser-capable, framework-agnostic utilities. Browser APIs allowed, React forbidden.
-2. **React** (`src/react/`) — Hooks (`useRequirements`, `useFieldState`, `useCalculatedData`) and `AdaptiveForm` component. Pluggable rendering via `components` prop. `type: 'computed'` receives `FieldComputedProps`; `type: 'notice'` receives `FieldNoticeProps` (with `variant`, resolved `heading` / `description`); everything else receives `FieldInputProps`.
-3. **Adapters** (`src/react/adapters/`) — Form library bridges for React Hook Form and Formik. Return `{ value, onChange }` for controlled mode.
+1. **Core** (`src/core/`) — Browser-capable, framework-agnostic utilities. Browser APIs allowed; React and Vue forbidden.
+2. **React** (`src/react/`) — Hooks and `AdaptiveForm` with pluggable `components` render functions. Form library adapters live under `src/react/adapters/`.
+3. **Vue** (`src/vue/`) — Composables and `AdaptiveForm` with pluggable `components` map and scoped slots (`field`, `step-navigation`). Plain `.ts` render functions — no SFC compiler in this package.
+4. **Adapters** (`src/react/adapters/` only) — React Hook Form and Formik bridges. Vue has no first-party form-library adapter; bind with `v-model`.
 
 ## Dependencies
 
 - **Runtime:** `@kotaio/adaptive-requirements-engine`
-- **Peer:** `react`, `react-dom` (>=18.3.1)
+- **Peer (optional):** `react`, `react-dom` (>=18.3.1), `vue` (>=3.5.0)
 
 ## Downlinks
 
 - `src/core/AGENTS.md` — Browser utilities contracts
-- `src/react/AGENTS.md` — Hooks and component details
+- `src/react/AGENTS.md` — React hooks and component details
 - `src/react/adapters/AGENTS.md` — Adapter pattern and available adapters
+- `src/vue/AGENTS.md` — Vue composables and component conventions

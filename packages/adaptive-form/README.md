@@ -1,16 +1,26 @@
 # @kotaio/adaptive-form
 
-React component for rendering requirement schemas from the Adaptive Requirements API. Wraps the [`@kotaio/adaptive-requirements-engine`](../adaptive-requirements-engine/) with a pluggable component system, multi-step flow support, and form library adapters.
+Framework integrations for rendering requirement schemas from the Adaptive Requirements API. Wraps the [`@kotaio/adaptive-requirements-engine`](../adaptive-requirements-engine/) with pluggable field renderers, multi-step flows, and async validation.
+
+| Framework | Entrypoint                    | Peer dependencies               |
+| --------- | ----------------------------- | ------------------------------- |
+| React     | `@kotaio/adaptive-form/react` | `react`, `react-dom` (>=18.3.1) |
+| Vue 3     | `@kotaio/adaptive-form/vue`   | `vue` (>=3.5.0)                 |
+
+Install the package once, then import from the entrypoint for your framework. React and Vue peers are optional — you only need the one you use.
 
 ## Installation
 
 ```bash
 npm install @kotaio/adaptive-form
+# plus your framework peer, e.g.:
+npm install react react-dom   # React
+npm install vue               # Vue 3
 ```
 
-**Peer dependencies:** `react` (>=18.3.1), `react-dom` (>=18.3.1)
+## React integration
 
-## Quick start
+### Quick start
 
 Fetch a requirements schema from the API, wrap your form in an `AdaptiveFormProvider`, and render `AdaptiveForm`. You provide the UI components — the form handles visibility, validation, computed values, and step navigation automatically.
 
@@ -56,7 +66,7 @@ function RequirementsForm({ requirementId }) {
 }
 ```
 
-## Uncontrolled vs controlled mode
+### Uncontrolled vs controlled mode
 
 **Uncontrolled (recommended):** Omit `defaultValue` to let AdaptiveForm seed its internal state from any `field.defaultValue` values in the schema. Pass `defaultValue` when you want to explicitly override those schema defaults. Use native form submission via `name` attributes on your inputs.
 
@@ -82,7 +92,7 @@ function MyForm({ requirements }) {
 }
 ```
 
-## Typing consumer code
+### Typing consumer code
 
 `@kotaio/adaptive-form/react` exports these types directly, so you don't need to derive them from `ComponentProps`.
 
@@ -122,7 +132,7 @@ Use these exported types when you want to:
 - type a wrapper component around `AdaptiveFormProvider` with `AdaptiveFormProviderProps<TFieldId>`
 - type controlled form state with `AdaptiveFormData`
 
-## Providing components
+### Providing components
 
 The `components` prop maps field type strings (e.g. `text`, `select`, `checkbox`) to render functions. Each render function receives typed props with full autocomplete — types are inferred automatically from the `components` prop signature.
 
@@ -292,7 +302,7 @@ If you don't supply a `notice` renderer, AdaptiveForm renders a deliberately uns
 
 You can target the fallback globally with CSS if you want a quick baseline (e.g. `[data-adaptive-form-default-renderer="notice"] { padding: 12px; border: 1px solid; }`), but a real renderer in `components` is the recommended path.
 
-## Custom render function
+### Custom render function
 
 For complete control over how each field renders, use the `renderField` prop. It receives:
 
@@ -328,7 +338,7 @@ For complete control over how each field renders, use the `renderField` prop. It
 </AdaptiveFormProvider>
 ```
 
-## Multi-step forms
+### Multi-step forms
 
 When the API returns a schema with a `flow` property, AdaptiveForm automatically renders one step at a time with Previous/Next navigation. Steps can be conditionally skipped based on form data.
 
@@ -449,7 +459,7 @@ Each `StepDetail` contains:
 
 > **`useFormInfo()` is deprecated** in favour of `useStepNavigation()`. It still works and returns the same step descriptor data, but new code should use `useStepNavigation()` for access to navigation handlers and validation state. Existing `useFormInfo()` consumers can keep working — the hook still returns a `StepperInfo` object and is safe to call anywhere inside the provider.
 
-## Field mapping
+### Field mapping
 
 When your application's field names differ from the schema's, use the `mapping` prop to translate between them:
 
@@ -470,7 +480,7 @@ When your application's field names differ from the schema's, use the `mapping` 
 
 Form data will use your field names (`firstName`) while the engine maps them to the schema's field IDs (`first_name`) internally.
 
-## Datasets and dynamic options
+### Datasets and dynamic options
 
 Schemas can include datasets — reusable lists of options that fields reference. When a field uses a dataset, AdaptiveForm resolves the options automatically and passes them to your component via the `options` prop.
 
@@ -510,7 +520,7 @@ function SelectInput({ field, value, onChange, options, isVisible, isRequired, l
 }
 ```
 
-## Form library adapters
+### Form library adapters
 
 Adapter hooks bridge AdaptiveForm with popular form libraries. They return `{ value, onChange }` to pass directly to AdaptiveForm in controlled mode.
 
@@ -564,29 +574,9 @@ function MyForm({ requirements }) {
 
 Same `serialize`/`deserialize` options as the React Hook Form adapter.
 
-## Schema features
+### Recipes
 
-These are features expressed in the schema that AdaptiveForm handles automatically. You don't need to implement any of this logic — it's documented here so you understand what your form will do.
-
-**Conditional visibility** — Fields can appear or disappear based on the values of other fields. Hidden field values are optionally cleared (set `clearHiddenValues`).
-
-**Conditional validation** — Fields can become required based on conditions (e.g. ZIP code required only when country is US).
-
-**Computed fields** — Fields whose values are calculated from other fields using formulas (e.g. age from date of birth, totals from line items).
-
-**Read-only fields** — Fields the user can see but not edit.
-
-**Hidden fields** — Fields included in form data but not rendered.
-
-**Localized labels** — Labels can be plain strings or objects with a `default` display value and an optional i18n `key` for translation lookup.
-
-**Exclusion rules** — Fields can be excluded from submission based on conditions, separate from visibility.
-
-**Custom validators** — Schemas can reference built-in validators (date checks, ID format validation, file constraints) with custom error messages.
-
-## Recipes
-
-### Blocking states
+#### Blocking states
 
 Halt forward progression based on an answer (e.g. "if the user has no previous insurance, take them off the online flow and to a phone call instead"). Achieved by composing two existing schema primitives — a validation rule and a conditional `notice` field with `variant: 'danger'` — with no new schema constructs and no bespoke React state:
 
@@ -700,7 +690,7 @@ function StepFooter({ requirements, formData }) {
 - `onChange` hands you data with computed values filled and excluded fields resolved, so the slice is submission-ready. Pass `clearHiddenValues` if you also want hidden-field values dropped.
 - The backend validates the same partial payload with the same engine (it's field-scoped — it validates exactly the fields you send), so client and server agree on what "this step is valid" means.
 
-## AdaptiveForm props
+### AdaptiveForm props (React)
 
 | Prop                      | Type                                   | Default         | Description                                                                                   |
 | ------------------------- | -------------------------------------- | --------------- | --------------------------------------------------------------------------------------------- |
@@ -719,6 +709,249 @@ function StepFooter({ requirements, formData }) {
 | `className`               | `string`                               | —               | Container class name                                                                          |
 | `groupClassName`          | `string`                               | —               | Field group container class name                                                              |
 | `children`                | `ReactNode`                            | —               | Content rendered after fields                                                                 |
+
+## Vue integration
+
+Vue 3 Composition API integration at `@kotaio/adaptive-form/vue`. Components are plain TypeScript render functions (`defineComponent` + `h`) — no SFC compiler required in this package. Field renderers you author can be `defineComponent` components or functional components compatible with `h()`.
+
+### Quick start
+
+Fetch a requirements schema, wrap your form in `AdaptiveFormProvider`, and bind `AdaptiveForm` with `v-model`. Submit answers as JSON in an `{ "answers": { field_id: value } }` envelope:
+
+```ts
+import { ref, defineComponent, h } from 'vue';
+import { AdaptiveFormProvider, AdaptiveForm } from '@kotaio/adaptive-form/vue';
+
+const TextInput = defineComponent({
+  name: 'TextInput',
+  props: {
+    field: { type: Object, required: true },
+    modelValue: { default: undefined },
+    errors: { type: Array, default: () => [] },
+    isRequired: { type: Boolean, default: false },
+    isVisible: { type: Boolean, default: true },
+    isReadOnly: { type: Boolean, default: false },
+    label: { type: String, default: undefined },
+  },
+  emits: ['update:modelValue', 'blur'],
+  setup(props, { emit }) {
+    return () => {
+      if (!props.isVisible) return null;
+      return h('div', [
+        h('label', { for: props.field.id }, props.label ?? props.field.id),
+        h('input', {
+          id: props.field.id,
+          name: props.field.id,
+          value: props.modelValue == null ? '' : String(props.modelValue),
+          readonly: props.isReadOnly,
+          onInput: (e: Event) => emit('update:modelValue', (e.target as HTMLInputElement).value),
+          onBlur: () => emit('blur'),
+        }),
+        ...props.errors.map((error: string, i: number) => h('p', { key: i, class: 'error' }, error)),
+      ]);
+    };
+  },
+});
+
+// Parent setup (Composition API)
+const requirements = ref(/* fetched schema */);
+const formData = ref<Record<string, unknown>>({});
+const components = { text: TextInput };
+
+// Template:
+// <AdaptiveFormProvider :requirements="requirements">
+//   <AdaptiveForm v-model="formData" :components="components" />
+//   <button @click="submit">Submit</button>
+// </AdaptiveFormProvider>
+```
+
+### Model and default behavior
+
+Vue uses `v-model` (`modelValue` + `update:modelValue`), not React's `value` / `onChange`.
+
+| Mode         | Props                    | Behavior                                                        |
+| ------------ | ------------------------ | --------------------------------------------------------------- |
+| Uncontrolled | omit `defaultValue`      | Seeds from schema `field.defaultValue` via `initializeFormData` |
+| Uncontrolled | `defaultValue`           | Explicit initial data; schema defaults are not applied          |
+| Controlled   | `v-model` / `modelValue` | Parent owns state; every change emits `update:modelValue`       |
+
+When `defaultValue` is omitted and the requirements object changes, the form re-seeds and emits an updated model. An explicit `defaultValue` suppresses that re-seeding.
+
+If the parent binds `v-model` to a ref that starts as `undefined`, AdaptiveForm seeds it on mount and emits once so the parent adopts the initial data. Until the prop round-trip completes, a read-only fallback keeps SSR output stable.
+
+Use `initializeFormData(requirements)` from `@kotaio/adaptive-requirements-engine` when you need the seeded object outside the component.
+
+### Field components and Vue renderer contracts
+
+Map field types to Vue components via the `components` prop. Interactive fields receive **data props** from `FieldInputProps`; wire updates through **`update:modelValue`** and touched tracking through **`blur`** (declare both in `emits`):
+
+| Prop / listener     | Type                          | Description                              |
+| ------------------- | ----------------------------- | ---------------------------------------- |
+| `field`             | `Field`                       | Field definition from the schema         |
+| `modelValue`        | `FieldValue`                  | Current value (data prop)                |
+| `update:modelValue` | `(value: FieldValue) => void` | Emit when the user changes the value     |
+| `blur`              | `() => void`                  | Emit on blur for touched-state tracking  |
+| `errors`            | `string[]`                    | Validation errors to display             |
+| `isRequired`        | `boolean`                     | Whether the field is currently required  |
+| `isVisible`         | `boolean`                     | Whether the field should render          |
+| `isReadOnly`        | `boolean`                     | Whether the field is read-only           |
+| `isValidating`      | `boolean \| undefined`        | Async validator running for this field   |
+| `options`           | `FieldOption[] \| undefined`  | Resolved options for select/radio fields |
+| `label`             | `string \| undefined`         | Resolved label (after localization)      |
+
+`FieldInputEmits` documents the listener contract; `FieldInputBindings` is the combined shape passed through `h()`.
+
+`type: 'computed'` components receive `FieldComputedProps` (`field`, `value`, `isVisible`). `type: 'notice'` components receive `FieldNoticeProps` (`field`, `isVisible`, `variant`, `description`, optional `heading`) — same semantics as the React integration. A built-in accessible fallback renders when no `notice` component is supplied.
+
+Define `components` outside setup or in a stable ref so Vue does not remount fields each render.
+
+### Scoped slots (not render props)
+
+Vue does **not** expose React's `renderField` or `renderStepNavigation` props. Use scoped slots instead:
+
+| Slot               | Replaces (React)       | Purpose                                      |
+| ------------------ | ---------------------- | -------------------------------------------- |
+| `#field`           | `renderField`          | Full per-field rendering override            |
+| `#step-navigation` | `renderStepNavigation` | Custom Previous/Next UI for multi-step flows |
+| default            | `children`             | Content after fields                         |
+
+The `#field` slot receives `FieldRenderProps`: `field`, `fieldState`, `displayErrors`, `isTouched`, `isValidating`, `asyncErrors`, `modelValue`, `onUpdate:modelValue`, `onBlur`, and the `components` map for delegation.
+
+The `#step-navigation` slot receives the same payload as `useStepNavigation()` when `initialised: true` (`canGoPrevious`, `canGoNext`, `isStepValid`, `onPrevious`, `onNext`, step metadata, and `steps`).
+
+When a `#step-navigation` slot is present, or a sibling calls `useStepNavigation()`, built-in Previous/Next buttons are suppressed. Set `:default-navigation="false"` to suppress defaults deterministically (including SSR) when you render navigation elsewhere.
+
+### Multi-step flows and `useStepNavigation()`
+
+When the schema includes `flow`, AdaptiveForm renders one step at a time. Default navigation matches React behavior: Next is gated on current-step validation.
+
+Call `useStepNavigation()` from any component inside `AdaptiveFormProvider`. It returns a **readonly computed ref** — use `.value` in `<script setup>`; templates auto-unwrap.
+
+```ts
+import { AdaptiveFormProvider, AdaptiveForm, useStepNavigation } from '@kotaio/adaptive-form/vue';
+
+const nav = useStepNavigation(); // ComputedRef<StepNavigationState>
+
+// nav.value.initialised === false until AdaptiveForm mounts
+// nav.value.initialised === true → canGoNext, onNext, steps, etc.
+```
+
+Set `showAllSteps` to render every step as a titled section without navigation.
+
+> **`useFormInfo()` is deprecated** in favour of `useStepNavigation()`. Vue exports both for back-compat. `useFormInfo()` returns `Readonly<ComputedRef<StepperInfo>>` — unwrap with `.value` in `<script setup>` (templates auto-unwrap). Prefer `useStepNavigation()` for navigation handlers and validation state.
+
+For staged/partial submission, combine controlled `v-model` with `useStepNavigation()` the same way as the React recipe — slice the current step's field IDs from `requirements.flow.steps`.
+
+### Async validation
+
+AdaptiveForm runs built-in async validators on blur (same gating as React). Listen for validation activity:
+
+```vue
+<AdaptiveForm v-model="formData" :components="components" @validation-state-change="isValidating = $event" />
+```
+
+Use `useAsyncValidation()` directly when building custom validation UIs outside AdaptiveForm.
+
+### Root attributes and styling
+
+`AdaptiveForm` sets `inheritAttrs: false`. Pass root attributes (e.g. `class`, `id`, `data-testid`) on the component — they merge onto the outer `[role="group"]` wrapper. Use `groupClass` for the inner field-group container (React's `groupClassName` equivalent).
+
+### SSR and hydration
+
+Safe for SSR and hydration when rendered with Vue's server renderer:
+
+- Version check (`phone-home`) runs in `onMounted` only — no `window`, `fetch`, or `sessionStorage` access during render.
+- Navigation state is published synchronously via an immediate watcher so SSR output includes step navigation when a `#step-navigation` slot or post-form `useStepNavigation()` consumer is present.
+- A sibling `useStepNavigation()` rendered **before** `AdaptiveForm` stays `{ initialised: false }` until the client updates; one rendered **after** the form can show initialized navigation during SSR.
+- Model seeding uses `useModel` with a read-only fallback so bound-but-initially-undefined parents hydrate without mismatch.
+
+### Typing and exports
+
+**Runtime exports** from `@kotaio/adaptive-form/vue`:
+
+- Components: `AdaptiveFormProvider`, `AdaptiveForm`
+- Composables: `useStepNavigation`, `useFormInfo` (deprecated), `useAdaptiveFormContext`, `useAsyncValidation`
+- Constants: `NOTICE_VARIANTS`
+
+**Type exports:**
+
+- Form/schema: `AdaptiveFormData`, `AdaptiveFormRequirements`, `AdaptiveFormProviderProps`, `FieldId`
+- Component/slot: `AdaptiveFormComponents`, `AdaptiveFormProps`, `AdaptiveFormEmits`, `AdaptiveFormSlots`
+- Field renderers: `FieldInputProps`, `FieldInputEmits`, `FieldInputBindings`, `FieldComputedProps`, `FieldNoticeProps`, `FieldRenderProps`, `FieldOption`
+- Navigation: `StepDetail`, `StepperInfo`, `StepNavigationProps`, `StepNavigationState`
+- Notice (engine): `NoticeField`, `NoticeVariant`
+- Async validation: `AsyncFieldState`, `AsyncValidationState`, `UseAsyncValidationOptions`, `UseAsyncValidationReturn`
+
+Example imports:
+
+```ts
+import {
+  AdaptiveFormProvider,
+  AdaptiveForm,
+  useStepNavigation,
+  useFormInfo,
+  useAdaptiveFormContext,
+  useAsyncValidation,
+  NOTICE_VARIANTS,
+} from '@kotaio/adaptive-form/vue';
+
+import type {
+  AdaptiveFormData,
+  AdaptiveFormRequirements,
+  AdaptiveFormProviderProps,
+  AdaptiveFormComponents,
+  FieldId,
+  FieldInputProps,
+  FieldInputEmits,
+  FieldComputedProps,
+  FieldNoticeProps,
+  FieldRenderProps,
+  StepDetail,
+  StepperInfo,
+  StepNavigationProps,
+  StepNavigationState,
+} from '@kotaio/adaptive-form/vue';
+```
+
+`useAdaptiveFormContext()` exposes the provider injection value for advanced or testing scenarios. Form library adapters (VeeValidate, FormKit) are not included — bind with `v-model` or use scoped slots.
+
+### AdaptiveForm props (Vue)
+
+| Prop                | Type                        | Default | Description                                              |
+| ------------------- | --------------------------- | ------- | -------------------------------------------------------- |
+| `modelValue`        | `FormData`                  | —       | Current data (`v-model`)                                 |
+| `defaultValue`      | `FormData`                  | schema  | Initial override when uncontrolled                       |
+| `components`        | `AdaptiveFormComponents`    | —       | Map of field type → Vue component                        |
+| `mapping`           | `FieldMapping`              | —       | Field ID remapping                                       |
+| `clearHiddenValues` | `boolean`                   | `false` | Clear values when fields become hidden                   |
+| `showAllSteps`      | `boolean`                   | `false` | Render all flow steps as sections                        |
+| `showAllErrors`     | `boolean`                   | `false` | Show validation errors before interaction                |
+| `groupClass`        | `string \| object \| array` | —       | Class for the inner field-group wrapper                  |
+| `defaultNavigation` | `boolean`                   | `true`  | Render built-in Previous/Next when no custom nav is used |
+
+**Emits:** `update:modelValue`, `validation-state-change`
+
+**Slots:** `field`, `step-navigation`, `default`
+
+## Schema features
+
+These are features expressed in the schema that AdaptiveForm handles automatically in both React and Vue. You don't need to implement any of this logic — it's documented here so you understand what your form will do.
+
+**Conditional visibility** — Fields can appear or disappear based on the values of other fields. Hidden field values are optionally cleared (set `clearHiddenValues`).
+
+**Conditional validation** — Fields can become required based on conditions (e.g. ZIP code required only when country is US).
+
+**Computed fields** — Fields whose values are calculated from other fields using formulas (e.g. age from date of birth, totals from line items).
+
+**Read-only fields** — Fields the user can see but not edit.
+
+**Hidden fields** — Fields included in form data but not rendered.
+
+**Localized labels** — Labels can be plain strings or objects with a `default` display value and an optional i18n `key` for translation lookup.
+
+**Exclusion rules** — Fields can be excluded from submission based on conditions, separate from visibility.
+
+**Custom validators** — Schemas can reference built-in validators (date checks, ID format validation, file constraints) with custom error messages.
 
 ## License
 

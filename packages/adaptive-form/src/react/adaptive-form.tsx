@@ -25,9 +25,10 @@ import {
 import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-parent-imports
+import { isEmptyValue } from '../core/is-empty-value';
+// eslint-disable-next-line import/no-relative-parent-imports
 import { builtInAsyncValidators } from '../core/validate-api';
 import { AdaptiveFormContext } from './adaptive-form-context';
-import { isEmptyValue } from './is-empty-value';
 import { useAsyncValidation } from './use-async-validation';
 import { usePhoneHome } from './use-phone-home';
 import { useRequirements } from './use-requirements';
