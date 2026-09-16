@@ -1,4 +1,12 @@
-* @dpkblg @PatrickOBoyle
+# Learn how to add code owners here:
+# https://help.github.com/en/articles/about-code-owners
 
-/packages/adaptive-requirements-engine/ @yonderlab/integrations-team
-/packages/adaptive-form/ @viktor-yonder
+# These owners will be the default owners for everything in the repo.
+# Unless a later match takes precedence, these users will be requested
+# for review when someone opens a pull request.
+
+*   @dpkblg @PatrickOBoyle
+
+# Package ownership
+/packages/adaptive-requirements-engine/   @yonderlab/integrations-team
+/packages/adaptive-form/                  @viktor-yonder
