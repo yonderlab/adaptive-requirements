@@ -36,7 +36,8 @@ const isLockable = (field: Field): boolean => !field.excludeWhen && !field.visib
  * Runs on the platform backend, before the schema reaches the browser. A value is locked only
  * when it is non-empty, belongs to an unconditional field, is one of the field's options, and
  * passes the field's own validation as if the field were visible. Any other value stays visible
- * and editable, and is not seeded, so the employee sees the normal error and supplies it.
+ * and editable; values of conditional fields are still seeded, while empty or invalid values are
+ * not, so the employee sees the normal error and supplies it.
  */
 export function preparePlatformPrefill<TFieldId extends string = string>(
   requirements: RequirementsObject<TFieldId>,
@@ -80,7 +81,7 @@ export function preparePlatformPrefill<TFieldId extends string = string>(
     return mode === 'hidden' ? { ...field, type: 'hidden' as const } : { ...field, readOnly: true };
   });
 
-  const rejectedIds = new Set(rejected.map((item) => item.fieldId));
+  const rejectedIds = new Set(rejected.filter((item) => item.reason !== 'conditional').map((item) => item.fieldId));
   return {
     schema: { ...requirements, fields },
     prefill: Object.fromEntries(Object.entries(prefill).filter(([id]) => !rejectedIds.has(id))),

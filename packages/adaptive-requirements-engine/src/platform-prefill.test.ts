@@ -149,6 +149,7 @@ describe(preparePlatformPrefill, () => {
     };
     const result = preparePlatformPrefill(conditional, { country: 'PT', extra: 'v' }, { extra: 'hidden' });
     expect(result.rejected).toStrictEqual([{ fieldId: 'extra', reason: 'conditional' }]);
+    expect(result.prefill).toHaveProperty('extra', 'v');
     expect(reapplyLockedValues(result.schema, { country: 'ES' }, result.locked)['extra']).toBeUndefined();
   });
 });
