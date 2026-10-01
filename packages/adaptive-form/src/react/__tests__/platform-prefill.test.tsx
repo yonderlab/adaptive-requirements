@@ -2,6 +2,7 @@
 import type { FieldInputProps, FieldRenderProps } from '../adaptive-form';
 import type { FieldValue, FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
+import { preparePlatformPrefill, reapplyLockedValues } from '@kotaio/adaptive-requirements-engine';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -314,47 +315,85 @@ describe('approach A — platform-side hide wrapper around a headless AdaptiveFo
   });
 });
 
-// Approach B moves the decision server-side and projects it onto the schema the
-// form already receives. The projection below is what Adaptive Requirements
-// returns for presentation { first_name/last_name: read_only, employment_type/
-// payroll_iban: hidden } — rendered here through the unmodified AdaptiveForm.
-const projected: RequirementsObject = {
-  ...schema,
-  fields: schema.fields.map((field) => {
-    if (field.id === 'first_name' || field.id === 'last_name') {
-      return { ...field, readOnly: true, defaultValue: PREFILL[field.id] };
-    }
-    if (PLATFORM_HIDDEN.has(field.id)) {
-      return { ...field, type: 'hidden', defaultValue: PREFILL[field.id] };
-    }
-    return field;
-  }),
-};
+// Approach A plus fixes: the platform backend projects the schema it already returns, using
+// preparePlatformPrefill from the engine. There is no hide wrapper and no custom step navigation.
+const MODES = {
+  first_name: 'read_only',
+  last_name: 'read_only',
+  employment_type: 'hidden',
+  payroll_iban: 'hidden',
+} as const;
 
-describe('approach B — server-projected presentation in the unmodified AdaptiveForm', () => {
-  it('shows locked fields read-only and skips steps whose fields are all hidden', () => {
-    render(<PlatformForm requirements={projected} components={components} initialData={PREFILL} />);
+const prepared = (prefill: FormData) => preparePlatformPrefill(schema, prefill, MODES);
 
+describe('approach A plus fixes: schema projected by the platform backend', () => {
+  it('skips all-hidden steps and locks identity with no wrapper', () => {
+    const result = prepared(PREFILL);
+    render(<PlatformForm requirements={result.schema} components={components} initialData={result.prefill} />);
     expect(stepTitle()).toBe('About you');
-    expect(renderedFields()).toStrictEqual(['first_name', 'last_name']);
     expect(screen.getByTestId<HTMLInputElement>('input-first_name').readOnly).toBeTruthy();
-
     clickNext();
     expect(stepTitle()).toBe('Health');
-    expect(renderedFields()).toStrictEqual(['pre_existing_conditions']);
-    expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeNull();
-
     fireEvent.click(screen.getByTestId('radio-pre_existing_conditions-no'));
     expect(submitted()).toStrictEqual({ ...PREFILL, pre_existing_conditions: 'no' });
   });
 
-  it('needs no renderer for hidden fields and drops all-hidden steps on a single page', () => {
+  it('drops all-hidden steps on a single page without warnings', () => {
     const warn = vi.spyOn(console, 'warn').mockReturnValue(undefined);
-    render(<PlatformForm requirements={projected} components={components} initialData={PREFILL} showAllSteps />);
+    const result = prepared(PREFILL);
+    render(
+      <PlatformForm requirements={result.schema} components={components} initialData={result.prefill} showAllSteps />,
+    );
     const sections = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(sections).toStrictEqual(['About you', 'Health']);
-    expect(screen.queryByTestId('field-payroll_iban')).toBeNull();
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  it('keeps an invalid prefilled IBAN visible and does not hide it', () => {
+    const result = prepared({ ...PREFILL, payroll_iban: INVALID_IBAN });
+    expect(result.rejected).toStrictEqual([{ fieldId: 'payroll_iban', reason: 'invalid_value' }]);
+    render(<PlatformForm requirements={result.schema} components={components} initialData={result.prefill} />);
+    clickNext();
+    expect(stepTitle()).toBe('Payroll');
+    expect(renderedFields()).toStrictEqual(['payroll_iban']);
+  });
+
+  it('blocks Next on a rejected value and asks the employee to enter it again', () => {
+    const result = prepared({ ...PREFILL, payroll_iban: INVALID_IBAN });
+    render(<PlatformForm requirements={result.schema} components={components} initialData={result.prefill} />);
+    clickNext();
+    expect(screen.queryAllByRole('alert')).toHaveLength(0);
+    clickNext();
+    expect(stepTitle()).toBe('Payroll');
+    // The invalid platform value is not seeded, so the employee sees the required error and types a fresh value.
+    expect(screen.getByRole('alert').textContent).toBe('This field is required');
+  });
+
+  it('does not unmount the input mid-edit', () => {
+    const result = prepared({ ...PREFILL, payroll_iban: INVALID_IBAN });
+    render(<PlatformForm requirements={result.schema} components={components} initialData={result.prefill} />);
+    clickNext();
+    fireEvent.change(screen.getByTestId('input-payroll_iban'), { target: { value: VALID_IBAN } });
+    expect(renderedFields()).toStrictEqual(['payroll_iban']);
+  });
+
+  it('keeps a select value outside the options visible', () => {
+    const result = prepared({ ...PREFILL, employment_type: 'contractor' });
+    expect(result.rejected).toStrictEqual([{ fieldId: 'employment_type', reason: 'invalid_option' }]);
+    render(<PlatformForm requirements={result.schema} components={components} initialData={result.prefill} />);
+    clickNext();
+    expect(stepTitle()).toBe('Employment');
+  });
+
+  it('re-applies locked values in the platform proxy, overriding browser tampering', () => {
+    const { locked } = prepared(PREFILL);
+    const tampered = {
+      ...PREFILL,
+      payroll_iban: 'GB82WEST12345698765432',
+      first_name: 'Eve',
+      pre_existing_conditions: 'no',
+    };
+    expect(reapplyLockedValues(schema, tampered, locked)).toStrictEqual({ ...PREFILL, pre_existing_conditions: 'no' });
   });
 });
