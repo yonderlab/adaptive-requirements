@@ -29,6 +29,13 @@ import { isEmptyValue } from '../core/is-empty-value';
 // eslint-disable-next-line import/no-relative-parent-imports
 import { builtInAsyncValidators } from '../core/validate-api';
 import { AdaptiveFormContext } from './adaptive-form-context';
+import {
+  renderDomContainer,
+  renderDomGroup,
+  renderDomNotice,
+  renderDomStepHeader,
+  renderDomStepNavigation,
+} from './dom-defaults';
 import { useAsyncValidation } from './use-async-validation';
 import { usePhoneHome } from './use-phone-home';
 import { useRequirements } from './use-requirements';
@@ -145,6 +152,30 @@ export interface FieldRenderProps<TFieldId extends FieldId = FieldId> {
 export type AdaptiveFormData = FormData;
 
 /**
+ * Props for `renderContainer`.
+ */
+export interface ContainerRenderProps {
+  children: React.ReactNode;
+  label: string;
+}
+
+/**
+ * Props for `renderStepHeader`.
+ */
+export interface StepHeaderRenderProps {
+  stepId: string;
+  title: string | undefined;
+  subtitle: string | undefined;
+}
+
+/**
+ * Props for `renderGroup`.
+ */
+export interface GroupRenderProps extends StepHeaderRenderProps {
+  children: React.ReactNode;
+}
+
+/**
  * Props for AdaptiveForm component.
  *
  * `AdaptiveForm` must be rendered inside an `AdaptiveFormProvider` which supplies
@@ -204,10 +235,19 @@ export interface AdaptiveFormProps<TFieldId extends FieldId = FieldId> {
    */
   renderStepNavigation?: (props: StepNavigationProps) => React.ReactNode;
 
-  /** Optional className for the form container */
+  /** Render prop for the outer form container. Defaults to a `div` using `className`. */
+  renderContainer?: (props: ContainerRenderProps) => React.ReactNode;
+
+  /** Render prop for a step's title and subtitle. Defaults to `h2` / `p`. */
+  renderStepHeader?: (props: StepHeaderRenderProps) => React.ReactNode;
+
+  /** Render prop for a step's field group. Defaults to a `div` using `groupClassName`. */
+  renderGroup?: (props: GroupRenderProps) => React.ReactNode;
+
+  /** Optional className for the default form container (ignored when `renderContainer` is set) */
   className?: string;
 
-  /** Optional className for the form group container */
+  /** Optional className for the default form group container (ignored when `renderGroup` is set) */
   groupClassName?: string;
 
   /** When true, field values are cleared when their visibleWhen evaluates to false. Default: false. */
@@ -280,6 +320,9 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     showAllErrors = false,
     className,
     children,
+    renderContainer = (p: ContainerRenderProps) => renderDomContainer(p, className),
+    renderStepHeader = renderDomStepHeader,
+    renderGroup = (p: GroupRenderProps) => renderDomGroup(p, groupClassName),
   } = props;
   const requirements = ctx.requirements as RequirementsObject<TFieldId>;
   const { flow } = requirements;
@@ -658,14 +701,9 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
           // Unstyled accessible default so a missing notice renderer is never a silent dead-end
           // (e.g. blocking-state UIs where Continue is disabled and the notice is the only explanation).
           // Consumers override by supplying components.notice.
-          const role = noticeVariant === 'danger' ? 'alert' : 'status';
           const heading = resolveLabel(field.heading);
           const description = resolveLabel(field.description) ?? '';
-          return (
-            <div role={role} data-adaptive-form-default-renderer="notice" data-variant={noticeVariant}>
-              {heading ? `${heading} — ${description}` : description}
-            </div>
-          );
+          return renderDomNotice(noticeVariant, heading ? `${heading} — ${description}` : description);
         }
         if (isDev) {
           console.warn(
@@ -731,101 +769,63 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
   // Flow mode: show current step only, or all steps when showAllSteps is true
   if (flow) {
     if (showAllSteps) {
-      return (
-        <div className={className} role="group" aria-label="Adaptive form with steps">
-          {allStepsWithFields.map(({ step, fields }) => {
-            const stepTitle = resolveLabel(step.title);
-            const stepSubtitle = resolveLabel(step.subtitle);
-            return (
-              <Fragment key={step.id}>
-                {stepTitle != null && (
-                  <h2 className="text-foreground-header mb-4 text-lg font-semibold" id={`step-${step.id}-title`}>
-                    {stepTitle}
-                  </h2>
-                )}
-                {stepSubtitle != null && (
-                  <p className="text-muted-foreground mb-4 text-sm" id={`step-${step.id}-subtitle`}>
-                    {stepSubtitle}
-                  </p>
-                )}
-                <div
-                  className={groupClassName}
-                  aria-labelledby={stepTitle != null ? `step-${step.id}-title` : undefined}
-                  aria-describedby={stepSubtitle != null ? `step-${step.id}-subtitle` : undefined}
-                >
-                  {fields.map((field) => (
-                    <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
-                  ))}
-                </div>
-              </Fragment>
-            );
-          })}
-          {children}
-        </div>
-      );
+      return renderContainer({
+        label: 'Adaptive form with steps',
+        children: (
+          <>
+            {allStepsWithFields.map(({ step, fields }) => {
+              const header = {
+                stepId: step.id,
+                title: resolveLabel(step.title),
+                subtitle: resolveLabel(step.subtitle),
+              };
+              return (
+                <Fragment key={step.id}>
+                  {renderStepHeader(header)}
+                  {renderGroup({
+                    ...header,
+                    children: fields.map((field) => <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>),
+                  })}
+                </Fragment>
+              );
+            })}
+            {children}
+          </>
+        ),
+      });
     }
 
-    return (
-      <div className={className} role="group" aria-label="Adaptive form with steps">
-        {currentStepTitle != null && (
-          <h2 className="text-foreground-header mb-4 text-lg font-semibold" id={`step-${currentStepId}-title`}>
-            {currentStepTitle}
-          </h2>
-        )}
-        {currentStepSubtitle != null && (
-          <p className="text-muted-foreground mb-4 text-sm" id={`step-${currentStepId}-subtitle`}>
-            {currentStepSubtitle}
-          </p>
-        )}
-        <div
-          className={groupClassName}
-          aria-labelledby={currentStepTitle != null ? `step-${currentStepId}-title` : undefined}
-          aria-describedby={currentStepSubtitle != null ? `step-${currentStepId}-subtitle` : undefined}
-        >
-          {currentStepFields.map((field) => (
-            <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
-          ))}
-        </div>
-        {renderStepNavigation && navigationProps ? (
-          renderStepNavigation(navigationProps)
-        ) : ctx.hasNavigationConsumer ? null : (
-          <div className="mt-6 flex gap-3">
-            {canGoPrevious && (
-              <button
-                type="button"
-                onClick={handlePrevious}
-                className="border-input bg-background hover:bg-accent rounded-lg border px-4 py-2 text-sm font-medium"
-              >
-                Previous
-              </button>
-            )}
-            {nextStepId !== undefined && (
-              <button
-                type="button"
-                onClick={handleNext}
-                aria-disabled={!currentStepIsValid || undefined}
-                title={!currentStepIsValid ? 'Fix validation errors to continue' : undefined}
-                className={`bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90${
-                  !currentStepIsValid ? ' cursor-not-allowed opacity-50' : ''
-                }`}
-              >
-                Next
-              </button>
-            )}
-          </div>
-        )}
-        {children}
-      </div>
-    );
+    const header = { stepId: currentStepId, title: currentStepTitle, subtitle: currentStepSubtitle };
+    return renderContainer({
+      label: 'Adaptive form with steps',
+      children: (
+        <>
+          {renderStepHeader(header)}
+          {renderGroup({
+            ...header,
+            children: currentStepFields.map((field) => <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>),
+          })}
+          {renderStepNavigation && navigationProps
+            ? renderStepNavigation(navigationProps)
+            : ctx.hasNavigationConsumer || !navigationProps
+              ? null
+              : renderDomStepNavigation({ ...navigationProps, hasNext: nextStepId !== undefined })}
+          {children}
+        </>
+      ),
+    });
   }
 
   // Flat mode: all fields
-  return (
-    <div className={className} role="group" aria-label="Adaptive form fields">
-      {requirements.fields.map((field) => (
-        <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
-      ))}
-      {children}
-    </div>
-  );
+  return renderContainer({
+    label: 'Adaptive form fields',
+    children: (
+      <>
+        {requirements.fields.map((field) => (
+          <Fragment key={field.id}>{renderFieldContent(field)}</Fragment>
+        ))}
+        {children}
+      </>
+    ),
+  });
 }

@@ -11,10 +11,13 @@ export { AdaptiveForm } from './adaptive-form';
 export type {
   AdaptiveFormData,
   AdaptiveFormProps,
+  ContainerRenderProps,
   FieldComputedProps,
   FieldInputProps,
   FieldNoticeProps,
   FieldOption,
+  GroupRenderProps,
+  StepHeaderRenderProps,
 } from './adaptive-form';
 // Re-export shared schema constants and types from the engine so consumers can import
 // everything from a single package when authoring or rendering forms.

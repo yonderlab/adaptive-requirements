@@ -48,7 +48,7 @@ function isBrowserEnvironment(): boolean {
     return false;
   }
 
-  return window.fetch !== undefined;
+  return window.location !== undefined && typeof fetch !== 'undefined';
 }
 
 function getPackageVersion(): string | undefined {
