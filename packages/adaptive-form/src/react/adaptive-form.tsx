@@ -1,3 +1,5 @@
+// eslint-disable-next-line import/no-relative-parent-imports
+import type { FieldFileProps, UploadFile } from '../core/file-upload-types';
 import type { StepDetail, StepNavigationProps } from './adaptive-form-context';
 import type {
   Field,
@@ -25,11 +27,14 @@ import {
 import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-parent-imports
+import { getFileFieldState } from '../core/file-upload';
+// eslint-disable-next-line import/no-relative-parent-imports
 import { isEmptyValue } from '../core/is-empty-value';
 // eslint-disable-next-line import/no-relative-parent-imports
 import { builtInAsyncValidators } from '../core/validate-api';
-import { AdaptiveFormContext } from './adaptive-form-context';
+import { AdaptiveFormContext, useIsomorphicLayoutEffect } from './adaptive-form-context';
 import { useAsyncValidation } from './use-async-validation';
+import { useFileUploads } from './use-file-uploads';
 import { usePhoneHome } from './use-phone-home';
 import { useRequirements } from './use-requirements';
 
@@ -56,6 +61,9 @@ function coerceNoticeVariant(rawVariant: unknown): NoticeVariant {
   }
   return 'info';
 }
+
+// eslint-disable-next-line import/no-relative-parent-imports
+export type { FieldFileProps, FileEntry, UploadFile } from '../core/file-upload-types';
 
 type FieldId = string;
 
@@ -137,6 +145,8 @@ export interface FieldRenderProps<TFieldId extends FieldId = FieldId> {
   onChange: (value: FieldValue) => void;
   onBlur: () => void;
   components?: AdaptiveFormProps<TFieldId>['components'];
+  /** Upload props for `type: 'file'` fields — the same props a `components.file` renderer receives. */
+  file?: FieldFileProps<TFieldId>;
 }
 
 /**
@@ -175,6 +185,18 @@ export interface AdaptiveFormProps<TFieldId extends FieldId = FieldId> {
   /** Called when aggregate async validation state transitions between validating and not validating. */
   onValidationStateChange?: (isValidating: boolean) => void;
 
+  /**
+   * Uploads one file for a `type: 'file'` field and resolves with its `file_` ID.
+   * Required for file fields; without it, every picked file is marked as an error.
+   */
+  uploadFile?: UploadFile;
+
+  /**
+   * Called when aggregate upload state transitions between uploading and not uploading.
+   * Use it to disable your own submit button while files are uploading.
+   */
+  onUploadStateChange?: (isUploading: boolean) => void;
+
   /** Optional field ID mapping */
   mapping?: FieldMapping;
 
@@ -188,10 +210,12 @@ export interface AdaptiveFormProps<TFieldId extends FieldId = FieldId> {
     radio?: (props: FieldInputProps<TFieldId>) => React.ReactNode;
     computed?: (props: FieldComputedProps<TFieldId>) => React.ReactNode;
     notice?: (props: FieldNoticeProps<TFieldId>) => React.ReactNode;
+    file?: (props: FieldFileProps<TFieldId>) => React.ReactNode;
     [key: string]:
       | ((props: FieldInputProps<TFieldId>) => React.ReactNode)
       | ((props: FieldComputedProps<TFieldId>) => React.ReactNode)
       | ((props: FieldNoticeProps<TFieldId>) => React.ReactNode)
+      | ((props: FieldFileProps<TFieldId>) => React.ReactNode)
       | undefined;
   };
 
@@ -270,6 +294,8 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     value: controlledValue,
     onChange,
     onValidationStateChange,
+    uploadFile,
+    onUploadStateChange,
     mapping,
     components,
     renderField,
@@ -289,6 +315,13 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
   );
   const isControlled = controlledValue !== undefined;
   const formData = isControlled ? controlledValue : internalValue;
+
+  // Writes can land after a later render (uploads finishing) or several times before a
+  // re-render, so changes build on this rather than the render-time formData.
+  const latestFormDataRef = useRef(formData);
+  useIsomorphicLayoutEffect(() => {
+    latestFormDataRef.current = formData;
+  });
 
   const { currentStepId, setCurrentStepId, visitedSteps, markStepVisited } = ctx;
 
@@ -402,6 +435,53 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     }
   }, [isAsyncValidating, onValidationStateChange]);
 
+  const handleFieldChange = useCallback(
+    (fieldId: string, newValue: FieldValue) => {
+      clearAsyncField(fieldId);
+      markFieldTouched(fieldId);
+
+      const updatedValue: FormData = { ...latestFormDataRef.current, [fieldId]: newValue };
+      const calculated = calculateData(updatedValue);
+      let mergedValue: FormData = { ...updatedValue, ...calculated };
+
+      // Apply exclusions (nulls out fields where excludeWhen evaluates to true)
+      mergedValue = applyExclusions(requirements, mergedValue);
+
+      if (clearHiddenValues) {
+        mergedValue = clearHiddenFieldValues(requirements, mergedValue);
+      }
+
+      latestFormDataRef.current = mergedValue;
+      if (!isControlled) {
+        setInternalValue(mergedValue);
+      }
+      onChange?.(mergedValue);
+    },
+    [calculateData, isControlled, onChange, clearHiddenValues, requirements, markFieldTouched, clearAsyncField],
+  );
+
+  const fileUploads = useFileUploads({
+    uploadFile,
+    getValue: (fieldId) => latestFormDataRef.current[fieldId],
+    setValue: handleFieldChange,
+  });
+  const { reset: resetFileUploads } = fileUploads;
+
+  useEffect(() => {
+    resetFileUploads();
+  }, [fieldIdKey, resetFileUploads]);
+
+  const isUploading = fileUploads.isUploading;
+  const previousIsUploadingRef = useRef(isUploading);
+  useEffect(() => {
+    const previous = previousIsUploadingRef.current;
+    previousIsUploadingRef.current = isUploading;
+
+    if (onUploadStateChange && previous !== isUploading) {
+      onUploadStateChange(isUploading);
+    }
+  }, [isUploading, onUploadStateChange]);
+
   const currentStepIndex = flow ? flow.steps.findIndex((s) => s.id === currentStepId) : -1;
   const currentStep = flow && currentStepIndex >= 0 ? flow.steps[currentStepIndex] : undefined;
   const totalSteps = flow ? flow.steps.length : 0;
@@ -438,13 +518,13 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
         return true;
       }
       const asyncFieldState = asyncState[field.id];
-      if (asyncFieldState?.isValidating) {
+      if (asyncFieldState?.isValidating || fileUploads.isFieldUploading(field.id)) {
         return false;
       }
       const asyncErrors = asyncFieldState?.errors ?? [];
       return state.errors.length === 0 && asyncErrors.length === 0;
     });
-  }, [flow, currentStepFields, getFieldState, asyncState]);
+  }, [flow, currentStepFields, getFieldState, asyncState, fileUploads]);
 
   const nextStepId = flow ? getNextStepId(flow, currentStepId, mergedFormData, { requirements }) : undefined;
   const previousStepId = flow ? getPreviousStepId(flow, currentStepId) : undefined;
@@ -466,7 +546,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
           return true;
         }
         const asyncFieldState = asyncState[fieldId];
-        if (asyncFieldState?.isValidating) {
+        if (asyncFieldState?.isValidating || fileUploads.isFieldUploading(fieldId)) {
           return false;
         }
         const asyncErrors = asyncFieldState?.errors ?? [];
@@ -483,7 +563,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
         hasBeenVisited: visitedSteps.has(step.id),
       };
     });
-  }, [flow, currentStepId, visitedSteps, getFieldState, asyncState, idToField]);
+  }, [flow, currentStepId, visitedSteps, getFieldState, asyncState, fileUploads, idToField]);
 
   const handleNext = useCallback(() => {
     if (!currentStepIsValid) {
@@ -566,39 +646,6 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     [setNavigationState],
   );
 
-  const handleFieldChange = useCallback(
-    (fieldId: string, newValue: FieldValue) => {
-      clearAsyncField(fieldId);
-      markFieldTouched(fieldId);
-
-      const updatedValue: FormData = { ...formData, [fieldId]: newValue };
-      const calculated = calculateData(updatedValue);
-      let mergedValue: FormData = { ...updatedValue, ...calculated };
-
-      // Apply exclusions (nulls out fields where excludeWhen evaluates to true)
-      mergedValue = applyExclusions(requirements, mergedValue);
-
-      if (clearHiddenValues) {
-        mergedValue = clearHiddenFieldValues(requirements, mergedValue);
-      }
-
-      if (!isControlled) {
-        setInternalValue(mergedValue);
-      }
-      onChange?.(mergedValue);
-    },
-    [
-      formData,
-      calculateData,
-      isControlled,
-      onChange,
-      clearHiddenValues,
-      requirements,
-      markFieldTouched,
-      clearAsyncField,
-    ],
-  );
-
   const handleFieldBlur = useCallback(
     (fieldId: string) => {
       markFieldTouched(fieldId);
@@ -617,6 +664,35 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     [markFieldTouched, getFieldState, triggerAsyncValidation, mergedFormData, requirements],
   );
 
+  const getFileProps = useCallback(
+    (field: Field<TFieldId>, fieldState: FieldState<TFieldId>, errors: string[]): FieldFileProps<TFieldId> => ({
+      field,
+      label: fieldState.label,
+      description: resolveLabel(field.description),
+      isRequired: fieldState.isRequired,
+      isVisible: fieldState.isVisible,
+      isReadOnly: fieldState.isReadOnly,
+      errors,
+      ...getFileFieldState(fileUploads, field.id, fieldState.value, field.fileConfig),
+      addFiles: (files: File[]) => {
+        if (fieldState.isReadOnly) {
+          return;
+        }
+        markFieldTouched(field.id);
+        fileUploads.addFiles(field.id, files, field.fileConfig);
+      },
+      remove: (key: string) => {
+        if (fieldState.isReadOnly) {
+          return;
+        }
+        markFieldTouched(field.id);
+        fileUploads.remove(field.id, key);
+      },
+      retry: (key: string) => fileUploads.retry(field.id, key, field.fileConfig),
+    }),
+    [fileUploads, markFieldTouched],
+  );
+
   const renderFieldContent = useCallback(
     (field: Field<TFieldId>) => {
       const fieldState = getFieldState(field.id);
@@ -624,18 +700,21 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       const fieldAsyncErrors = asyncFieldState?.errors ?? [];
       const fieldIsValidating = asyncFieldState?.isValidating ?? false;
       const mergedErrors = [...fieldState.errors, ...fieldAsyncErrors];
+      const displayErrors = getDisplayErrors(field.id, mergedErrors);
+      const fileProps = field.type === 'file' ? getFileProps(field, fieldState, displayErrors) : undefined;
 
       if (renderField) {
         return renderField({
           field,
           fieldState,
-          displayErrors: getDisplayErrors(field.id, mergedErrors),
+          displayErrors,
           isTouched: touchedFields.has(field.id),
           isValidating: fieldIsValidating,
           asyncErrors: fieldAsyncErrors,
           onChange: (newValue: FieldValue) => handleFieldChange(field.id, newValue),
           onBlur: () => handleFieldBlur(field.id),
           components,
+          ...(fileProps ? { file: fileProps } : {}),
         });
       }
 
@@ -699,6 +778,11 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
         return <DisplayField field={field} value={fieldState.value} isVisible={fieldState.isVisible} />;
       }
 
+      if (fileProps) {
+        const FileField = renderFn as React.ComponentType<FieldFileProps<TFieldId>>;
+        return <FileField {...fileProps} />;
+      }
+
       const InputField = renderFn as React.ComponentType<FieldInputProps<TFieldId>>;
       return (
         <InputField
@@ -706,7 +790,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
           value={fieldState.value}
           onChange={(newValue: FieldValue) => handleFieldChange(field.id, newValue)}
           onBlur={() => handleFieldBlur(field.id)}
-          errors={getDisplayErrors(field.id, mergedErrors)}
+          errors={displayErrors}
           isRequired={fieldState.isRequired}
           isVisible={fieldState.isVisible}
           isReadOnly={fieldState.isReadOnly}
@@ -723,6 +807,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       handleFieldChange,
       handleFieldBlur,
       getDisplayErrors,
+      getFileProps,
       touchedFields,
       asyncState,
     ],

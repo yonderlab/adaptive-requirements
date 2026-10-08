@@ -1,3 +1,5 @@
+// eslint-disable-next-line import/no-relative-parent-imports
+import type { FieldFileProps, UploadFile } from '../core/file-upload-types';
 import type { StepNavigationProps } from './adaptive-form-context';
 import type {
   AdaptiveFormEmits,
@@ -10,6 +12,7 @@ import type {
 } from './types';
 import type {
   Field,
+  FieldState,
   FieldValue,
   FlowStep,
   FormData,
@@ -43,11 +46,14 @@ import {
 } from 'vue';
 
 // eslint-disable-next-line import/no-relative-parent-imports
+import { getFileFieldState } from '../core/file-upload';
+// eslint-disable-next-line import/no-relative-parent-imports
 import { isEmptyValue } from '../core/is-empty-value';
 // eslint-disable-next-line import/no-relative-parent-imports
 import { builtInAsyncValidators } from '../core/validate-api';
 import { ADAPTIVE_FORM_CONTEXT_KEY } from './adaptive-form-context';
 import { useAsyncValidation } from './use-async-validation';
+import { useFileUploads } from './use-file-uploads';
 import { usePhoneHome } from './use-phone-home';
 import { useRequirements } from './use-requirements';
 
@@ -115,10 +121,15 @@ export const AdaptiveForm = defineComponent({
       type: Boolean,
       default: true,
     },
+    uploadFile: {
+      type: Function as PropType<UploadFile>,
+      default: undefined,
+    },
   },
   emits: {
     'update:modelValue': (value: FormData) => value != null,
     'validation-state-change': (isValidating: boolean) => typeof isValidating === 'boolean',
+    'upload-state-change': (isUploading: boolean) => typeof isUploading === 'boolean',
   } satisfies Record<keyof AdaptiveFormEmits, (...args: never[]) => boolean>,
   slots: Object as SlotsType<AdaptiveFormSlots>,
   setup(props, { attrs, emit, expose }) {
@@ -145,6 +156,17 @@ export const AdaptiveForm = defineComponent({
     }
 
     const formData = computed<FormData>(() => model.value ?? seededDefault.value);
+
+    // A controlled v-model prop only updates after the parent re-renders, so writes landing
+    // in the same tick (two uploads finishing) build on this rather than formData.value.
+    let latestFormData = formData.value;
+    watch(
+      formData,
+      (next) => {
+        latestFormData = next;
+      },
+      { flush: 'sync' },
+    );
 
     watch(
       requirements,
@@ -223,6 +245,38 @@ export const AdaptiveForm = defineComponent({
       }
     });
 
+    const handleFieldChange = (fieldId: string, newValue: FieldValue) => {
+      clearAsyncField(fieldId);
+      markFieldTouched(fieldId);
+
+      const updatedValue: FormData = { ...latestFormData, [fieldId]: newValue };
+      const calculated = calculateData(updatedValue);
+      let mergedValue: FormData = { ...updatedValue, ...calculated };
+
+      mergedValue = applyExclusions(requirements.value, mergedValue);
+
+      if (props.clearHiddenValues) {
+        mergedValue = clearHiddenFieldValues(requirements.value, mergedValue);
+      }
+
+      latestFormData = mergedValue;
+      model.value = mergedValue;
+    };
+
+    const fileUploads = useFileUploads({
+      uploadFile: () => props.uploadFile,
+      getValue: (fieldId) => latestFormData[fieldId],
+      setValue: handleFieldChange,
+    });
+
+    watch(fieldIdKey, () => {
+      fileUploads.reset();
+    });
+
+    watch(fileUploads.isUploading, (current) => {
+      emit('upload-state-change', current);
+    });
+
     const hasCorrectedInitialStep = shallowRef(false);
     const prevRequirementsRef = shallowRef(requirements.value);
 
@@ -297,7 +351,7 @@ export const AdaptiveForm = defineComponent({
           return true;
         }
         const asyncFieldState = asyncState.value[fieldId];
-        if (asyncFieldState?.isValidating) {
+        if (asyncFieldState?.isValidating || fileUploads.isFieldUploading(fieldId)) {
           return false;
         }
         const asyncErrors = asyncFieldState?.errors ?? [];
@@ -314,7 +368,7 @@ export const AdaptiveForm = defineComponent({
           return true;
         }
         const asyncFieldState = asyncState.value[field.id];
-        if (asyncFieldState?.isValidating) {
+        if (asyncFieldState?.isValidating || fileUploads.isFieldUploading(field.id)) {
           return false;
         }
         const asyncErrors = asyncFieldState?.errors ?? [];
@@ -404,23 +458,6 @@ export const AdaptiveForm = defineComponent({
       ctx.setNavigationState({ initialised: false });
     });
 
-    const handleFieldChange = (fieldId: string, newValue: FieldValue) => {
-      clearAsyncField(fieldId);
-      markFieldTouched(fieldId);
-
-      const updatedValue: FormData = { ...formData.value, [fieldId]: newValue };
-      const calculated = calculateData(updatedValue);
-      let mergedValue: FormData = { ...updatedValue, ...calculated };
-
-      mergedValue = applyExclusions(requirements.value, mergedValue);
-
-      if (props.clearHiddenValues) {
-        mergedValue = clearHiddenFieldValues(requirements.value, mergedValue);
-      }
-
-      model.value = mergedValue;
-    };
-
     const handleFieldBlur = (fieldId: string) => {
       markFieldTouched(fieldId);
 
@@ -458,19 +495,47 @@ export const AdaptiveForm = defineComponent({
       );
     };
 
+    const getFileProps = (field: Field, fieldState: FieldState, errors: string[]): FieldFileProps => ({
+      field,
+      label: fieldState.label,
+      description: resolveLabel(field.description),
+      isRequired: fieldState.isRequired,
+      isVisible: fieldState.isVisible,
+      isReadOnly: fieldState.isReadOnly,
+      errors,
+      ...getFileFieldState(fileUploads, field.id, fieldState.value, field.fileConfig),
+      addFiles: (files: File[]) => {
+        if (fieldState.isReadOnly) {
+          return;
+        }
+        markFieldTouched(field.id);
+        fileUploads.addFiles(field.id, files, field.fileConfig);
+      },
+      remove: (key: string) => {
+        if (fieldState.isReadOnly) {
+          return;
+        }
+        markFieldTouched(field.id);
+        fileUploads.remove(field.id, key);
+      },
+      retry: (key: string) => fileUploads.retry(field.id, key, field.fileConfig),
+    });
+
     const renderFieldContent = (field: Field): VNode | null => {
       const fieldState = getFieldState(field.id);
       const asyncFieldState = asyncState.value[field.id];
       const fieldAsyncErrors = asyncFieldState?.errors ?? [];
       const fieldIsValidating = asyncFieldState?.isValidating ?? false;
       const mergedErrors = [...fieldState.errors, ...fieldAsyncErrors];
+      const displayErrors = getDisplayErrors(field.id, mergedErrors);
+      const fileProps = field.type === 'file' ? getFileProps(field, fieldState, displayErrors) : undefined;
 
       const fieldSlot = slots['field'];
       if (fieldSlot) {
         const renderProps: FieldRenderProps = {
           field,
           fieldState,
-          displayErrors: getDisplayErrors(field.id, mergedErrors),
+          displayErrors,
           isTouched: touchedFields.value.has(field.id),
           isValidating: fieldIsValidating,
           asyncErrors: fieldAsyncErrors,
@@ -478,6 +543,7 @@ export const AdaptiveForm = defineComponent({
           'onUpdate:modelValue': (value: FieldValue) => handleFieldChange(field.id, value),
           onBlur: () => handleFieldBlur(field.id),
           components: props.components,
+          ...(fileProps ? { file: fileProps } : {}),
         };
         const slotResult = fieldSlot(renderProps);
         return Array.isArray(slotResult) ? h('div', { key: field.id }, slotResult) : slotResult;
@@ -522,12 +588,16 @@ export const AdaptiveForm = defineComponent({
         return h(component, { key: field.id, ...computedProps });
       }
 
+      if (fileProps) {
+        return h(component, { key: field.id, ...fileProps });
+      }
+
       const inputBindings: FieldInputBindings = {
         field,
         modelValue: fieldState.value,
         'onUpdate:modelValue': (value: FieldValue) => handleFieldChange(field.id, value),
         onBlur: () => handleFieldBlur(field.id),
-        errors: getDisplayErrors(field.id, mergedErrors),
+        errors: displayErrors,
         isRequired: fieldState.isRequired,
         isVisible: fieldState.isVisible,
         isReadOnly: fieldState.isReadOnly,

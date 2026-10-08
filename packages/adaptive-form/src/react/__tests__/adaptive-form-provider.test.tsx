@@ -1,5 +1,5 @@
 /* eslint-disable import/no-relative-parent-imports */
-import type { FieldInputProps } from '../adaptive-form';
+import type { FieldFileProps, FieldInputProps } from '../adaptive-form';
 import type { StepperInfo } from '../adaptive-form-context';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
@@ -38,6 +38,17 @@ function TestInput({ field, value, onChange, onBlur, errors, isVisible }: FieldI
   );
 }
 
+function TestFile({ field, isVisible, files }: FieldFileProps) {
+  if (!isVisible) {
+    return null;
+  }
+  return (
+    <div data-testid={`field-${field.id}`}>
+      <span data-testid={`value-${field.id}`}>{files.map((file) => file.id).join(',')}</span>
+    </div>
+  );
+}
+
 const testComponents = {
   text: (props: FieldInputProps) => <TestInput {...props} />,
   number: (props: FieldInputProps) => <TestInput {...props} />,
@@ -48,7 +59,7 @@ const testComponents = {
   select: (props: FieldInputProps) => <TestInput {...props} />,
   checkbox: (props: FieldInputProps) => <TestInput {...props} />,
   radio: (props: FieldInputProps) => <TestInput {...props} />,
-  file: (props: FieldInputProps) => <TestInput {...props} />,
+  file: (props: FieldFileProps) => <TestFile {...props} />,
 };
 
 /** Sibling component that reads step info from context */

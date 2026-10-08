@@ -1,3 +1,5 @@
+// eslint-disable-next-line import/no-relative-parent-imports
+import type { FieldFileProps, UploadFile } from '../core/file-upload-types';
 import type { StepNavigationProps } from './adaptive-form-context';
 import type {
   Field,
@@ -11,6 +13,9 @@ import type {
   ResolvedFieldOption,
 } from '@kotaio/adaptive-requirements-engine';
 import type { Component, HTMLAttributes } from 'vue';
+
+// eslint-disable-next-line import/no-relative-parent-imports
+export type { FieldFileProps, FileEntry, UploadFile } from '../core/file-upload-types';
 
 export type FieldId = string;
 
@@ -92,6 +97,7 @@ export interface FieldRenderProps<TFieldId extends FieldId = FieldId> {
   'onUpdate:modelValue': (value: FieldValue) => void;
   onBlur: () => void;
   components?: AdaptiveFormComponents<TFieldId>;
+  file?: FieldFileProps<TFieldId>;
 }
 
 /** Known built-in field type keys with autocomplete on the components map. */
@@ -104,6 +110,7 @@ export type AdaptiveFormComponents<TFieldId extends FieldId = FieldId> = {
   radio?: Component<FieldInputProps<TFieldId>>;
   computed?: Component<FieldComputedProps<TFieldId>>;
   notice?: Component<FieldNoticeProps<TFieldId>>;
+  file?: Component<FieldFileProps<TFieldId>>;
 } & Record<string, Component | undefined>;
 
 /** Props for the `AdaptiveForm` component. */
@@ -118,12 +125,14 @@ export interface AdaptiveFormProps<TFieldId extends FieldId = FieldId> {
   groupClass?: HTMLAttributes['class'];
   /** When false, built-in Previous/Next navigation is never rendered. Default: true. */
   defaultNavigation?: boolean;
+  uploadFile?: UploadFile;
 }
 
 /** Emits for the `AdaptiveForm` component. */
 export interface AdaptiveFormEmits {
   'update:modelValue': [value: AdaptiveFormData];
   'validation-state-change': [isValidating: boolean];
+  'upload-state-change': [isUploading: boolean];
 }
 
 /** Scoped slots for the `AdaptiveForm` component. */

@@ -12,7 +12,9 @@ Vue 3 integration layer beside `src/react/`. Depends on `@kotaio/adaptive-requir
 | Vue   | `src/vue/`   | Vue 3.5+, Composition API, `defineComponent` render functions | React, JSX (react-jsx) |
 | React | `src/react/` | React 18.3+                                                   | Vue                    |
 
-Shared contracts (`is-empty-value`, navigation types) live in `src/core/` and are re-exported by framework entrypoints.
+Shared contracts (`is-empty-value`, navigation types, file upload types and store) live in `src/core/` and are re-exported by framework entrypoints.
+
+File fields: `type: 'file'` components receive `FieldFileProps` (function props `addFiles` / `remove` / `retry`, no `modelValue`), the `#field` slot gets them as `file`, and `uploadFile` is a prop (`:upload-file`). `handleFieldChange` builds on a `latestFormData` copy rather than `formData.value`, because a controlled `v-model` prop only updates after the parent re-renders.
 
 ## Conventions
 
@@ -32,6 +34,7 @@ Shared contracts (`is-empty-value`, navigation types) live in `src/core/` and ar
 | `adaptive-form-context.ts` | Provider, `useStepNavigation`, deprecated `useFormInfo`, public `useAdaptiveFormContext` |
 | `use-requirements.ts`      | Reactive engine adapter (internal)                                                       |
 | `use-async-validation.ts`  | Public async-validation composable                                                       |
+| `use-file-uploads.ts`      | Internal composable wrapping the core file upload store                                  |
 | `use-phone-home.ts`        | Mount-time version check                                                                 |
 | `adaptive-form.ts`         | Main render-function component                                                           |
 | `test-setup.ts`            | Shared Vitest Vue warning policy                                                         |

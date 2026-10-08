@@ -9,15 +9,19 @@ import type {
   AsyncFieldState,
   AsyncValidationState,
   FieldComputedProps,
+  FieldFileProps,
   FieldInputBindings,
   FieldInputEmits,
   FieldInputProps,
   FieldNoticeProps,
   FieldOption,
+  FieldRenderProps,
+  FileEntry,
   StepDetail,
   StepNavigationProps,
   StepNavigationState,
   StepperInfo,
+  UploadFile,
   UseAsyncValidationOptions,
   UseAsyncValidationReturn,
 } from './index';
@@ -36,6 +40,7 @@ describe('vue public API runtime exports', () => {
   const expectedRuntimeExports = [
     'AdaptiveForm',
     'AdaptiveFormProvider',
+    'FILE_MIME_TYPES',
     'NOTICE_VARIANTS',
     'useAdaptiveFormContext',
     'useAsyncValidation',
@@ -55,13 +60,18 @@ describe('vue public API runtime exports', () => {
     expect(VuePublicApi).not.toHaveProperty('usePhoneHome');
     expect(VuePublicApi).not.toHaveProperty('ADAPTIVE_FORM_CONTEXT_KEY');
     expect(VuePublicApi).not.toHaveProperty('DEFAULT_VALUE_UNSET');
+    expect(VuePublicApi).not.toHaveProperty('useFileUploads');
   });
 
   it('does not leak React into the Vue entry module graph', () => {
     const vueDir = dirname(fileURLToPath(import.meta.url));
-    const vueSources = ['index.ts', 'adaptive-form.ts', 'adaptive-form-context.ts', 'use-async-validation.ts'].map(
-      (file) => readFileSync(resolve(vueDir, file), 'utf8'),
-    );
+    const vueSources = [
+      'index.ts',
+      'adaptive-form.ts',
+      'adaptive-form-context.ts',
+      'use-async-validation.ts',
+      'use-file-uploads.ts',
+    ].map((file) => readFileSync(resolve(vueDir, file), 'utf8'));
 
     for (const source of vueSources) {
       expect(source).not.toMatch(/from\s+['"]react(?:-dom)?['"]/);
@@ -88,6 +98,7 @@ describe('vue public API type contracts', () => {
     type Emits = AdaptiveFormEmits;
     expectTypeOf<Emits['update:modelValue']>().toEqualTypeOf<[AdaptiveFormData]>();
     expectTypeOf<Emits['validation-state-change']>().toEqualTypeOf<[boolean]>();
+    expectTypeOf<Emits['upload-state-change']>().toEqualTypeOf<[boolean]>();
 
     // React-style controlled props must not be part of the Vue public contract.
     // @ts-expect-error Vue uses modelValue, not value
@@ -169,6 +180,22 @@ describe('vue public API type contracts', () => {
     expectTypeOf<AsyncValidationState>().toEqualTypeOf<Record<string, AsyncFieldState>>();
     expectTypeOf<UseAsyncValidationOptions['asyncValidators']>().toBeObject();
     expectTypeOf<UseAsyncValidationReturn['isValidating']>().toEqualTypeOf<ComputedRef<boolean>>();
+  });
+
+  it('exports file upload types and the file component contract', () => {
+    type CustomFieldId = 'proof_of_address';
+
+    expectTypeOf<NonNullable<AdaptiveFormProps['uploadFile']>>().toEqualTypeOf<UploadFile>();
+    expectTypeOf<UploadFile>().parameters.toEqualTypeOf<[File, { fieldId: string; signal: AbortSignal }]>();
+    expectTypeOf<UploadFile>().returns.toEqualTypeOf<Promise<{ id: string }>>();
+    expectTypeOf<FieldFileProps<CustomFieldId>['field']['id']>().toEqualTypeOf<CustomFieldId>();
+    expectTypeOf<FieldFileProps['files']>().toEqualTypeOf<FileEntry[]>();
+    expectTypeOf<FileEntry['status']>().toEqualTypeOf<'uploading' | 'uploaded' | 'error'>();
+    expectTypeOf<AdaptiveFormComponents<CustomFieldId>['file']>().toEqualTypeOf<
+      Component<FieldFileProps<CustomFieldId>> | undefined
+    >();
+    expectTypeOf<FieldRenderProps<CustomFieldId>['file']>().toEqualTypeOf<FieldFileProps<CustomFieldId> | undefined>();
+    expect(VuePublicApi.FILE_MIME_TYPES).toStrictEqual(['application/pdf', 'image/png', 'image/jpeg']);
   });
 
   it('re-exports notice constants and engine notice types', () => {

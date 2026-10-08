@@ -13,6 +13,7 @@ React integration layer. Thin hooks wrapping the engine with `useMemo`/`useCallb
 | `use-requirements.ts`       | `useRequirements`, `useFieldState`, `useCalculatedData` hooks                                          |
 | `use-async-validation.ts`   | `useAsyncValidation` hook — debounce, abort, per-field state                                           |
 | `use-phone-home.ts`         | Version check hook (triggers on mount)                                                                 |
+| `use-file-uploads.ts`       | Internal hook wrapping the core file upload store (`useSyncExternalStore`)                             |
 | `adaptive-form.tsx`         | `AdaptiveForm` component                                                                               |
 
 ## Hooks
@@ -35,7 +36,8 @@ Required provider that owns `requirements` and step state. `AdaptiveForm` must b
 ## AdaptiveForm Component
 
 - Pluggable component system: `components` prop maps field type strings to render functions (typed as `(props) => ReactNode` for autocomplete, rendered via JSX internally to preserve component boundaries)
-- Three rendering interfaces: `FieldInputProps` (interactive fields), `FieldComputedProps` (`type: 'computed'`), and `FieldNoticeProps` (`type: 'notice'` — carries required `variant`, resolved `description`, optional resolved `heading`). The renderer dispatches on `field.type`: `'computed'` and `'notice'` go through their dedicated branches; everything else is treated as an input.
+- Four rendering interfaces: `FieldInputProps` (interactive fields), `FieldComputedProps` (`type: 'computed'`), `FieldNoticeProps` (`type: 'notice'` — carries required `variant`, resolved `description`, optional resolved `heading`), and `FieldFileProps` (`type: 'file'` — upload entries and `addFiles` / `remove` / `retry`; no `value` / `onChange`). The renderer dispatches on `field.type`: `'computed'`, `'notice'` and `'file'` go through their dedicated branches; everything else is treated as an input.
+- `uploadFile` prop is the file transport; `onUploadStateChange` reports aggregate upload state. Next is blocked while a file in the step uploads. `renderField` receives `file` (the `FieldFileProps`) for file fields.
 - `renderField` prop for full per-field rendering control
 - `renderStepNavigation` prop for custom step navigation UI
 
@@ -57,7 +59,7 @@ Required provider that owns `requirements` and step state. `AdaptiveForm` must b
 ## On-Change Flow
 
 1. Clear async validation state for the changed field (abort in-flight, cancel debounce)
-2. Update the changed field value
+2. Update the changed field value on top of `latestFormDataRef` (not the render-time `formData`), so writes that land after a re-render (uploads finishing) or back-to-back in one tick keep each other's changes
 3. Recalculate all computed fields via `calculateData`
 4. Apply exclusions via `applyExclusions`
 5. Optionally clear hidden field values via `clearHiddenFieldValues` (when `clearHiddenValues=true`)

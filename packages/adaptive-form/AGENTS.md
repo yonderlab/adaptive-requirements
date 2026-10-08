@@ -19,6 +19,8 @@ Multi-framework integration package: React and Vue 3 layers plus shared browser 
 | `src/core/validate-api.ts`            | Async validation API client and `builtInAsyncValidators` registry                     |
 | `src/core/is-empty-value.ts`          | Framework-neutral empty-value helper                                                  |
 | `src/core/navigation-types.ts`        | Shared step/navigation types re-exported by React and Vue                             |
+| `src/core/file-upload.ts`             | File upload store and pre-upload checks shared by React and Vue                       |
+| `src/core/file-upload-types.ts`       | Shared `UploadFile`, `FileEntry`, `FieldFileProps` types                              |
 | `src/react/index.ts`                  | React public API barrel                                                               |
 | `src/react/adaptive-form-context.tsx` | React provider, `useFormInfo`, `useStepNavigation`                                    |
 | `src/react/adaptive-form.tsx`         | React `AdaptiveForm` component                                                        |
