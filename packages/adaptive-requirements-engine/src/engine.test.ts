@@ -1,5 +1,5 @@
 import type { AsyncValidatorFn } from './engine';
-import type { AsyncValidatorRef, RequirementsObject, ValidationRule } from './types';
+import type { AsyncValidatorRef, Field, RequirementsObject, ValidationRule } from './types';
 
 import { describe, expect, it } from 'vitest';
 
@@ -1310,74 +1310,86 @@ describe('checkField with excludeWhen', () => {
   });
 });
 
+const fileField = (overrides: Partial<Field> = {}): RequirementsObject => ({
+  fields: [{ id: 'upload', type: 'file', label: 'Upload', ...overrides }],
+});
+
 describe('file field type', () => {
   describe('checkField with file type', () => {
-    it('should auto-validate file type from fileConfig', () => {
-      const requirements: RequirementsObject = {
-        fields: [
-          {
-            id: 'upload',
-            type: 'file',
-            label: 'Upload Document',
-            fileConfig: { accept: ['.pdf'] },
-            validation: { required: true },
-          },
-        ],
-      };
+    it('should accept an array of file IDs', () => {
+      const requirements = fileField({ fileConfig: { maxFiles: 2 }, validation: { required: true } });
 
-      const state = checkField(requirements, 'upload', { upload: 'photo.jpg|1024' });
-      expect(state.errors.length).toBeGreaterThan(0);
-      expect(state.errors.some((e) => e.includes('not accepted'))).toBeTruthy();
+      const state = checkField(requirements, 'upload', { upload: ['file_a1', 'file_b2'] });
+      expect(state.errors).toStrictEqual([]);
+      expect(state.value).toStrictEqual(['file_a1', 'file_b2']);
     });
 
-    it('should pass for accepted file type', () => {
-      const requirements: RequirementsObject = {
-        fields: [
-          {
-            id: 'upload',
-            type: 'file',
-            label: 'Upload',
-            fileConfig: { accept: ['.pdf'] },
-            validation: { required: true },
-          },
-        ],
-      };
-
-      const state = checkField(requirements, 'upload', { upload: 'doc.pdf|1024' });
-      expect(state.errors).toHaveLength(0);
+    it('should reject a legacy "name|size" string answer', () => {
+      const state = checkField(fileField(), 'upload', { upload: 'doc.pdf|1024' });
+      expect(state.errors).toStrictEqual(['Must be a list of file IDs']);
     });
 
-    it('should auto-validate file size from fileConfig', () => {
-      const requirements: RequirementsObject = {
-        fields: [
-          {
-            id: 'upload',
-            type: 'file',
-            label: 'Upload',
-            fileConfig: { maxSize: 1024 },
-          },
-        ],
-      };
-
-      const state = checkField(requirements, 'upload', { upload: 'doc.pdf|2048' });
-      expect(state.errors.length).toBeGreaterThan(0);
-      expect(state.errors.some((e) => e.includes('exceeds'))).toBeTruthy();
+    it('should reject entries without the file_ prefix', () => {
+      const state = checkField(fileField(), 'upload', { upload: ['doc.pdf'] });
+      expect(state.errors).toStrictEqual(['Must be a list of file IDs']);
     });
 
-    it('should auto-validate file count from fileConfig', () => {
-      const requirements: RequirementsObject = {
-        fields: [
-          {
-            id: 'upload',
-            type: 'file',
-            label: 'Upload',
-            fileConfig: { multiple: true, maxFiles: 2 },
-          },
-        ],
-      };
+    it('should reject non-string entries', () => {
+      const state = checkField(fileField({ fileConfig: { maxFiles: 2 } }), 'upload', { upload: ['file_a1', 42] });
+      expect(state.errors).toStrictEqual(['Must be a list of file IDs']);
+    });
 
-      const state = checkField(requirements, 'upload', { upload: 'a.pdf;b.pdf;c.pdf' });
-      expect(state.errors.length).toBeGreaterThan(0);
+    it('should reject duplicate file IDs', () => {
+      const state = checkField(fileField({ fileConfig: { maxFiles: 3 } }), 'upload', {
+        upload: ['file_a1', 'file_a1'],
+      });
+      expect(state.errors).toStrictEqual(['Each file can only be added once']);
+    });
+
+    it('should enforce maxFiles', () => {
+      const state = checkField(fileField({ fileConfig: { maxFiles: 2 } }), 'upload', {
+        upload: ['file_a1', 'file_b2', 'file_c3'],
+      });
+      expect(state.errors).toStrictEqual(['At most 2 files can be uploaded']);
+    });
+
+    it('should default maxFiles to 1 when fileConfig is absent', () => {
+      const state = checkField(fileField(), 'upload', { upload: ['file_a1', 'file_b2'] });
+      expect(state.errors).toStrictEqual(['At most 1 file can be uploaded']);
+    });
+
+    it('should default maxFiles to 1 when fileConfig omits it', () => {
+      const state = checkField(fileField({ fileConfig: { accept: ['application/pdf'] } }), 'upload', {
+        upload: ['file_a1', 'file_b2'],
+      });
+      expect(state.errors).toStrictEqual(['At most 1 file can be uploaded']);
+    });
+
+    it('should not check accept or maxSize against file IDs', () => {
+      const requirements = fileField({ fileConfig: { accept: ['application/pdf'], maxSize: 1 } });
+
+      const state = checkField(requirements, 'upload', { upload: ['file_a1'] });
+      expect(state.errors).toStrictEqual([]);
+    });
+
+    it('should require at least one file when validation.required is true', () => {
+      const requirements = fileField({ validation: { required: true } });
+
+      expect(checkField(requirements, 'upload', {}).errors).toStrictEqual(['This field is required']);
+      expect(checkField(requirements, 'upload', { upload: [] }).errors).toStrictEqual(['This field is required']);
+    });
+
+    it('should accept an empty array on an optional field', () => {
+      const state = checkField(fileField(), 'upload', { upload: [] });
+      expect(state.errors).toStrictEqual([]);
+    });
+
+    it('should use saved file IDs from defaultValue', () => {
+      const requirements = fileField({ defaultValue: ['file_a1'], validation: { required: true } });
+
+      const state = checkField(requirements, 'upload', {});
+      expect(state.errors).toStrictEqual([]);
+      expect(state.value).toStrictEqual(['file_a1']);
     });
 
     it('should work with visibleWhen', () => {
@@ -1388,7 +1400,7 @@ describe('file field type', () => {
             id: 'upload',
             type: 'file',
             label: 'Upload',
-            fileConfig: { accept: ['.pdf'] },
+            fileConfig: { accept: ['application/pdf'] },
             visibleWhen: { var: 'needsDoc' },
             validation: { required: true },
           },
@@ -1397,56 +1409,32 @@ describe('file field type', () => {
 
       const hidden = checkField(requirements, 'upload', { needsDoc: false });
       expect(hidden.isVisible).toBeFalsy();
+      expect(hidden.errors).toStrictEqual([]);
 
       const visible = checkField(requirements, 'upload', { needsDoc: true });
       expect(visible.isVisible).toBeTruthy();
       expect(visible.isRequired).toBeTruthy();
+      expect(visible.errors).toStrictEqual(['This field is required']);
     });
 
     it('should work with excludeWhen', () => {
-      const requirements: RequirementsObject = {
-        fields: [
-          {
-            id: 'upload',
-            type: 'file',
-            label: 'Upload',
-            fileConfig: { accept: ['.pdf'] },
-            excludeWhen: true,
-          },
-        ],
-      };
+      const requirements = fileField({ fileConfig: { accept: ['application/pdf'] }, excludeWhen: true });
 
-      const state = checkField(requirements, 'upload', { upload: 'doc.pdf' });
+      const state = checkField(requirements, 'upload', { upload: ['file_a1'] });
       expect(state.isExcluded).toBeTruthy();
       expect(state.value).toBeUndefined();
+      expect(state.errors).toStrictEqual([]);
     });
 
-    it('should require file when validation.required is true', () => {
-      const requirements: RequirementsObject = {
-        fields: [
-          {
-            id: 'upload',
-            type: 'file',
-            label: 'Upload',
-            validation: { required: true },
-          },
-        ],
-      };
-
-      const state = checkField(requirements, 'upload', {});
-      expect(state.errors).toHaveLength(1);
-      expect(state.errors[0]).toContain('required');
-    });
-
-    it('should not auto-validate file config when field type is not file', () => {
+    it('should not apply file checks when field type is not file', () => {
       const requirements: RequirementsObject = {
         fields: [
           {
             id: 'textField',
             type: 'text',
             label: 'Text',
-            // fileConfig on non-file field should be ignored
-            fileConfig: { accept: ['.pdf'] },
+            // fileConfig on non-file field is rejected at publish, and ignored at runtime
+            fileConfig: { accept: ['application/pdf'] },
           },
         ],
       };
@@ -1513,19 +1501,6 @@ describe('validation rules (JSON Logic)', () => {
     };
     expect(checkField(req, 'email', { email: 'bad' }).errors).toStrictEqual(['Invalid email']);
     expect(checkField(req, 'email', { email: 'a@b.com' }).errors).toStrictEqual([]);
-  });
-
-  it('should auto-apply file validation from fileConfig', () => {
-    const req: RequirementsObject = {
-      fields: [
-        {
-          id: 'doc',
-          type: 'file',
-          fileConfig: { accept: ['.pdf'], maxSize: 1_048_576 },
-        },
-      ],
-    };
-    expect(checkField(req, 'doc', { doc: 'test.jpg|500' }).errors).toContain('File type not accepted. Allowed: .pdf');
   });
 
   it('should run rules after required check (no rules on empty value)', () => {

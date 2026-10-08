@@ -274,22 +274,27 @@ const errors = runCustomValidators(
 // [] (valid) or ['Must be at least 18 years old']
 ```
 
-#### `builtInValidators`
+#### File fields
 
-A record of built-in validator functions:
+A `type: 'file'` field's answer is an array of `file_` IDs returned by the upload endpoint, even when it holds one file. File bytes never pass through the engine.
 
-| Validator           | Params       | Description                                          |
-| ------------------- | ------------ | ---------------------------------------------------- |
-| `age_range`         | `min`, `max` | Validates age calculated from a date is within range |
-| `dob_not_in_future` | —            | Date must not be in the future                       |
-| `date_after`        | `date`       | Date must be after the specified date                |
-| `date_before`       | `date`       | Date must be before the specified date               |
-| `spanish_tax_id`    | —            | Validates Spanish NIF/NIE format                     |
-| `irish_pps`         | —            | Validates Irish PPS number format                    |
-| `german_tax_id`     | —            | Validates German Steuer-ID (11 digits)               |
-| `file_type`         | `accept`     | File extension/MIME type matching                    |
-| `file_size`         | `maxSize`    | File size limit in bytes                             |
-| `file_count`        | `maxFiles`   | Maximum number of files                              |
+```ts
+const field = {
+  id: 'proof_of_address',
+  type: 'file',
+  label: 'Proof of address',
+  fileConfig: {
+    accept: ['application/pdf', 'image/png', 'image/jpeg'], // exact MIME types from FILE_MIME_TYPES
+    maxSize: 5_000_000, // bytes per file, 1 to FILE_MAX_SIZE (10,000,000)
+    maxFiles: 2, // 1 to FILE_MAX_FILES (10), defaults to 1
+  },
+  validation: { required: true },
+};
+
+checkField(requirements, 'proof_of_address', { proof_of_address: ['file_5b1e…', 'file_a3c1…'] });
+```
+
+`checkField` checks that the answer is an array of unique `file_` IDs with at most `maxFiles` entries (default 1). `required` means at least one. `accept` and `maxSize` can't be checked from an ID: renderers check them before upload, and the server checks them on submit.
 
 #### `validateRequirementsObject(input)`
 

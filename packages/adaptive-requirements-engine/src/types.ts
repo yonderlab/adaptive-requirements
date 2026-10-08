@@ -136,16 +136,39 @@ export interface OptionsSource {
 }
 
 /**
- * File field configuration for accepted types, size limits, and multi-file support
+ * MIME types a `file` field may accept, matching the upload endpoint's allowlist.
+ *
+ * Single source of truth for both the engine's schema validator (which
+ * rejects any other `fileConfig.accept` entry) and downstream renderers.
+ */
+export const FILE_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg'] as const;
+
+/** Literal union of accepted file MIME types. */
+export type FileMimeType = (typeof FILE_MIME_TYPES)[number];
+
+/** Largest file the upload endpoint accepts, in bytes. Also the default `fileConfig.maxSize`. */
+export const FILE_MAX_SIZE = 10_000_000;
+
+/** Upper bound for `fileConfig.maxFiles`. */
+export const FILE_MAX_FILES = 10;
+
+/** Default `fileConfig.maxFiles` when the schema omits it. */
+export const FILE_DEFAULT_MAX_FILES = 1;
+
+/**
+ * File field configuration for accepted types, size limits, and file count.
+ *
+ * A file field's answer is an array of `file_` IDs returned by the upload
+ * endpoint. The engine checks the answer's shape and `maxFiles`; `accept` and
+ * `maxSize` describe the files themselves and are checked by the renderer
+ * before upload and by the server on submit.
  */
 export interface FileConfig {
-  /** Accepted file types (e.g., '.pdf', 'image/*') */
-  accept?: string[];
-  /** Maximum file size in bytes */
+  /** Accepted MIME types (exact match, no wildcards or extensions). Defaults to every type in `FILE_MIME_TYPES`. */
+  accept?: FileMimeType[];
+  /** Maximum size per file in bytes, 1 to `FILE_MAX_SIZE`. Defaults to `FILE_MAX_SIZE`. */
   maxSize?: number;
-  /** Whether multiple files can be selected */
-  multiple?: boolean;
-  /** Maximum number of files (only relevant when multiple is true) */
+  /** Maximum number of files, 1 to `FILE_MAX_FILES`. Defaults to `FILE_DEFAULT_MAX_FILES` and is always enforced. */
   maxFiles?: number;
 }
 
@@ -206,7 +229,7 @@ export interface Field<TFieldId extends string = string> {
   defaultValue?: FieldValue;
   /** Whether the field is read-only */
   readOnly?: boolean;
-  /** File field configuration (accepted types, size limits, multi-file) */
+  /** File field configuration (accepted types, size limit, file count). Only valid on `type: 'file'`. */
   fileConfig?: FileConfig;
 }
 

@@ -13,6 +13,7 @@ export type {
   FieldValidation,
   OptionsSource,
   FileConfig,
+  FileMimeType,
   Field,
   NoticeField,
   NoticeVariant,
@@ -30,7 +31,7 @@ export type {
   FieldMapping,
   FieldState,
 } from './types';
-export { NOTICE_VARIANTS } from './types';
+export { NOTICE_VARIANTS, FILE_MIME_TYPES, FILE_MAX_SIZE, FILE_MAX_FILES, FILE_DEFAULT_MAX_FILES } from './types';
 
 // Engine
 export {

@@ -21,6 +21,9 @@ import jsonLogic from 'json-logic-js';
 import { isSupportedCountry, isValidPhoneNumber } from 'libphonenumber-js/min';
 
 import { isReservedOperationName } from './operations';
+import { FILE_DEFAULT_MAX_FILES } from './types';
+
+const FILE_ID_PREFIX = 'file_';
 
 /**
  * Context object for rule evaluation
@@ -299,82 +302,16 @@ export function runValidationRules(
 }
 
 /** @internal */
-/* File type validation — used by checkField for fileConfig auto-application */
-function validateFileType(value: FieldValue, accept: string[]): string | null {
-  if (typeof value !== 'string' || !value) {
-    return null;
+/* File answer validation — a file field's answer is an array of unique `file_` IDs, at most `maxFiles` long */
+function validateFileAnswer(value: FieldValue, maxFiles: number): string | null {
+  if (!Array.isArray(value) || !value.every((id) => typeof id === 'string' && id.startsWith(FILE_ID_PREFIX))) {
+    return 'Must be a list of file IDs';
   }
-  if (accept.length === 0) {
-    return null;
+  if (new Set(value).size !== value.length) {
+    return 'Each file can only be added once';
   }
-
-  const extCategories: Record<string, string[]> = {
-    image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff', '.avif'],
-    audio: ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.wma'],
-    video: ['.mp4', '.webm', '.avi', '.mov', '.mkv', '.wmv'],
-    application: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.rar', '.7z'],
-  };
-
-  // Check each file in semicolon-delimited list
-  const files = value.split(';').filter(Boolean);
-  for (const file of files) {
-    const filename = file.split('|')[0]!.toLowerCase();
-    const extension = filename.includes('.') ? `.${filename.split('.').pop()!}` : '';
-
-    const isAccepted = accept.some((type) => {
-      if (typeof type !== 'string') {
-        return false;
-      }
-      const t = type.toLowerCase().trim();
-      if (t.startsWith('.')) {
-        return extension === t;
-      }
-      if (t.endsWith('/*')) {
-        const category = t.split('/')[0]!;
-        return extCategories[category]?.includes(extension) ?? false;
-      }
-      return false;
-    });
-
-    if (!isAccepted) {
-      return `File type not accepted. Allowed: ${accept.join(', ')}`;
-    }
-  }
-  return null;
-}
-
-/** @internal */
-/* File size validation — used by checkField for fileConfig auto-application */
-function validateFileSize(value: FieldValue, maxSize: number): string | null {
-  if (typeof value !== 'string' || !value) {
-    return null;
-  }
-
-  // Check each file in semicolon-delimited list
-  const files = value.split(';').filter(Boolean);
-  for (const file of files) {
-    const sizeStr = file.split('|')[1];
-    if (sizeStr !== undefined) {
-      const size = Number(sizeStr);
-      if (!Number.isNaN(size) && size > maxSize) {
-        const maxMB = (maxSize / (1024 * 1024)).toFixed(1);
-        return `File exceeds maximum size of ${maxMB}MB`;
-      }
-    }
-  }
-  return null;
-}
-
-/** @internal */
-/* File count validation — used by checkField for fileConfig auto-application */
-function validateFileCount(value: FieldValue, maxFiles: number): string | null {
-  if (typeof value !== 'string' || !value) {
-    return null;
-  }
-
-  const fileCount = value.split(';').filter(Boolean).length;
-  if (fileCount > maxFiles) {
-    return `Maximum ${maxFiles} file(s) allowed`;
+  if (value.length > maxFiles) {
+    return `At most ${maxFiles} ${maxFiles === 1 ? 'file' : 'files'} can be uploaded`;
   }
   return null;
 }
@@ -621,26 +558,11 @@ export function checkField<TFieldId extends string = string>(
     }
 
     if (!empty) {
-      // Auto-apply file config validators for file fields
-      if (field.type === 'file' && field.fileConfig) {
-        const fc = field.fileConfig;
-        if (fc.accept && fc.accept.length > 0) {
-          const fileTypeError = validateFileType(fieldValue, fc.accept);
-          if (fileTypeError) {
-            errors.push(fileTypeError);
-          }
-        }
-        if (fc.maxSize !== undefined) {
-          const fileSizeError = validateFileSize(fieldValue, fc.maxSize);
-          if (fileSizeError) {
-            errors.push(fileSizeError);
-          }
-        }
-        if (fc.multiple && fc.maxFiles !== undefined) {
-          const fileCountError = validateFileCount(fieldValue, fc.maxFiles);
-          if (fileCountError) {
-            errors.push(fileCountError);
-          }
+      // File fields: answer must be unique `file_` IDs, at most maxFiles of them
+      if (field.type === 'file') {
+        const fileError = validateFileAnswer(fieldValue, field.fileConfig?.maxFiles ?? FILE_DEFAULT_MAX_FILES);
+        if (fileError) {
+          errors.push(fileError);
         }
       }
 

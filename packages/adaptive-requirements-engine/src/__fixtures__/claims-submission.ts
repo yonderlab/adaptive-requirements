@@ -296,9 +296,8 @@ export const claimsSubmissionSchema: RequirementsObject = {
       label: { default: 'Supporting documents' },
       description: 'Upload receipts, invoices or medical reports (PDF or image, max 5 MB each)',
       fileConfig: {
-        accept: ['.pdf', 'image/*'],
-        maxSize: 5_242_880,
-        multiple: true,
+        accept: ['application/pdf', 'image/png', 'image/jpeg'],
+        maxSize: 5_000_000,
         maxFiles: 5,
       },
     },

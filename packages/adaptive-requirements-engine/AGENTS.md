@@ -113,6 +113,11 @@ interface AsyncValidatorRef {
 - `checkFieldAsync()` — runs `checkField()` first, short-circuits if field not visible/excluded/empty/has sync errors, then runs async validators and merges errors
 - `createAdapter()` returns `checkFieldAsync()` and `hasAsyncValidators` boolean when async validators are configured
 
+## File Field Convention
+
+- `type: 'file'` — answer is `string[]` of `file_` IDs from the upload endpoint, never file bytes or `"name|size"` strings. `checkField` enforces array shape, `file_` prefix, no duplicates, and `fileConfig.maxFiles` (default `FILE_DEFAULT_MAX_FILES` = 1, always checked). `accept` / `maxSize` are not checkable from IDs and are left to the renderer and the server.
+- `validateRequirementsObject` rejects `fileConfig` on non-file fields, `accept` entries outside `FILE_MIME_TYPES`, `maxSize` outside 1–`FILE_MAX_SIZE`, `maxFiles` outside 1–`FILE_MAX_FILES`, `fileConfig.multiple`, and `validation.rules` on file fields.
+
 ## Display-Only Field Type Convention
 
 The engine treats `field.type` as an opaque string for input fields, but enforces structure for two display-only conventions:
