@@ -433,6 +433,25 @@ describe('file fields — blocking', () => {
     expect(screen.getByTestId('input-notes')).toBeTruthy();
   });
 
+  it('does not show a required error when Next is clicked during an upload, and shows it once the upload fails', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    render(
+      <ControlledForm
+        requirements={makeRequirements({ validation: { required: true } }, flow)}
+        uploadFile={uploadFile}
+      />,
+    );
+
+    pickFiles('doc', [makeFile('a.pdf')]);
+    fireEvent.click(screen.getByText('Next'));
+    expect(screen.getByTestId('field-doc')).toBeTruthy();
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+
+    await settle(calls[0]!, new Error('Upload failed'));
+    fireEvent.click(screen.getByText('Next'));
+    expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+  });
+
   it('reports aggregate upload state through onUploadStateChange', async () => {
     const { uploadFile, calls } = deferredUploadFile();
     const onUploadStateChange = vi.fn();

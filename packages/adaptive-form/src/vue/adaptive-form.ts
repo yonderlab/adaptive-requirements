@@ -405,8 +405,9 @@ export const AdaptiveForm = defineComponent({
 
     const handleNext = () => {
       if (!currentStepIsValid.value) {
+        // A field still uploading is left untouched: its answer is empty until the upload lands.
         const visibleFieldIds = currentStepFields.value
-          .filter((field) => getFieldState(field.id).isVisible)
+          .filter((field) => getFieldState(field.id).isVisible && !fileUploads.isFieldUploading(field.id))
           .map((field) => field.id);
         markFieldsTouched(visibleFieldIds);
         return;

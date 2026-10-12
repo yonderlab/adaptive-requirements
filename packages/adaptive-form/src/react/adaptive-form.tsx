@@ -567,8 +567,11 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
 
   const handleNext = useCallback(() => {
     if (!currentStepIsValid) {
-      // Reveal errors for all visible fields in current step
-      const visibleFieldIds = currentStepFields.filter((f) => getFieldState(f.id).isVisible).map((f) => f.id);
+      // Reveal errors for all visible fields in current step. A field still uploading is left
+      // untouched: its answer is empty until the upload lands, so touching it would flash "required".
+      const visibleFieldIds = currentStepFields
+        .filter((f) => getFieldState(f.id).isVisible && !fileUploads.isFieldUploading(f.id))
+        .map((f) => f.id);
       markFieldsTouched(visibleFieldIds);
       return;
     }
@@ -581,6 +584,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     currentStepIsValid,
     currentStepFields,
     getFieldState,
+    fileUploads,
     markFieldsTouched,
     setCurrentStepId,
     markStepVisited,
