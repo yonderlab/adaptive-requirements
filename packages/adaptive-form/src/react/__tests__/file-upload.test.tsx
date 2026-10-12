@@ -302,6 +302,20 @@ describe('file fields — upload lifecycle', () => {
     expect(screen.queryByTestId('file-upload-1')).toBeNull();
   });
 
+  it('does not show a required error while a file uploads', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    render(
+      <ControlledForm requirements={makeRequirements({ validation: { required: true } })} uploadFile={uploadFile} />,
+    );
+
+    pickFiles('doc', [makeFile('a.pdf')]);
+    expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('uploading');
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+
+    await settle(calls[0]!, { id: 'file_a' });
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+  });
+
   it('shows field-level errors once the field is touched', async () => {
     const { uploadFile, calls } = deferredUploadFile();
     render(

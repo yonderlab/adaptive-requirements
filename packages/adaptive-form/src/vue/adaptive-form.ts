@@ -508,7 +508,8 @@ export const AdaptiveForm = defineComponent({
         if (fieldState.isReadOnly) {
           return;
         }
-        markFieldTouched(field.id);
+        // Not touched here: the answer only gains an ID when the upload lands (which touches the
+        // field), so touching now would show "required" for the whole upload.
         fileUploads.addFiles(field.id, files, field.fileConfig);
       },
       remove: (key: string) => {

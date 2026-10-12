@@ -264,6 +264,24 @@ describe('file fields — upload lifecycle', () => {
     expect(entry.textContent).toContain('Uploaded file');
   });
 
+  it('does not show a required error while a file uploads, and shows it once the file is removed', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    renderControlledForm({
+      requirements: makeRequirements({ validation: { required: true } }),
+      formProps: { uploadFile },
+    });
+
+    await pickFiles('doc', [makeFile('a.pdf')]);
+    expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('uploading');
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+
+    await settle(calls[0]!, { id: 'file_a' });
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+
+    await fireEvent.click(screen.getByText('Remove upload-1'));
+    expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+  });
+
   it('marks every file as an error and warns when uploadFile is not passed', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
     renderControlledForm({ requirements: makeRequirements() });
