@@ -12,7 +12,7 @@ import { createFileUploadStore } from '../core/file-upload';
 
 export interface UseFileUploadsOptions {
   uploadFile: () => UploadFile | undefined;
-  /** Read a field's latest value. Called when an upload finishes, after any edits made meanwhile. */
+  /** Read a field's latest value. Called when an upload finishes, so it must not be a render-time snapshot. */
   getValue: (fieldId: string) => FieldValue;
   setValue: (fieldId: string, ids: string[]) => void;
 }
@@ -43,7 +43,7 @@ export function useFileUploads(options: UseFileUploadsOptions): UseFileUploadsRe
   });
   onScopeDispose(() => {
     unsubscribe();
-    // Abort uploads still running on unmount, so they can't write to a form that's gone
+    // Abort in-flight uploads on unmount
     store.reset();
   });
 

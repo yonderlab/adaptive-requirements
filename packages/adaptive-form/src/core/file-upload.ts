@@ -230,7 +230,8 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
     })();
   };
 
-  // Doesn't start the upload: the caller adds the entry first, so a synchronous throw from uploadFile finds it.
+  // Returns the checked entry without uploading it, so the caller can add it to `pending` first
+  // (a synchronous throw from uploadFile then finds it).
   const checkPendingFile = (
     fieldId: string,
     entry: Pick<PendingFile, 'key' | 'seq' | 'file'>,

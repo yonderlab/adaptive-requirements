@@ -556,7 +556,7 @@ export function checkField<TFieldId extends string = string>(
     }
 
     if (!empty) {
-      // File fields: answer must be unique file IDs, at most maxFiles of them
+      // File fields: check the answer's shape and maxFiles
       if (field.type === 'file') {
         const fileError = validateFileAnswer(fieldValue, field.fileConfig?.maxFiles ?? FILE_DEFAULT_MAX_FILES);
         if (fileError) {

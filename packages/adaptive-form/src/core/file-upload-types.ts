@@ -3,8 +3,7 @@ import type { Field } from '@kotaio/adaptive-requirements-engine';
 /**
  * Uploads one file and resolves with its file ID.
  *
- * Supplied by the consumer as the `uploadFile` prop. It owns the transport: call the
- * upload endpoint directly (Kota embed) or go through your own backend (API partners).
+ * Supplied by the consumer as the `uploadFile` prop. It owns the transport.
  * Whatever it throws becomes the file's `FileEntry.error` message.
  */
 export type UploadFile = (file: File, context: { fieldId: string; signal: AbortSignal }) => Promise<{ id: string }>;
@@ -39,12 +38,12 @@ export interface FieldFileProps<TFieldId extends string = string> {
   isRequired: boolean;
   isVisible: boolean;
   isReadOnly: boolean;
-  /** Field-level errors, e.g. "This field is required" (filtered by touched state) */
+  /** Field-level errors, e.g. "This field is required" (filtered by touched state, and hidden while the field waits on its first upload) */
   errors: string[];
   files: FileEntry[];
   /** Check, then upload, the picked files. */
   addFiles: (files: File[]) => void;
-  /** Remove a file. Removing an uploaded file takes its ID out of the answer; the file stays in storage. */
+  /** Remove a file. Removing an uploaded file takes its ID out of the answer. */
   remove: (key: string) => void;
   /** Check and upload a failed file again. */
   retry: (key: string) => void;

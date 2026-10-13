@@ -168,7 +168,7 @@ export interface FileConfig {
   accept?: FileMimeType[];
   /** Maximum size per file in bytes, 1 to `FILE_MAX_SIZE`. Defaults to `FILE_MAX_SIZE`. */
   maxSize?: number;
-  /** Maximum number of files, 1 to `FILE_MAX_FILES`. Defaults to `FILE_DEFAULT_MAX_FILES` and is always enforced. */
+  /** Maximum number of files, 1 to `FILE_MAX_FILES`. Defaults to `FILE_DEFAULT_MAX_FILES`. */
   maxFiles?: number;
 }
 

@@ -508,8 +508,7 @@ export const AdaptiveForm = defineComponent({
         if (fieldState.isReadOnly) {
           return;
         }
-        // Not touched here: picking a file isn't an answer yet. The field is touched when an
-        // upload lands (through its value change) or a file is removed.
+        // Not touched: picking a file isn't an answer yet; the upload landing touches the field
         fileUploads.addFiles(field.id, files, field.fileConfig);
       },
       remove: (key: string) => {
@@ -528,7 +527,6 @@ export const AdaptiveForm = defineComponent({
       const fieldAsyncErrors = asyncFieldState?.errors ?? [];
       const fieldIsValidating = asyncFieldState?.isValidating ?? false;
       const mergedErrors = [...fieldState.errors, ...fieldAsyncErrors];
-      // A file field waiting on its first upload is empty, so "required" would show until the upload lands
       const displayErrors = isAwaitingUpload(fileUploads, field.id, fieldState.value)
         ? []
         : getDisplayErrors(field.id, mergedErrors);
