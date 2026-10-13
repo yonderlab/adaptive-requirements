@@ -1,4 +1,4 @@
-import type { Field, FileConfig } from '@kotaio/adaptive-requirements-engine';
+import type { Field } from '@kotaio/adaptive-requirements-engine';
 
 /**
  * Uploads one file and resolves with its file ID.
@@ -26,12 +26,14 @@ export type FileEntry =
   | { key: string; status: 'error'; name: string; size: number; error: string };
 
 /**
- * Props for `type: 'file'` field components.
+ * State props for `type: 'file'` field components, shared by React and Vue. Each
+ * framework adds the actions in its own idiom: function props in React, emits in Vue.
  *
  * The library runs the upload lifecycle and writes the field's answer (an array of
  * file IDs). The component only draws: it never calls the network or sets the value.
+ * Limits are read from `field.fileConfig`.
  */
-export interface FieldFileProps<TFieldId extends string = string> {
+export interface FieldFileState<TFieldId extends string = string> {
   field: Field<TFieldId>;
   /** Resolved label string (after localization) */
   label?: string;
@@ -43,18 +45,16 @@ export interface FieldFileProps<TFieldId extends string = string> {
   /** Field-level errors, e.g. "This field is required" (filtered by touched state, and hidden while the field waits on its first upload) */
   errors: string[];
   files: FileEntry[];
+  /** False once the field holds `fileConfig.maxFiles` files */
+  canAddMore: boolean;
+}
+
+/** What a file field component can ask the library to do. */
+export interface FieldFileActions {
   /** Check, then upload, the picked files. */
   addFiles: (files: File[]) => void;
   /** Remove a file. Removing an uploaded file takes its ID out of the answer. */
   remove: (key: string) => void;
   /** Check and upload a failed file again. */
   retry: (key: string) => void;
-  /** Value for `<input accept>`, e.g. "application/pdf,image/png,image/jpeg" */
-  acceptAttribute: string;
-  /** Human-readable limits, e.g. "PDF, PNG or JPEG · up to 5 MB · up to 2 files" */
-  limitsText: string;
-  /** `field.fileConfig` with defaults applied, for building your own (e.g. translated) limits copy */
-  limits: Required<FileConfig>;
-  /** False once the field holds `maxFiles` files */
-  canAddMore: boolean;
 }

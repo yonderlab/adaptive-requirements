@@ -284,9 +284,9 @@ const field = {
   type: 'file',
   label: 'Proof of address',
   fileConfig: {
-    accept: ['application/pdf', 'image/png', 'image/jpeg'], // exact MIME types from FILE_MIME_TYPES
-    maxSize: 5_000_000, // bytes per file, 1 to FILE_MAX_SIZE (10,000,000)
-    maxFiles: 2, // 1 to 10, defaults to 1
+    accept: ['application/pdf', 'image/png', 'image/jpeg'], // exact MIME types: any of these three
+    maxSize: 5_000_000, // bytes per file, 1 to 10,000,000
+    maxFiles: 2, // 1 to 10
   },
   validation: { required: true },
 };
@@ -294,14 +294,9 @@ const field = {
 checkField(requirements, 'proof_of_address', { proof_of_address: ['file_5b1e…', 'file_a3c1…'] });
 ```
 
-`checkField` checks that the answer is an array of unique, non-empty file IDs with at most `maxFiles` entries (default 1). `required` means at least one. `accept` and `maxSize` can't be checked from an ID: renderers check them before upload, and the server checks them on submit.
+`fileConfig` is required on file fields, with all three keys set; there are no defaults. `validateRequirementsObject` rejects a file field without it, so renderers and servers read `field.fileConfig` as is.
 
-`resolveFileConfig(fileConfig)` returns the config with every default applied, for renderers that check files themselves:
-
-```ts
-resolveFileConfig(undefined);
-// { accept: ['application/pdf', 'image/png', 'image/jpeg'], maxSize: 10_000_000, maxFiles: 1 }
-```
+`checkField` checks that the answer is an array of unique, non-empty file IDs with at most `maxFiles` entries. `required` means at least one. `accept` and `maxSize` can't be checked from an ID: renderers check them before upload, and the server checks them on submit.
 
 #### `validateRequirementsObject(input)`
 

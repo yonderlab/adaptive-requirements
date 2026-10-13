@@ -1,6 +1,6 @@
 /* eslint-disable import/no-relative-parent-imports */
 import type { AdaptiveFormComponents, FieldFileProps, FieldInputProps, FieldRenderProps, UploadFile } from '../types';
-import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type { Field, FileConfig, FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 import type { PropType } from 'vue';
 
 import { fireEvent, render, screen } from '@testing-library/vue';
@@ -25,14 +25,14 @@ const TestFileField = defineComponent({
     isReadOnly: { type: Boolean, default: false },
     errors: { type: Array as PropType<FieldFileProps['errors']>, default: () => [] },
     files: { type: Array as PropType<FieldFileProps['files']>, default: () => [] },
-    addFiles: { type: Function as PropType<FieldFileProps['addFiles']>, required: true },
-    remove: { type: Function as PropType<FieldFileProps['remove']>, required: true },
-    retry: { type: Function as PropType<FieldFileProps['retry']>, required: true },
-    acceptAttribute: { type: String, default: '' },
-    limitsText: { type: String, default: '' },
     canAddMore: { type: Boolean, default: true },
   },
-  setup(props) {
+  emits: {
+    addFiles: (_files: File[]) => true,
+    remove: (_key: string) => true,
+    retry: (_key: string) => true,
+  },
+  setup(props, { emit }) {
     return () => {
       if (!props.isVisible) {
         return null;
@@ -43,20 +43,19 @@ const TestFileField = defineComponent({
           ? h('input', {
               type: 'file',
               multiple: true,
-              accept: props.acceptAttribute,
+              accept: props.field.fileConfig?.accept.join(','),
               'data-testid': `input-${fieldId}`,
-              onChange: (event: Event) => props.addFiles([...((event.target as HTMLInputElement).files ?? [])]),
+              onChange: (event: Event) => emit('addFiles', [...((event.target as HTMLInputElement).files ?? [])]),
             })
           : null,
-        h('p', { 'data-testid': `limits-${fieldId}` }, props.limitsText),
         h(
           'ul',
           props.files.map((file) =>
             h('li', { key: file.key, 'data-testid': `file-${file.key}`, 'data-status': file.status }, [
               h('span', file.name ?? 'Uploaded file'),
               file.status === 'error' ? h('span', { 'data-testid': `file-error-${file.key}` }, file.error) : null,
-              h('button', { type: 'button', onClick: () => props.retry(file.key) }, `Retry ${file.key}`),
-              h('button', { type: 'button', onClick: () => props.remove(file.key) }, `Remove ${file.key}`),
+              h('button', { type: 'button', onClick: () => emit('retry', file.key) }, `Retry ${file.key}`),
+              h('button', { type: 'button', onClick: () => emit('remove', file.key) }, `Remove ${file.key}`),
             ]),
           ),
         ),
@@ -119,13 +118,25 @@ function deferredUploadFile() {
   return { uploadFile, calls };
 }
 
+const FILE_CONFIG: FileConfig = {
+  accept: ['application/pdf', 'image/png', 'image/jpeg'],
+  maxSize: 10_000_000,
+  maxFiles: 1,
+};
+
 function makeRequirements(
-  fileField: Partial<RequirementsObject['fields'][number]> = {},
+  { fileConfig, ...fileField }: Partial<Omit<Field, 'fileConfig'>> & { fileConfig?: Partial<FileConfig> } = {},
   flow?: RequirementsObject['flow'],
 ): RequirementsObject {
   const fields: RequirementsObject['fields'] = [
     { id: 'name', type: 'text' },
-    { id: 'doc', type: 'file', label: 'Proof of address', ...fileField },
+    {
+      id: 'doc',
+      type: 'file',
+      label: 'Proof of address',
+      fileConfig: { ...FILE_CONFIG, ...fileConfig },
+      ...fileField,
+    },
     { id: 'notes', type: 'text' },
   ];
   return flow ? { fields, flow } : { fields };
@@ -174,13 +185,59 @@ async function settle(deferred: Deferred, value: { id: string } | Error) {
 }
 
 describe('file fields — upload lifecycle', () => {
-  it('passes limits and accept to the component', () => {
-    renderControlledForm({
-      requirements: makeRequirements({ fileConfig: { accept: ['application/pdf'], maxSize: 5_000_000, maxFiles: 2 } }),
+  it('passes fileConfig to the component through field', () => {
+    renderControlledForm({ requirements: makeRequirements({ fileConfig: { accept: ['application/pdf'] } }) });
+
+    expect(screen.getByTestId('input-doc').getAttribute('accept')).toBe('application/pdf');
+  });
+
+  it('marks every file as an error when the field has no fileConfig', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
+    const { uploadFile } = deferredUploadFile();
+    renderControlledForm({ requirements: { fields: [{ id: 'doc', type: 'file' }] }, formProps: { uploadFile } });
+
+    await pickFiles('doc', [makeFile('a.pdf')]);
+
+    expect(uploadFile).not.toHaveBeenCalled();
+    expect(screen.getByTestId('file-error-upload-1').textContent).toBe('This field is not configured for file uploads');
+    warn.mockRestore();
+  });
+
+  it('ignores addFiles on a read-only field', async () => {
+    const { uploadFile } = deferredUploadFile();
+    renderControlledForm({ requirements: makeRequirements({ readOnly: true }), formProps: { uploadFile } });
+
+    await pickFiles('doc', [makeFile('a.pdf')]);
+
+    expect(uploadFile).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('file-upload-1')).toBeNull();
+  });
+
+  it('ignores retry once the field is read-only', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const requirements = shallowRef(makeRequirements());
+    render({
+      components: { AdaptiveFormProvider, AdaptiveForm },
+      template: `
+        <AdaptiveFormProvider :requirements="requirements">
+          <AdaptiveForm :components="components" :upload-file="uploadFile" />
+        </AdaptiveFormProvider>
+      `,
+      setup() {
+        return { requirements, components: testComponents, uploadFile };
+      },
     });
 
-    expect(screen.getByTestId('limits-doc').textContent).toBe('PDF · up to 5 MB · up to 2 files');
-    expect(screen.getByTestId('input-doc').getAttribute('accept')).toBe('application/pdf');
+    await pickFiles('doc', [makeFile('a.pdf')]);
+    await settle(calls[0]!, new Error('Network down'));
+
+    requirements.value = makeRequirements({ readOnly: true });
+    await nextTick();
+    await fireEvent.click(screen.getByText('Retry upload-1'));
+
+    // eslint-disable-next-line vitest/prefer-called-times
+    expect(uploadFile).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('error');
   });
 
   it('uploads a picked file and writes its ID to v-model', async () => {
@@ -260,7 +317,7 @@ describe('file fields — upload lifecycle', () => {
       },
     });
 
-    const entry = screen.getByTestId('file-file_saved');
+    const entry = screen.getByTestId('file-saved:file_saved');
     expect(entry.dataset['status']).toBe('uploaded');
     expect(entry.textContent).toContain('Uploaded file');
   });
@@ -361,8 +418,8 @@ describe('file fields — writes against the latest form data', () => {
     const { model } = renderControlledForm({
       requirements: {
         fields: [
-          { id: 'doc', type: 'file' },
-          { id: 'id_card', type: 'file' },
+          { id: 'doc', type: 'file', fileConfig: FILE_CONFIG },
+          { id: 'id_card', type: 'file', fileConfig: FILE_CONFIG },
         ],
       },
       formProps: { uploadFile },
@@ -472,9 +529,11 @@ describe('file fields — field slot', () => {
     expect(seen['name']).toBeUndefined();
     expect(seen['doc']).toMatchObject({
       label: 'Proof of address',
-      files: [{ key: 'file_saved', status: 'uploaded', id: 'file_saved' }],
-      limitsText: 'PDF, PNG or JPEG · up to 10 MB',
+      files: [{ key: 'saved:file_saved', status: 'uploaded', id: 'file_saved' }],
       canAddMore: false,
+      onAddFiles: expect.any(Function),
+      onRemove: expect.any(Function),
+      onRetry: expect.any(Function),
     });
   });
 });

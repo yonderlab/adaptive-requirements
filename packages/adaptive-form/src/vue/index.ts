@@ -15,6 +15,8 @@ export type {
   AdaptiveFormProps,
   AdaptiveFormSlots,
   FieldComputedProps,
+  FieldFileBindings,
+  FieldFileEmits,
   FieldFileProps,
   FieldId,
   FieldInputBindings,
@@ -27,7 +29,7 @@ export type {
   UploadFile,
 } from './types';
 export { NOTICE_VARIANTS } from '@kotaio/adaptive-requirements-engine';
-export type { FileMimeType, NoticeField, NoticeVariant } from '@kotaio/adaptive-requirements-engine';
+export type { NoticeField, NoticeVariant } from '@kotaio/adaptive-requirements-engine';
 export { useAsyncValidation } from './use-async-validation';
 export type {
   AsyncFieldState,

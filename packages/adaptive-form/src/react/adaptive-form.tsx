@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-relative-parent-imports
-import type { FieldFileProps, UploadFile } from '../core/file-upload-types';
+import type { FieldFileActions, FieldFileState, UploadFile } from '../core/file-upload-types';
 import type { StepDetail, StepNavigationProps } from './adaptive-form-context';
 import type {
   Field,
@@ -63,9 +63,19 @@ function coerceNoticeVariant(rawVariant: unknown): NoticeVariant {
 }
 
 // eslint-disable-next-line import/no-relative-parent-imports
-export type { FieldFileProps, FileEntry, UploadFile } from '../core/file-upload-types';
+export type { FileEntry, UploadFile } from '../core/file-upload-types';
 
 type FieldId = string;
+
+/**
+ * Props for `type: 'file'` field components.
+ *
+ * The library runs the upload lifecycle and writes the field's answer (an array of
+ * file IDs). The component only draws: it never calls the network or sets the value.
+ * Limits are read from `field.fileConfig`.
+ */
+export interface FieldFileProps<TFieldId extends FieldId = FieldId>
+  extends FieldFileState<TFieldId>, FieldFileActions {}
 
 /**
  * Public field option shape for selectable inputs.
@@ -688,7 +698,12 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
         markFieldTouched(field.id);
         fileUploads.remove(field.id, key);
       },
-      retry: (key: string) => fileUploads.retry(field.id, key, field.fileConfig),
+      retry: (key: string) => {
+        if (fieldState.isReadOnly) {
+          return;
+        }
+        fileUploads.retry(field.id, key, field.fileConfig);
+      },
     }),
     [fileUploads, markFieldTouched],
   );

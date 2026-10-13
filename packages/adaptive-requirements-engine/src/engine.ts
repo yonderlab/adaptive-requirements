@@ -5,7 +5,6 @@ import type {
   FieldMapping,
   FieldState,
   FieldValue,
-  FileConfig,
   Flow,
   FormData,
   LocalizedLabel,
@@ -22,7 +21,6 @@ import jsonLogic from 'json-logic-js';
 import { isSupportedCountry, isValidPhoneNumber } from 'libphonenumber-js/min';
 
 import { isReservedOperationName } from './operations';
-import { FILE_DEFAULT_MAX_FILES, FILE_MAX_SIZE, FILE_MIME_TYPES } from './types';
 
 /**
  * Context object for rule evaluation
@@ -300,21 +298,15 @@ export function runValidationRules(
   return errors;
 }
 
-/**
- * A file field's `fileConfig` with every default applied: all of `FILE_MIME_TYPES`,
- * `FILE_MAX_SIZE` bytes per file, and one file.
- */
-export function resolveFileConfig(fileConfig: FileConfig | undefined): Required<FileConfig> {
-  return {
-    accept: fileConfig?.accept && fileConfig.accept.length > 0 ? fileConfig.accept : FILE_MIME_TYPES,
-    maxSize: fileConfig?.maxSize ?? FILE_MAX_SIZE,
-    maxFiles: fileConfig?.maxFiles ?? FILE_DEFAULT_MAX_FILES,
-  };
-}
+const FILE_NOT_CONFIGURED_MESSAGE = 'This field is not configured for file uploads';
 
 /** @internal */
 /* File answer validation — a file field's answer is an array of unique, non-empty file IDs, at most `maxFiles` long */
-function validateFileAnswer(value: FieldValue, maxFiles: number): string | null {
+function validateFileAnswer(value: FieldValue, maxFiles: number | undefined): string | null {
+  // fileConfig is required at publish; an unvalidated schema without it accepts no files
+  if (typeof maxFiles !== 'number') {
+    return FILE_NOT_CONFIGURED_MESSAGE;
+  }
   if (!Array.isArray(value) || !value.every((id) => typeof id === 'string' && id !== '')) {
     return 'Must be a list of file IDs';
   }
@@ -571,7 +563,7 @@ export function checkField<TFieldId extends string = string>(
     if (!empty) {
       // File fields: check the answer's shape and maxFiles
       if (field.type === 'file') {
-        const fileError = validateFileAnswer(fieldValue, resolveFileConfig(field.fileConfig).maxFiles);
+        const fileError = validateFileAnswer(fieldValue, field.fileConfig?.maxFiles);
         if (fileError) {
           errors.push(fileError);
         }

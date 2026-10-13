@@ -309,23 +309,22 @@ File fields (`type: 'file'`) answer with an array of file IDs (with Kota, the ID
 1. **`uploadFile`** — the transport, passed as a prop on `AdaptiveForm`. It's called once per file and resolves with `{ id }`. Whatever it throws becomes that file's error message.
 2. **A `file` component** — drawing only. It never calls the network or sets the value. There is no default `file` component; without one, file fields render nothing (with a development warning), like every other input type.
 
-| Prop              | Type                      | Description                                                                        |
-| ----------------- | ------------------------- | ---------------------------------------------------------------------------------- |
-| `field`           | `Field`                   | The field definition (`field.fileConfig`, `field.placeholder`)                     |
-| `label`           | `string \| undefined`     | Resolved label (after localization)                                                |
-| `description`     | `string \| undefined`     | Resolved description (after localization)                                          |
-| `isRequired`      | `boolean`                 | Whether at least one file is required                                              |
-| `isVisible`       | `boolean`                 | Whether the field should be rendered                                               |
-| `isReadOnly`      | `boolean`                 | Whether the field is read-only (`addFiles` and `remove` are ignored)               |
-| `errors`          | `string[]`                | Field-level errors, e.g. "This field is required" (filtered by touched state)      |
-| `files`           | `FileEntry[]`             | Uploaded, uploading and failed files, in the order added                           |
-| `addFiles`        | `(files: File[]) => void` | Check, then upload, the picked files                                               |
-| `remove`          | `(key: string) => void`   | Remove a file; an uploaded file's ID leaves the answer (the file stays in storage) |
-| `retry`           | `(key: string) => void`   | Check and upload a failed file again                                               |
-| `acceptAttribute` | `string`                  | For `<input accept>`, e.g. `"application/pdf,image/png,image/jpeg"`                |
-| `limitsText`      | `string`                  | e.g. `"PDF, PNG or JPEG · up to 5 MB · up to 2 files"`                             |
-| `limits`          | `Required<FileConfig>`    | `field.fileConfig` with defaults applied: `accept`, `maxSize`, `maxFiles`          |
-| `canAddMore`      | `boolean`                 | False once the field holds `fileConfig.maxFiles` files                             |
+| Prop          | Type                      | Description                                                                                 |
+| ------------- | ------------------------- | ------------------------------------------------------------------------------------------- |
+| `field`       | `Field`                   | The field definition. Its `fileConfig` holds the limits: `accept`, `maxSize` and `maxFiles` |
+| `label`       | `string \| undefined`     | Resolved label (after localization)                                                         |
+| `description` | `string \| undefined`     | Resolved description (after localization)                                                   |
+| `isRequired`  | `boolean`                 | Whether at least one file is required                                                       |
+| `isVisible`   | `boolean`                 | Whether the field should be rendered                                                        |
+| `isReadOnly`  | `boolean`                 | Whether the field is read-only (`addFiles`, `remove` and `retry` are ignored)               |
+| `errors`      | `string[]`                | Field-level errors, e.g. "This field is required" (filtered by touched state)               |
+| `files`       | `FileEntry[]`             | Uploaded, uploading and failed files, in the order added                                    |
+| `canAddMore`  | `boolean`                 | False once the field holds `fileConfig.maxFiles` files                                      |
+| `addFiles`    | `(files: File[]) => void` | Check, then upload, the picked files                                                        |
+| `remove`      | `(key: string) => void`   | Remove a file; an uploaded file's ID leaves the answer (the file stays in storage)          |
+| `retry`       | `(key: string) => void`   | Check and upload a failed file again                                                        |
+
+`fileConfig` is required on file fields, with all three keys set and no defaults, so read it as is: `field.fileConfig?.accept.join(',')` is the value for `<input accept>`. (`Field` marks `fileConfig` optional only because other field types don't have one.) The schema's publish check guarantees it; if an unvalidated schema has none, every picked file becomes an error ("This field is not configured for file uploads").
 
 Each `FileEntry` has a stable `key` and a `status`. Narrow on `status` to reach the rest: `uploaded` entries have an `id`, `error` entries have an `error` message, and `uploading` and `error` entries have the file's `name` and `size`. Saved IDs from the field's `defaultValue` (a reopened requirement) appear as `uploaded` entries with no `name` — show something like "Uploaded file".
 
@@ -393,6 +392,7 @@ The upload endpoint accepts files up to 10,000,000 bytes; make sure your backend
 import type { FieldFileProps } from '@kotaio/adaptive-form/react';
 
 function FileField({
+  field,
   label,
   description,
   isRequired,
@@ -402,12 +402,11 @@ function FileField({
   addFiles,
   remove,
   retry,
-  acceptAttribute,
-  limitsText,
   canAddMore,
   errors,
 }: FieldFileProps) {
   if (!isVisible) return null;
+  const { fileConfig } = field;
 
   return (
     <div className="field">
@@ -418,9 +417,19 @@ function FileField({
       {description && <p className="hint">{description}</p>}
 
       {canAddMore && !isReadOnly && (
-        <input type="file" multiple accept={acceptAttribute} onChange={(e) => addFiles([...(e.target.files ?? [])])} />
+        <input
+          type="file"
+          multiple
+          accept={fileConfig?.accept.join(',')}
+          onChange={(e) => addFiles([...(e.target.files ?? [])])}
+        />
       )}
-      <p className="hint">{limitsText}</p>
+      {fileConfig && (
+        <p className="hint">
+          Up to {fileConfig.maxSize / 1_000_000} MB per file, {fileConfig.maxFiles}{' '}
+          {fileConfig.maxFiles === 1 ? 'file' : 'files'}
+        </p>
+      )}
 
       <ul>
         {files.map((file) => (
@@ -461,7 +470,7 @@ function FileField({
 />;
 ```
 
-The answers object you submit then contains file IDs — e.g. `{ "company_registration_extract": ["file_5b1e…"] }` — and goes through your existing answers call unchanged. `limitsText` and the pre-upload error messages are in English; build your own copy from `limits` if you need translations.
+The answers object you submit then contains file IDs — e.g. `{ "company_registration_extract": ["file_5b1e…"] }` — and goes through your existing answers call unchanged. The pre-upload error messages are in English; write your own hint copy from `field.fileConfig` in whatever language you need.
 
 ### Custom render function
 
@@ -967,7 +976,39 @@ Map field types to Vue components via the `components` prop. Interactive fields 
 
 `type: 'computed'` components receive `FieldComputedProps` (`field`, `value`, `isVisible`). `type: 'notice'` components receive `FieldNoticeProps` (`field`, `isVisible`, `variant`, `description`, optional `heading`) — same semantics as the React integration. A built-in accessible fallback renders when no `notice` component is supplied.
 
-`type: 'file'` components receive `FieldFileProps` as props — the same contract as React (see [File fields](#file-fields--fieldfileprops)), with `addFiles`, `remove` and `retry` as plain function props rather than emits. Pass the transport with `:upload-file`:
+`type: 'file'` components receive `FieldFileProps` as props — the same state as React (see [File fields](#file-fields--fieldfileprops)) — and ask for changes by emitting `addFiles`, `remove` and `retry` (`FieldFileEmits`), the same way input components emit `update:modelValue` and `blur`:
+
+```vue
+<script setup lang="ts">
+import type { FieldFileEmits, FieldFileProps } from '@kotaio/adaptive-form/vue';
+
+const props = defineProps<FieldFileProps>();
+const emit = defineEmits<FieldFileEmits>();
+</script>
+
+<template>
+  <div v-if="props.isVisible">
+    <label>{{ props.label }}</label>
+    <input
+      v-if="props.canAddMore && !props.isReadOnly"
+      type="file"
+      multiple
+      :accept="props.field.fileConfig?.accept.join(',')"
+      @change="emit('addFiles', [...(($event.target as HTMLInputElement).files ?? [])])"
+    />
+    <div v-for="file in props.files" :key="file.key">
+      {{ file.name ?? 'Uploaded file' }} · {{ file.status }}
+      <template v-if="file.status === 'error'">
+        {{ file.error }} <button type="button" @click="emit('retry', file.key)">Retry</button>
+      </template>
+      <button v-if="!props.isReadOnly" type="button" @click="emit('remove', file.key)">Remove</button>
+    </div>
+    <p v-for="error in props.errors" :key="error">{{ error }}</p>
+  </div>
+</template>
+```
+
+Pass the transport with `:upload-file`:
 
 ```vue
 <AdaptiveForm
@@ -990,7 +1031,7 @@ Vue does **not** expose React's `renderField` or `renderStepNavigation` props. U
 | `#step-navigation` | `renderStepNavigation` | Custom Previous/Next UI for multi-step flows |
 | default            | `children`             | Content after fields                         |
 
-The `#field` slot receives `FieldRenderProps`: `field`, `fieldState`, `displayErrors`, `isTouched`, `isValidating`, `asyncErrors`, `modelValue`, `onUpdate:modelValue`, `onBlur`, the `components` map for delegation, and — for `type: 'file'` fields only — `file` with the `FieldFileProps` upload props.
+The `#field` slot receives `FieldRenderProps`: `field`, `fieldState`, `displayErrors`, `isTouched`, `isValidating`, `asyncErrors`, `modelValue`, `onUpdate:modelValue`, `onBlur`, the `components` map for delegation, and — for `type: 'file'` fields only — `file`, the `FieldFileBindings`: the `FieldFileProps` plus `onAddFiles`, `onRemove` and `onRetry`, so `<FileField v-bind="file" />` wires a file component up.
 
 The `#step-navigation` slot receives the same payload as `useStepNavigation()` when `initialised: true` (`canGoPrevious`, `canGoNext`, `isStepValid`, `onPrevious`, `onNext`, step metadata, and `steps`).
 
@@ -1052,8 +1093,8 @@ Safe for SSR and hydration when rendered with Vue's server renderer:
 
 - Form/schema: `AdaptiveFormData`, `AdaptiveFormRequirements`, `AdaptiveFormProviderProps`, `FieldId`
 - Component/slot: `AdaptiveFormComponents`, `AdaptiveFormProps`, `AdaptiveFormEmits`, `AdaptiveFormSlots`
-- Field renderers: `FieldInputProps`, `FieldInputEmits`, `FieldInputBindings`, `FieldComputedProps`, `FieldNoticeProps`, `FieldFileProps`, `FieldRenderProps`, `FieldOption`
-- File uploads: `UploadFile`, `FileEntry`, `FileMimeType` (engine)
+- Field renderers: `FieldInputProps`, `FieldInputEmits`, `FieldInputBindings`, `FieldComputedProps`, `FieldNoticeProps`, `FieldFileProps`, `FieldFileEmits`, `FieldFileBindings`, `FieldRenderProps`, `FieldOption`
+- File uploads: `UploadFile`, `FileEntry`
 - Navigation: `StepDetail`, `StepperInfo`, `StepNavigationProps`, `StepNavigationState`
 - Notice (engine): `NoticeField`, `NoticeVariant`
 - Async validation: `AsyncFieldState`, `AsyncValidationState`, `UseAsyncValidationOptions`, `UseAsyncValidationReturn`

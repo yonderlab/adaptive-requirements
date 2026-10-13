@@ -14,7 +14,7 @@ Vue 3 integration layer beside `src/react/`. Depends on `@kotaio/adaptive-requir
 
 Shared contracts (`is-empty-value`, navigation types, file upload types and store) live in `src/core/` and are re-exported by framework entrypoints.
 
-File fields: `type: 'file'` components receive `FieldFileProps` (function props `addFiles` / `remove` / `retry`, no `modelValue`), the `#field` slot gets them as `file`, and `uploadFile` is a prop (`:upload-file`). `handleFieldChange` builds on a `latestFormData` copy rather than `formData.value`, because a controlled `v-model` prop only updates after the parent re-renders.
+File fields: `type: 'file'` components receive `FieldFileProps` (state only, no `modelValue`) and emit `addFiles` / `remove` / `retry` (`FieldFileEmits`), matching how inputs emit `update:modelValue` / `blur`. `h()` passes `FieldFileBindings` (props plus `onAddFiles` / `onRemove` / `onRetry`), the `#field` slot gets the same bindings as `file`, and `uploadFile` is a prop (`:upload-file`). `handleFieldChange` builds on a `latestFormData` copy rather than `formData.value`, because a controlled `v-model` prop only updates after the parent re-renders.
 
 ## Conventions
 

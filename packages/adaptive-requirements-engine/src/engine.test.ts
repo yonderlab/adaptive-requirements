@@ -1,5 +1,5 @@
 import type { AsyncValidatorFn } from './engine';
-import type { AsyncValidatorRef, Field, RequirementsObject, ValidationRule } from './types';
+import type { AsyncValidatorRef, Field, FileConfig, RequirementsObject, ValidationRule } from './types';
 
 import { describe, expect, it } from 'vitest';
 
@@ -12,7 +12,6 @@ import {
   createAdapter,
   initializeFormData,
   resolveFieldOptions,
-  resolveFileConfig,
   resolveLabel,
   runAsyncValidators,
   runRule,
@@ -1311,36 +1310,22 @@ describe('checkField with excludeWhen', () => {
   });
 });
 
-const fileField = (overrides: Partial<Field> = {}): RequirementsObject => ({
-  fields: [{ id: 'upload', type: 'file', label: 'Upload', ...overrides }],
-});
+const FILE_CONFIG: FileConfig = {
+  accept: ['application/pdf', 'image/png', 'image/jpeg'],
+  maxSize: 5_000_000,
+  maxFiles: 1,
+};
 
-describe(resolveFileConfig, () => {
-  it('applies every default when fileConfig is absent', () => {
-    expect(resolveFileConfig(undefined)).toStrictEqual({
-      accept: ['application/pdf', 'image/png', 'image/jpeg'],
-      maxSize: 10_000_000,
-      maxFiles: 1,
-    });
-  });
-
-  it('treats an empty accept list as every type', () => {
-    expect(resolveFileConfig({ accept: [] }).accept).toStrictEqual(['application/pdf', 'image/png', 'image/jpeg']);
-  });
-
-  it('keeps configured values', () => {
-    expect(resolveFileConfig({ accept: ['image/png'], maxSize: 500, maxFiles: 3 })).toStrictEqual({
-      accept: ['image/png'],
-      maxSize: 500,
-      maxFiles: 3,
-    });
-  });
+const fileField = (overrides: Partial<Field> = {}, fileConfig: Partial<FileConfig> = {}): RequirementsObject => ({
+  fields: [
+    { id: 'upload', type: 'file', label: 'Upload', fileConfig: { ...FILE_CONFIG, ...fileConfig }, ...overrides },
+  ],
 });
 
 describe('file field type', () => {
   describe('checkField with file type', () => {
     it('should accept an array of file IDs', () => {
-      const requirements = fileField({ fileConfig: { maxFiles: 2 }, validation: { required: true } });
+      const requirements = fileField({ validation: { required: true } }, { maxFiles: 2 });
 
       const state = checkField(requirements, 'upload', { upload: ['file_a1', 'file_b2'] });
       expect(state.errors).toStrictEqual([]);
@@ -1353,7 +1338,7 @@ describe('file field type', () => {
     });
 
     it('should accept IDs in any format', () => {
-      const state = checkField(fileField({ fileConfig: { maxFiles: 2 } }), 'upload', {
+      const state = checkField(fileField({}, { maxFiles: 2 }), 'upload', {
         upload: ['3f2a9c1e-7b4d-4e8a-9c6f-1d2e3f4a5b6c', 'doc-42'],
       });
       expect(state.errors).toStrictEqual([]);
@@ -1365,38 +1350,40 @@ describe('file field type', () => {
     });
 
     it('should reject non-string entries', () => {
-      const state = checkField(fileField({ fileConfig: { maxFiles: 2 } }), 'upload', { upload: ['file_a1', 42] });
+      const state = checkField(fileField({}, { maxFiles: 2 }), 'upload', { upload: ['file_a1', 42] });
       expect(state.errors).toStrictEqual(['Must be a list of file IDs']);
     });
 
     it('should reject duplicate file IDs', () => {
-      const state = checkField(fileField({ fileConfig: { maxFiles: 3 } }), 'upload', {
+      const state = checkField(fileField({}, { maxFiles: 3 }), 'upload', {
         upload: ['file_a1', 'file_a1'],
       });
       expect(state.errors).toStrictEqual(['Each file can only be added once']);
     });
 
     it('should enforce maxFiles', () => {
-      const state = checkField(fileField({ fileConfig: { maxFiles: 2 } }), 'upload', {
+      const state = checkField(fileField({}, { maxFiles: 2 }), 'upload', {
         upload: ['file_a1', 'file_b2', 'file_c3'],
       });
       expect(state.errors).toStrictEqual(['At most 2 files can be uploaded']);
     });
 
-    it('should default maxFiles to 1 when fileConfig is absent', () => {
+    it('should use singular wording when maxFiles is 1', () => {
       const state = checkField(fileField(), 'upload', { upload: ['file_a1', 'file_b2'] });
       expect(state.errors).toStrictEqual(['At most 1 file can be uploaded']);
     });
 
-    it('should default maxFiles to 1 when fileConfig omits it', () => {
-      const state = checkField(fileField({ fileConfig: { accept: ['application/pdf'] } }), 'upload', {
-        upload: ['file_a1', 'file_b2'],
-      });
-      expect(state.errors).toStrictEqual(['At most 1 file can be uploaded']);
+    it('should reject any file when fileConfig is missing (unvalidated schema)', () => {
+      const requirements: RequirementsObject = { fields: [{ id: 'upload', type: 'file', label: 'Upload' }] };
+
+      expect(checkField(requirements, 'upload', { upload: ['file_a1'] }).errors).toStrictEqual([
+        'This field is not configured for file uploads',
+      ]);
+      expect(checkField(requirements, 'upload', { upload: [] }).errors).toStrictEqual([]);
     });
 
     it('should not check accept or maxSize against file IDs', () => {
-      const requirements = fileField({ fileConfig: { accept: ['application/pdf'], maxSize: 1 } });
+      const requirements = fileField({}, { accept: ['application/pdf'], maxSize: 1 });
 
       const state = checkField(requirements, 'upload', { upload: ['file_a1'] });
       expect(state.errors).toStrictEqual([]);
@@ -1430,7 +1417,7 @@ describe('file field type', () => {
             id: 'upload',
             type: 'file',
             label: 'Upload',
-            fileConfig: { accept: ['application/pdf'] },
+            fileConfig: FILE_CONFIG,
             visibleWhen: { var: 'needsDoc' },
             validation: { required: true },
           },
@@ -1448,7 +1435,7 @@ describe('file field type', () => {
     });
 
     it('should work with excludeWhen', () => {
-      const requirements = fileField({ fileConfig: { accept: ['application/pdf'] }, excludeWhen: true });
+      const requirements = fileField({ excludeWhen: true });
 
       const state = checkField(requirements, 'upload', { upload: ['file_a1'] });
       expect(state.isExcluded).toBeTruthy();
@@ -1464,7 +1451,7 @@ describe('file field type', () => {
             type: 'text',
             label: 'Text',
             // fileConfig on non-file field is rejected at publish, and ignored at runtime
-            fileConfig: { accept: ['application/pdf'] },
+            fileConfig: FILE_CONFIG,
           },
         ],
       };

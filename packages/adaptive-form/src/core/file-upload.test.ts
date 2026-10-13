@@ -1,7 +1,6 @@
 import type { UploadFile } from './file-upload-types';
 import type { FieldValue, FileConfig } from '@kotaio/adaptive-requirements-engine';
 
-import { resolveFileConfig } from '@kotaio/adaptive-requirements-engine';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -9,9 +8,8 @@ import {
   createFileUploadStore,
   formatFileSize,
   formatFileTypes,
-  getAcceptAttribute,
   getFileFieldState,
-  getLimitsText,
+  isFileConfig,
   toFileIds,
 } from './file-upload';
 
@@ -57,6 +55,10 @@ const throwingUploadFile: UploadFile = () => {
   throw new Error('Bad config');
 };
 
+const ALL_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
+/** One file of any accepted type, up to 10 MB. */
+const single: FileConfig = { accept: ALL_TYPES, maxSize: 10_000_000, maxFiles: 1 };
+
 async function flush() {
   await Promise.resolve();
 }
@@ -66,7 +68,8 @@ describe('file limit formatting', () => {
     [['application/pdf'], 'PDF'],
     [['application/pdf', 'image/png'], 'PDF or PNG'],
     [['application/pdf', 'image/png', 'image/jpeg'], 'PDF, PNG or JPEG'],
-  ] as const)('formats %j as %s', (accept, expected) => {
+    [['image/heic'], 'HEIC'],
+  ])('formats %j as %s', (accept, expected) => {
     expect(formatFileTypes(accept)).toBe(expected);
   });
 
@@ -79,35 +82,35 @@ describe('file limit formatting', () => {
   ])('formats %d bytes as %s', (bytes, expected) => {
     expect(formatFileSize(bytes)).toBe(expected);
   });
-
-  it('builds limits text, leaving out the count for a single file', () => {
-    expect(getLimitsText(resolveFileConfig({ maxSize: 5_000_000 }))).toBe('PDF, PNG or JPEG · up to 5 MB');
-    expect(getLimitsText(resolveFileConfig({ maxSize: 5_000_000, maxFiles: 2 }))).toBe(
-      'PDF, PNG or JPEG · up to 5 MB · up to 2 files',
-    );
-  });
-
-  it('builds the accept attribute', () => {
-    expect(getAcceptAttribute(resolveFileConfig({ accept: ['application/pdf', 'image/png'] }))).toBe(
-      'application/pdf,image/png',
-    );
-  });
 });
 
 describe(checkFile, () => {
-  const limits = resolveFileConfig({ accept: ['application/pdf', 'image/png'], maxSize: 5_000_000 });
+  const fileConfig: FileConfig = { accept: ['application/pdf', 'image/png'], maxSize: 5_000_000, maxFiles: 1 };
 
   it('accepts a file within limits', () => {
-    expect(checkFile(makeFile('a.pdf', 'application/pdf', 5_000_000), limits)).toBeNull();
+    expect(checkFile(makeFile('a.pdf', 'application/pdf', 5_000_000), fileConfig)).toBeNull();
   });
 
   it.each([['image/heic'], ['image/jpeg'], ['']])('rejects type %j', (type) => {
-    expect(checkFile(makeFile('a', type), limits)).toBe('File must be PDF or PNG');
+    expect(checkFile(makeFile('a', type), fileConfig)).toBe('File must be PDF or PNG');
   });
 
   it('rejects a file over maxSize', () => {
-    expect(checkFile(makeFile('a.pdf', 'application/pdf', 5_000_001), limits)).toBe('File must be 5 MB or smaller');
+    expect(checkFile(makeFile('a.pdf', 'application/pdf', 5_000_001), fileConfig)).toBe('File must be 5 MB or smaller');
   });
+});
+
+describe(isFileConfig, () => {
+  it('accepts a config with accept, maxSize and maxFiles', () => {
+    expect(isFileConfig(single)).toBeTruthy();
+  });
+
+  it.each([[undefined], [null], [{ maxFiles: 2 }], [{ accept: ALL_TYPES, maxSize: 1000 }], [['application/pdf']]])(
+    'rejects %j',
+    (value) => {
+      expect(isFileConfig(value)).toBeFalsy();
+    },
+  );
 });
 
 describe(toFileIds, () => {
@@ -119,7 +122,7 @@ describe(toFileIds, () => {
 });
 
 describe(createFileUploadStore, () => {
-  const config: FileConfig = { maxFiles: 3 };
+  const config: FileConfig = { ...single, maxFiles: 3 };
 
   it('uploads a file and writes its ID', async () => {
     const { uploadFile, calls } = deferredUploadFile();
@@ -154,7 +157,7 @@ describe(createFileUploadStore, () => {
 
     expect(values['doc']).toStrictEqual(['file_saved', 'file_a', 'file_b']);
     expect(store.getFiles('doc', values['doc']).map((file) => file.key)).toStrictEqual([
-      'file_saved',
+      'saved:file_saved',
       'upload-1',
       'upload-2',
     ]);
@@ -179,41 +182,41 @@ describe(createFileUploadStore, () => {
     const { uploadFile } = deferredUploadFile();
     const { store, values } = setup(uploadFile);
 
-    store.addFiles('doc', [makeFile('a.heic', 'image/heic')], undefined);
+    store.addFiles('doc', [makeFile('a.heic', 'image/heic')], single);
 
     expect(uploadFile).not.toHaveBeenCalled();
     expect(store.getFiles('doc', values['doc'])[0]).toMatchObject({
       status: 'error',
       error: 'File must be PDF, PNG or JPEG',
     });
-    expect(store.canAddMore('doc', values['doc'], undefined)).toBeTruthy();
+    expect(store.canAddMore('doc', values['doc'], single)).toBeTruthy();
   });
 
   it('counts failed uploads toward maxFiles until removed', async () => {
     const { uploadFile, calls } = deferredUploadFile();
     const { store, values } = setup(uploadFile);
 
-    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
     calls[0]!.reject(new Error('Network down'));
     await flush();
 
     expect(store.getFiles('doc', values['doc'])[0]).toMatchObject({ status: 'error', error: 'Network down' });
-    expect(store.canAddMore('doc', values['doc'], undefined)).toBeFalsy();
+    expect(store.canAddMore('doc', values['doc'], single)).toBeFalsy();
 
     store.remove('doc', 'upload-1');
     expect(store.getFiles('doc', values['doc'])).toStrictEqual([]);
-    expect(store.canAddMore('doc', values['doc'], undefined)).toBeTruthy();
+    expect(store.canAddMore('doc', values['doc'], single)).toBeTruthy();
   });
 
   it('retries a failed upload with the same key', async () => {
     const { uploadFile, calls } = deferredUploadFile();
     const { store, values } = setup(uploadFile);
 
-    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
     calls[0]!.reject(new Error('Network down'));
     await flush();
 
-    store.retry('doc', 'upload-1', undefined);
+    store.retry('doc', 'upload-1', single);
     // The retried entry drops its old error
     expect(store.getFiles('doc', values['doc'])).toStrictEqual([
       { key: 'upload-1', status: 'uploading', name: 'a.pdf', size: 1000 },
@@ -228,7 +231,7 @@ describe(createFileUploadStore, () => {
     const { uploadFile, calls } = deferredUploadFile();
     const { store, values, setValue } = setup(uploadFile);
 
-    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
     store.remove('doc', 'upload-1');
     expect(calls[0]!.signal.aborted).toBeTruthy();
 
@@ -238,7 +241,7 @@ describe(createFileUploadStore, () => {
     expect(store.getFiles('doc', values['doc'])).toStrictEqual([]);
   });
 
-  it('removes an uploaded file by its key, including saved IDs keyed by ID', async () => {
+  it('removes an uploaded file by its key, including saved IDs', async () => {
     const { uploadFile, calls } = deferredUploadFile();
     const { store, values } = setup(uploadFile, { doc: ['file_saved'] });
 
@@ -248,7 +251,7 @@ describe(createFileUploadStore, () => {
 
     store.remove('doc', 'upload-1');
     expect(values['doc']).toStrictEqual(['file_saved']);
-    store.remove('doc', 'file_saved');
+    store.remove('doc', 'saved:file_saved');
     expect(values['doc']).toStrictEqual([]);
   });
 
@@ -256,7 +259,7 @@ describe(createFileUploadStore, () => {
     const uploadFile = vi.fn<UploadFile>().mockResolvedValue({ name: 'nope' } as unknown as { id: string });
     const { store, values } = setup(uploadFile);
 
-    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
     await flush();
     await flush();
 
@@ -267,7 +270,7 @@ describe(createFileUploadStore, () => {
     const uploadFile = vi.fn<UploadFile>().mockResolvedValue({ id: '' });
     const { store, values } = setup(uploadFile);
 
-    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
     await flush();
     await flush();
 
@@ -278,7 +281,7 @@ describe(createFileUploadStore, () => {
   it('marks a file as failed when uploadFile throws synchronously', () => {
     const { store, values } = setup(throwingUploadFile);
 
-    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
 
     expect(store.getFiles('doc', values['doc'])[0]).toMatchObject({ status: 'error', error: 'Bad config' });
     expect(store.isUploading()).toBeFalsy();
@@ -288,7 +291,7 @@ describe(createFileUploadStore, () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
     const { store, values } = setup(undefined);
 
-    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
 
     expect(store.getFiles('doc', values['doc'])[0]).toMatchObject({
       status: 'error',
@@ -301,8 +304,38 @@ describe(createFileUploadStore, () => {
   it('shows saved IDs as uploaded entries without a name', () => {
     const { store } = setup(undefined);
     expect(store.getFiles('doc', ['file_saved'])).toStrictEqual([
-      { key: 'file_saved', status: 'uploaded', id: 'file_saved' },
+      { key: 'saved:file_saved', status: 'uploaded', id: 'file_saved' },
     ]);
+  });
+
+  it('keeps a saved ID that looks like an upload key apart from a new upload', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { store, values } = setup(uploadFile, { doc: ['upload-1'] });
+
+    store.addFiles('doc', [makeFile('a.pdf')], config);
+    calls[0]!.resolve({ id: 'file_a' });
+    await flush();
+    expect(store.getFiles('doc', values['doc']).map((file) => file.key)).toStrictEqual(['saved:upload-1', 'upload-1']);
+
+    store.remove('doc', 'upload-1');
+    expect(values['doc']).toStrictEqual(['upload-1']);
+  });
+
+  it('marks every file as an error and warns when fileConfig is missing', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
+    const { uploadFile } = deferredUploadFile();
+    const { store, values } = setup(uploadFile);
+
+    expect(store.canAddMore('doc', values['doc'], undefined)).toBeTruthy();
+    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+
+    expect(uploadFile).not.toHaveBeenCalled();
+    expect(store.getFiles('doc', values['doc'])[0]).toMatchObject({
+      status: 'error',
+      error: 'This field is not configured for file uploads',
+    });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('has no valid fileConfig'));
+    warn.mockRestore();
   });
 
   it('resets: aborts uploads and notifies only when there is state', () => {
@@ -314,7 +347,7 @@ describe(createFileUploadStore, () => {
     store.reset();
     expect(listener).not.toHaveBeenCalled();
 
-    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
     store.reset();
     expect(calls[0]!.signal.aborted).toBeTruthy();
     expect(store.isUploading()).toBeFalsy();
@@ -323,13 +356,10 @@ describe(createFileUploadStore, () => {
 });
 
 describe(getFileFieldState, () => {
-  it('combines entries, limits and upload state for a field', () => {
+  it('combines entries and upload state for a field', () => {
     const { store } = setup(undefined);
-    expect(getFileFieldState(store, 'doc', ['file_saved'], { maxSize: 5_000_000, maxFiles: 2 })).toStrictEqual({
-      files: [{ key: 'file_saved', status: 'uploaded', id: 'file_saved' }],
-      acceptAttribute: 'application/pdf,image/png,image/jpeg',
-      limitsText: 'PDF, PNG or JPEG · up to 5 MB · up to 2 files',
-      limits: { accept: ['application/pdf', 'image/png', 'image/jpeg'], maxSize: 5_000_000, maxFiles: 2 },
+    expect(getFileFieldState(store, 'doc', ['file_saved'], { ...single, maxFiles: 2 })).toStrictEqual({
+      files: [{ key: 'saved:file_saved', status: 'uploaded', id: 'file_saved' }],
       canAddMore: true,
     });
   });

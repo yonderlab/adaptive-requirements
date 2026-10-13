@@ -136,27 +136,8 @@ export interface OptionsSource {
 }
 
 /**
- * MIME types a `file` field may accept, matching the upload endpoint's allowlist.
- *
- * Single source of truth for both the engine's schema validator (which
- * rejects any other `fileConfig.accept` entry) and downstream renderers.
- */
-export const FILE_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg'] as const;
-
-/** Literal union of accepted file MIME types. */
-export type FileMimeType = (typeof FILE_MIME_TYPES)[number];
-
-/** Largest file the upload endpoint accepts, in bytes. Also the default `fileConfig.maxSize`. */
-export const FILE_MAX_SIZE = 10_000_000;
-
-/** Upper bound for `fileConfig.maxFiles`, checked at publish. Not exported from the package. */
-export const FILE_MAX_FILES = 10;
-
-/** Default `fileConfig.maxFiles`. Not exported from the package: consumers use `resolveFileConfig`. */
-export const FILE_DEFAULT_MAX_FILES = 1;
-
-/**
- * File field configuration for accepted types, size limits, and file count.
+ * File field configuration: accepted types, size limit, and file count.
+ * Required on `type: 'file'` fields, with every key set; there are no defaults.
  *
  * A file field's answer is an array of file IDs returned by the upload
  * endpoint. The engine checks the answer's shape and `maxFiles`; `accept` and
@@ -164,12 +145,12 @@ export const FILE_DEFAULT_MAX_FILES = 1;
  * before upload and by the server on submit.
  */
 export interface FileConfig {
-  /** Accepted MIME types (exact match, no wildcards or extensions). Defaults to every type in `FILE_MIME_TYPES`. */
-  accept?: readonly FileMimeType[];
-  /** Maximum size per file in bytes, 1 to `FILE_MAX_SIZE`. Defaults to `FILE_MAX_SIZE`. */
-  maxSize?: number;
-  /** Maximum number of files, 1 to 10. Defaults to 1. */
-  maxFiles?: number;
+  /** Accepted MIME types, exact match (e.g. `application/pdf`). The publish check limits these to the upload endpoint's allowlist. */
+  accept: readonly string[];
+  /** Maximum size per file in bytes. */
+  maxSize: number;
+  /** Maximum number of files. */
+  maxFiles: number;
 }
 
 /**
@@ -229,7 +210,7 @@ export interface Field<TFieldId extends string = string> {
   defaultValue?: FieldValue;
   /** Whether the field is read-only */
   readOnly?: boolean;
-  /** File field configuration (accepted types, size limit, file count). Only valid on `type: 'file'`. */
+  /** File field configuration (accepted types, size limit, file count). Required on `type: 'file'`, not allowed elsewhere. */
   fileConfig?: FileConfig;
 }
 

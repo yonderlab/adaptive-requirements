@@ -1,6 +1,6 @@
 /* eslint-disable import/no-relative-parent-imports */
 import type { FieldFileProps, FieldInputProps, FieldRenderProps, UploadFile } from '../adaptive-form';
-import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type { Field, FileConfig, FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
@@ -21,8 +21,6 @@ function TestFileField({
   errors,
   isVisible,
   canAddMore,
-  acceptAttribute,
-  limitsText,
 }: FieldFileProps) {
   if (!isVisible) {
     return null;
@@ -35,12 +33,11 @@ function TestFileField({
           id={field.id}
           type="file"
           multiple
-          accept={acceptAttribute}
+          accept={field.fileConfig?.accept.join(',')}
           data-testid={`input-${field.id}`}
           onChange={(e) => addFiles([...(e.target.files ?? [])])}
         />
       )}
-      <p data-testid={`limits-${field.id}`}>{limitsText}</p>
       <ul>
         {files.map((file) => (
           <li key={file.key} data-testid={`file-${file.key}`} data-status={file.status}>
@@ -110,13 +107,25 @@ function deferredUploadFile() {
   return { uploadFile, calls };
 }
 
+const FILE_CONFIG: FileConfig = {
+  accept: ['application/pdf', 'image/png', 'image/jpeg'],
+  maxSize: 10_000_000,
+  maxFiles: 1,
+};
+
 function makeRequirements(
-  fileField: Partial<RequirementsObject['fields'][number]> = {},
+  { fileConfig, ...fileField }: Partial<Omit<Field, 'fileConfig'>> & { fileConfig?: Partial<FileConfig> } = {},
   flow?: RequirementsObject['flow'],
 ): RequirementsObject {
   const fields: RequirementsObject['fields'] = [
     { id: 'name', type: 'text' },
-    { id: 'doc', type: 'file', label: 'Proof of address', ...fileField },
+    {
+      id: 'doc',
+      type: 'file',
+      label: 'Proof of address',
+      fileConfig: { ...FILE_CONFIG, ...fileConfig },
+      ...fileField,
+    },
     { id: 'notes', type: 'text' },
   ];
   return flow ? { fields, flow } : { fields };
@@ -167,17 +176,23 @@ function ControlledForm({
 }
 
 describe('file fields — upload lifecycle', () => {
-  it('passes limits and accept to the component', () => {
-    render(
-      <ControlledForm
-        requirements={makeRequirements({
-          fileConfig: { accept: ['application/pdf'], maxSize: 5_000_000, maxFiles: 2 },
-        })}
-      />,
-    );
+  it('passes fileConfig to the component through field', () => {
+    render(<ControlledForm requirements={makeRequirements({ fileConfig: { accept: ['application/pdf'] } })} />);
 
-    expect(screen.getByTestId('limits-doc').textContent).toBe('PDF · up to 5 MB · up to 2 files');
     expect(screen.getByTestId('input-doc').getAttribute('accept')).toBe('application/pdf');
+  });
+
+  it('marks every file as an error when the field has no fileConfig', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
+    const { uploadFile } = deferredUploadFile();
+    const requirements: RequirementsObject = { fields: [{ id: 'doc', type: 'file' }] };
+    render(<ControlledForm requirements={requirements} uploadFile={uploadFile} />);
+
+    pickFiles('doc', [makeFile('a.pdf')]);
+
+    expect(uploadFile).not.toHaveBeenCalled();
+    expect(screen.getByTestId('file-error-upload-1').textContent).toBe('This field is not configured for file uploads');
+    warn.mockRestore();
   });
 
   it('uploads a picked file and writes its ID as the answer', async () => {
@@ -278,7 +293,7 @@ describe('file fields — upload lifecycle', () => {
       </AdaptiveFormProvider>,
     );
 
-    const entry = screen.getByTestId('file-file_saved');
+    const entry = screen.getByTestId('file-saved:file_saved');
     expect(entry.dataset['status']).toBe('uploaded');
     expect(entry.textContent).toContain('Uploaded file');
   });
@@ -302,6 +317,21 @@ describe('file fields — upload lifecycle', () => {
 
     expect(uploadFile).not.toHaveBeenCalled();
     expect(screen.queryByTestId('file-upload-1')).toBeNull();
+  });
+
+  it('ignores retry once the field is read-only', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { rerender } = render(<ControlledForm requirements={makeRequirements()} uploadFile={uploadFile} />);
+
+    pickFiles('doc', [makeFile('a.pdf')]);
+    await settle(calls[0]!, new Error('Network down'));
+
+    rerender(<ControlledForm requirements={makeRequirements({ readOnly: true })} uploadFile={uploadFile} />);
+    fireEvent.click(screen.getByText('Retry upload-1'));
+
+    // eslint-disable-next-line vitest/prefer-called-times
+    expect(uploadFile).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('error');
   });
 
   it('does not show a required error while a file uploads', async () => {
@@ -440,8 +470,8 @@ describe('file fields — writes against the latest form data', () => {
     const onData = vi.fn();
     const requirements: RequirementsObject = {
       fields: [
-        { id: 'doc', type: 'file' },
-        { id: 'id_card', type: 'file' },
+        { id: 'doc', type: 'file', fileConfig: FILE_CONFIG },
+        { id: 'id_card', type: 'file', fileConfig: FILE_CONFIG },
       ],
     };
     render(<ControlledForm requirements={requirements} uploadFile={uploadFile} onData={onData} />);
@@ -543,8 +573,7 @@ describe('file fields — renderField', () => {
     expect(seen['name']).toBeUndefined();
     expect(seen['doc']).toMatchObject({
       label: 'Proof of address',
-      files: [{ key: 'file_saved', status: 'uploaded', id: 'file_saved' }],
-      limitsText: 'PDF, PNG or JPEG · up to 10 MB',
+      files: [{ key: 'saved:file_saved', status: 'uploaded', id: 'file_saved' }],
       canAddMore: false,
     });
   });

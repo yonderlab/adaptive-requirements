@@ -7,7 +7,7 @@ import type {
   FileEntry,
   UploadFile,
 } from './index';
-import type { FileConfig, FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 import type { ReactNode } from 'react';
 
 import { expect, expectTypeOf, test } from 'vitest';
@@ -37,10 +37,16 @@ test('exports file upload types and the file component contract', () => {
   expectTypeOf<FileEntry['status']>().toEqualTypeOf<'uploading' | 'uploaded' | 'error'>();
   expectTypeOf<Extract<FileEntry, { status: 'uploaded' }>['id']>().toEqualTypeOf<string>();
   expectTypeOf<Extract<FileEntry, { status: 'error' }>['error']>().toEqualTypeOf<string>();
-  expectTypeOf<FieldFileProps['limits']>().toEqualTypeOf<Required<FileConfig>>();
+  expectTypeOf<FieldFileProps['addFiles']>().toEqualTypeOf<(files: File[]) => void>();
+  expectTypeOf<FieldFileProps['remove']>().toEqualTypeOf<(key: string) => void>();
+  expectTypeOf<FieldFileProps['retry']>().toEqualTypeOf<(key: string) => void>();
   expectTypeOf<FieldFileProps>().not.toHaveProperty('isUploading');
+  expectTypeOf<FieldFileProps>().not.toHaveProperty('limits');
+  expectTypeOf<FieldFileProps>().not.toHaveProperty('limitsText');
+  expectTypeOf<FieldFileProps>().not.toHaveProperty('acceptAttribute');
   expectTypeOf<NonNullable<AdaptiveFormProps<FieldId>['components']>['file']>().toEqualTypeOf<
     ((props: FieldFileProps<FieldId>) => ReactNode) | undefined
   >();
   expect(ReactPublicApi).not.toHaveProperty('FILE_MIME_TYPES');
+  expect(ReactPublicApi).not.toHaveProperty('resolveFileConfig');
 });

@@ -36,7 +36,7 @@ Required provider that owns `requirements` and step state. `AdaptiveForm` must b
 ## AdaptiveForm Component
 
 - Pluggable component system: `components` prop maps field type strings to render functions (typed as `(props) => ReactNode` for autocomplete, rendered via JSX internally to preserve component boundaries)
-- Four rendering interfaces: `FieldInputProps` (interactive fields), `FieldComputedProps` (`type: 'computed'`), `FieldNoticeProps` (`type: 'notice'` — carries required `variant`, resolved `description`, optional resolved `heading`), and `FieldFileProps` (`type: 'file'` — upload entries and `addFiles` / `remove` / `retry`; no `value` / `onChange`). The renderer dispatches on `field.type`: `'computed'`, `'notice'` and `'file'` go through their dedicated branches; everything else is treated as an input.
+- Four rendering interfaces: `FieldInputProps` (interactive fields), `FieldComputedProps` (`type: 'computed'`), `FieldNoticeProps` (`type: 'notice'` — carries required `variant`, resolved `description`, optional resolved `heading`), and `FieldFileProps` (`type: 'file'` — upload entries and `addFiles` / `remove` / `retry` function props, all ignored on read-only fields; limits come from `field.fileConfig`; no `value` / `onChange`). The renderer dispatches on `field.type`: `'computed'`, `'notice'` and `'file'` go through their dedicated branches; everything else is treated as an input.
 - `uploadFile` prop is the file transport; `onUploadStateChange` reports aggregate upload state. Next is blocked while a file in the step uploads. `renderField` receives `file` (the `FieldFileProps`) for file fields.
 - `renderField` prop for full per-field rendering control
 - `renderStepNavigation` prop for custom step navigation UI

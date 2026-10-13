@@ -1,26 +1,32 @@
-import type { FieldFileProps, FileEntry, UploadFile } from './file-upload-types';
-import type { FieldValue, FileConfig, FileMimeType } from '@kotaio/adaptive-requirements-engine';
-
-import { resolveFileConfig } from '@kotaio/adaptive-requirements-engine';
+import type { FieldFileState, FileEntry, UploadFile } from './file-upload-types';
+import type { FieldValue, FileConfig } from '@kotaio/adaptive-requirements-engine';
 
 import { isEmptyValue } from './is-empty-value';
 
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
-const FILE_TYPE_NAMES: Record<FileMimeType, string> = {
-  'application/pdf': 'PDF',
-  'image/png': 'PNG',
-  'image/jpeg': 'JPEG',
-};
-
 export const UPLOAD_FAILED_MESSAGE = 'Upload failed';
 export const UPLOADS_UNAVAILABLE_MESSAGE = 'File uploads are not available';
+export const FILE_NOT_CONFIGURED_MESSAGE = 'This field is not configured for file uploads';
 
-/** A field's `fileConfig` with defaults applied (see `resolveFileConfig`). */
-type FileLimits = Required<FileConfig>;
+/**
+ * `fileConfig` is required on file fields at publish, but AdaptiveForm doesn't run the
+ * publish check, so an unvalidated schema may lack it. Such a field accepts no files.
+ */
+export function isFileConfig(value: unknown): value is FileConfig {
+  if (value === null || typeof value !== 'object') {
+    return false;
+  }
+  const { accept, maxSize, maxFiles } = value as Record<string, unknown>;
+  return Array.isArray(accept) && typeof maxSize === 'number' && typeof maxFiles === 'number';
+}
 
-export function formatFileTypes(accept: readonly FileMimeType[]): string {
-  const names = accept.map((type) => FILE_TYPE_NAMES[type] ?? type);
+/** "application/pdf" → "PDF". Names come from the MIME subtype, so new types need no mapping. */
+const fileTypeName = (type: string) => (type.split('/')[1] ?? type).toUpperCase();
+
+/** ["application/pdf", "image/png", "image/jpeg"] → "PDF, PNG or JPEG" */
+export function formatFileTypes(accept: readonly string[]): string {
+  const names = accept.map(fileTypeName);
   if (names.length <= 1) {
     return names.join('');
   }
@@ -44,25 +50,12 @@ export function formatMaxFilesMessage(maxFiles: number): string {
   return `At most ${maxFiles} ${maxFiles === 1 ? 'file' : 'files'} can be uploaded`;
 }
 
-export function getAcceptAttribute(limits: FileLimits): string {
-  return limits.accept.join(',');
-}
-
-/** "PDF, PNG or JPEG · up to 5 MB · up to 2 files" — the file count is left out when only one file is allowed. */
-export function getLimitsText(limits: FileLimits): string {
-  const parts = [formatFileTypes(limits.accept), `up to ${formatFileSize(limits.maxSize)}`];
-  if (limits.maxFiles > 1) {
-    parts.push(`up to ${limits.maxFiles} files`);
+export function checkFile(file: File, fileConfig: FileConfig): string | null {
+  if (!fileConfig.accept.includes(file.type)) {
+    return `File must be ${formatFileTypes(fileConfig.accept)}`;
   }
-  return parts.join(' · ');
-}
-
-export function checkFile(file: File, limits: FileLimits): string | null {
-  if (!(limits.accept as readonly string[]).includes(file.type)) {
-    return `File must be ${formatFileTypes(limits.accept)}`;
-  }
-  if (file.size > limits.maxSize) {
-    return `File must be ${formatFileSize(limits.maxSize)} or smaller`;
+  if (file.size > fileConfig.maxSize) {
+    return `File must be ${formatFileSize(fileConfig.maxSize)} or smaller`;
   }
   return null;
 }
@@ -104,6 +97,9 @@ interface FieldUploads {
   pending: PendingFile[];
   uploaded: Map<string, UploadedFile>;
 }
+
+/** Key for a saved ID from `defaultValue`. Prefixed so it can't collide with an upload key (`upload-N`). */
+const savedKey = (id: string) => `saved:${id}`;
 
 /** Order an ID was added in; IDs not uploaded in this session (saved answers) come first. */
 const seqOf = (uploads: FieldUploads, id: string) => uploads.uploaded.get(id)?.seq ?? -1;
@@ -232,11 +228,13 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
     if (!options.getUploadFile()) {
       return { ...base, status: 'error', error: UPLOADS_UNAVAILABLE_MESSAGE, passedChecks: false };
     }
-    const limits = resolveFileConfig(fileConfig);
+    if (!isFileConfig(fileConfig)) {
+      return { ...base, status: 'error', error: FILE_NOT_CONFIGURED_MESSAGE, passedChecks: false };
+    }
     const error =
-      checkFile(entry.file, limits) ??
-      (countSlots(fieldId, options.getValue(fieldId), entry.key) >= limits.maxFiles
-        ? formatMaxFilesMessage(limits.maxFiles)
+      checkFile(entry.file, fileConfig) ??
+      (countSlots(fieldId, options.getValue(fieldId), entry.key) >= fileConfig.maxFiles
+        ? formatMaxFilesMessage(fileConfig.maxFiles)
         : null);
     if (error) {
       return { ...base, status: 'error', error, passedChecks: false };
@@ -252,6 +250,12 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
       console.warn(
         `[AdaptiveForm] No "uploadFile" provided, so files for field "${fieldId}" cannot be uploaded. ` +
           `Pass an uploadFile function to AdaptiveForm.`,
+      );
+    }
+    if (isDev && !isFileConfig(fileConfig)) {
+      console.warn(
+        `[AdaptiveForm] File field "${fieldId}" has no valid fileConfig, so it accepts no files. ` +
+          `Set fileConfig with accept, maxSize and maxFiles.`,
       );
     }
     const uploads = getField(fieldId);
@@ -295,9 +299,9 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
       return;
     }
 
-    // An uploaded file: hydrated entries use the ID as their key.
+    // An uploaded file: this session's uploads keep their upload key, saved IDs use savedKey(id).
     const ids = toFileIds(options.getValue(fieldId));
-    const id = ids.find((candidate) => candidate === key || uploads?.uploaded.get(candidate)?.key === key);
+    const id = ids.find((candidate) => savedKey(candidate) === key || uploads?.uploaded.get(candidate)?.key === key);
     if (id === undefined) {
       return;
     }
@@ -315,7 +319,7 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
       const known = uploads?.uploaded.get(id);
       const entry: FileEntry = known
         ? { key: known.key, status: 'uploaded', id, name: known.name, size: known.size }
-        : { key: id, status: 'uploaded', id };
+        : { key: savedKey(id), status: 'uploaded', id };
       return { seq: known?.seq ?? -1, entry };
     });
     const pendingEntries = (uploads?.pending ?? []).map((pending) => {
@@ -348,7 +352,9 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
 
   return {
     getFiles,
-    canAddMore: (fieldId, value, fileConfig) => countSlots(fieldId, value) < resolveFileConfig(fileConfig).maxFiles,
+    // Without a valid fileConfig the picker stays available, so picked files show why they were refused.
+    canAddMore: (fieldId, value, fileConfig) =>
+      !isFileConfig(fileConfig) || countSlots(fieldId, value) < fileConfig.maxFiles,
     isFieldUploading,
     isUploading: () => [...fields.keys()].some((fieldId) => isFieldUploading(fieldId)),
     addFiles,
@@ -382,13 +388,9 @@ export function getFileFieldState(
   fieldId: string,
   value: FieldValue,
   fileConfig: FileConfig | undefined,
-): Pick<FieldFileProps, 'files' | 'acceptAttribute' | 'limitsText' | 'limits' | 'canAddMore'> {
-  const limits = resolveFileConfig(fileConfig);
+): Pick<FieldFileState, 'files' | 'canAddMore'> {
   return {
     files: store.getFiles(fieldId, value),
-    acceptAttribute: getAcceptAttribute(limits),
-    limitsText: getLimitsText(limits),
-    limits,
     canAddMore: store.canAddMore(fieldId, value, fileConfig),
   };
 }

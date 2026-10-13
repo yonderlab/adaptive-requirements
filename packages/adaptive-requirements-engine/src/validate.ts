@@ -1,10 +1,16 @@
 import type { DatasetItem, RequirementsObject } from './types';
 
 import { isReservedOperationName } from './operations';
-import { FILE_MAX_FILES, FILE_MAX_SIZE, FILE_MIME_TYPES, NOTICE_VARIANTS } from './types';
+import { NOTICE_VARIANTS } from './types';
 
 const NOTICE_VARIANT_SET = new Set<string>(NOTICE_VARIANTS);
-const FILE_MIME_TYPE_SET = new Set<string>(FILE_MIME_TYPES);
+
+/** MIME types a file field may accept: the upload endpoint's allowlist. */
+const FILE_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
+const FILE_MIME_TYPE_SET = new Set(FILE_MIME_TYPES);
+/** Largest file the upload endpoint accepts, in bytes. */
+const FILE_MAX_SIZE = 10_000_000;
+const FILE_MAX_FILES = 10;
 
 /**
  * A single validation error with path and message
@@ -291,7 +297,7 @@ function collectFieldRules(field: Record<string, unknown>, index: number): RuleE
 /**
  * Check `fileConfig` and file-field constraints for a single field.
  *
- * - `fileConfig` is only allowed on `type: 'file'`
+ * - `fileConfig` is required on `type: 'file'`, with `accept`, `maxSize` and `maxFiles` all set, and not allowed elsewhere
  * - `accept` lists exact MIME types from `FILE_MIME_TYPES`
  * - `maxSize` is an integer from 1 to `FILE_MAX_SIZE`; `maxFiles` from 1 to `FILE_MAX_FILES`
  * - file fields carry no `fileConfig.multiple` and no `validation.rules`
@@ -317,6 +323,10 @@ function validateFileField(field: Record<string, unknown>, index: number): Valid
   }
 
   if (fileConfig === undefined) {
+    errors.push({
+      path: `${prefix}.fileConfig`,
+      message: 'File fields require fileConfig with accept, maxSize and maxFiles',
+    });
     return errors;
   }
   if (!isObject(fileConfig)) {
@@ -325,31 +335,26 @@ function validateFileField(field: Record<string, unknown>, index: number): Valid
   }
 
   const accept = fileConfig['accept'];
-  if (accept !== undefined) {
-    const allowed = FILE_MIME_TYPES.map((t) => `"${t}"`).join(', ');
-    if (!Array.isArray(accept) || accept.length === 0) {
-      errors.push({
-        path: `${prefix}.fileConfig.accept`,
-        message: `Expected accept to be a non-empty array of MIME types: ${allowed}`,
-      });
-    } else {
-      for (let j = 0; j < accept.length; j++) {
-        const type = accept[j] as unknown;
-        if (!isString(type) || !FILE_MIME_TYPE_SET.has(type)) {
-          errors.push({
-            path: `${prefix}.fileConfig.accept[${j}]`,
-            message: `Unsupported file type ${JSON.stringify(type)}. Must be one of: ${allowed}`,
-          });
-        }
+  const allowed = FILE_MIME_TYPES.map((t) => `"${t}"`).join(', ');
+  if (!Array.isArray(accept) || accept.length === 0) {
+    errors.push({
+      path: `${prefix}.fileConfig.accept`,
+      message: `Expected accept to be a non-empty array of MIME types: ${allowed}`,
+    });
+  } else {
+    for (let j = 0; j < accept.length; j++) {
+      const type = accept[j] as unknown;
+      if (!isString(type) || !FILE_MIME_TYPE_SET.has(type)) {
+        errors.push({
+          path: `${prefix}.fileConfig.accept[${j}]`,
+          message: `Unsupported file type ${JSON.stringify(type)}. Must be one of: ${allowed}`,
+        });
       }
     }
   }
 
   const maxSize = fileConfig['maxSize'];
-  if (
-    maxSize !== undefined &&
-    !(Number.isInteger(maxSize) && (maxSize as number) >= 1 && (maxSize as number) <= FILE_MAX_SIZE)
-  ) {
+  if (!(Number.isInteger(maxSize) && (maxSize as number) >= 1 && (maxSize as number) <= FILE_MAX_SIZE)) {
     errors.push({
       path: `${prefix}.fileConfig.maxSize`,
       message: `Expected maxSize to be an integer from 1 to ${FILE_MAX_SIZE} (bytes)`,
@@ -357,10 +362,7 @@ function validateFileField(field: Record<string, unknown>, index: number): Valid
   }
 
   const maxFiles = fileConfig['maxFiles'];
-  if (
-    maxFiles !== undefined &&
-    !(Number.isInteger(maxFiles) && (maxFiles as number) >= 1 && (maxFiles as number) <= FILE_MAX_FILES)
-  ) {
+  if (!(Number.isInteger(maxFiles) && (maxFiles as number) >= 1 && (maxFiles as number) <= FILE_MAX_FILES)) {
     errors.push({
       path: `${prefix}.fileConfig.maxFiles`,
       message: `Expected maxFiles to be an integer from 1 to ${FILE_MAX_FILES}`,

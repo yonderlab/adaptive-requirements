@@ -1,11 +1,12 @@
 // eslint-disable-next-line import/no-relative-parent-imports
-import type { FieldFileProps, UploadFile } from '../core/file-upload-types';
+import type { UploadFile } from '../core/file-upload-types';
 import type { StepNavigationProps } from './adaptive-form-context';
 import type {
   AdaptiveFormEmits,
   AdaptiveFormProps,
   AdaptiveFormSlots,
   FieldComputedProps,
+  FieldFileBindings,
   FieldInputBindings,
   FieldNoticeProps,
   FieldRenderProps,
@@ -495,7 +496,7 @@ export const AdaptiveForm = defineComponent({
       );
     };
 
-    const getFileProps = (field: Field, fieldState: FieldState, errors: string[]): FieldFileProps => ({
+    const getFileBindings = (field: Field, fieldState: FieldState, errors: string[]): FieldFileBindings => ({
       field,
       label: fieldState.label,
       description: resolveLabel(field.description),
@@ -504,21 +505,26 @@ export const AdaptiveForm = defineComponent({
       isReadOnly: fieldState.isReadOnly,
       errors,
       ...getFileFieldState(fileUploads, field.id, fieldState.value, field.fileConfig),
-      addFiles: (files: File[]) => {
+      onAddFiles: (files: File[]) => {
         if (fieldState.isReadOnly) {
           return;
         }
         // Not touched: picking a file isn't an answer yet; the upload landing touches the field
         fileUploads.addFiles(field.id, files, field.fileConfig);
       },
-      remove: (key: string) => {
+      onRemove: (key: string) => {
         if (fieldState.isReadOnly) {
           return;
         }
         markFieldTouched(field.id);
         fileUploads.remove(field.id, key);
       },
-      retry: (key: string) => fileUploads.retry(field.id, key, field.fileConfig),
+      onRetry: (key: string) => {
+        if (fieldState.isReadOnly) {
+          return;
+        }
+        fileUploads.retry(field.id, key, field.fileConfig);
+      },
     });
 
     const renderFieldContent = (field: Field): VNode | null => {
@@ -530,7 +536,7 @@ export const AdaptiveForm = defineComponent({
       const displayErrors = isAwaitingUpload(fileUploads, field.id, fieldState.value)
         ? []
         : getDisplayErrors(field.id, mergedErrors);
-      const fileProps = field.type === 'file' ? getFileProps(field, fieldState, displayErrors) : undefined;
+      const fileBindings = field.type === 'file' ? getFileBindings(field, fieldState, displayErrors) : undefined;
 
       const fieldSlot = slots['field'];
       if (fieldSlot) {
@@ -545,7 +551,7 @@ export const AdaptiveForm = defineComponent({
           'onUpdate:modelValue': (value: FieldValue) => handleFieldChange(field.id, value),
           onBlur: () => handleFieldBlur(field.id),
           components: props.components,
-          ...(fileProps ? { file: fileProps } : {}),
+          ...(fileBindings ? { file: fileBindings } : {}),
         };
         const slotResult = fieldSlot(renderProps);
         return Array.isArray(slotResult) ? h('div', { key: field.id }, slotResult) : slotResult;
@@ -590,8 +596,8 @@ export const AdaptiveForm = defineComponent({
         return h(component, { key: field.id, ...computedProps });
       }
 
-      if (fileProps) {
-        return h(component, { key: field.id, ...fileProps });
+      if (fileBindings) {
+        return h(component, { key: field.id, ...fileBindings });
       }
 
       const inputBindings: FieldInputBindings = {

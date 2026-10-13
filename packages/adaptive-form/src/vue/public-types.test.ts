@@ -9,6 +9,8 @@ import type {
   AsyncFieldState,
   AsyncValidationState,
   FieldComputedProps,
+  FieldFileBindings,
+  FieldFileEmits,
   FieldFileProps,
   FieldInputBindings,
   FieldInputEmits,
@@ -25,13 +27,7 @@ import type {
   UseAsyncValidationOptions,
   UseAsyncValidationReturn,
 } from './index';
-import type {
-  FieldValue,
-  FileConfig,
-  FormData,
-  NoticeField,
-  RequirementsObject,
-} from '@kotaio/adaptive-requirements-engine';
+import type { FieldValue, FormData, NoticeField, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 import type { Component, ComputedRef } from 'vue';
 
 import { readFileSync } from 'node:fs';
@@ -198,12 +194,26 @@ describe('vue public API type contracts', () => {
     expectTypeOf<FileEntry['status']>().toEqualTypeOf<'uploading' | 'uploaded' | 'error'>();
     expectTypeOf<Extract<FileEntry, { status: 'uploaded' }>['id']>().toEqualTypeOf<string>();
     expectTypeOf<Extract<FileEntry, { status: 'error' }>['error']>().toEqualTypeOf<string>();
-    expectTypeOf<FieldFileProps['limits']>().toEqualTypeOf<Required<FileConfig>>();
     expectTypeOf<FieldFileProps>().not.toHaveProperty('isUploading');
+    expectTypeOf<FieldFileProps>().not.toHaveProperty('limits');
+    expectTypeOf<FieldFileProps>().not.toHaveProperty('limitsText');
+    expectTypeOf<FieldFileProps>().not.toHaveProperty('acceptAttribute');
+    // Actions are emits, the same as input components' update:modelValue / blur
+    expectTypeOf<FieldFileProps>().not.toHaveProperty('addFiles');
+    expectTypeOf<FieldFileEmits>().toEqualTypeOf<{
+      addFiles: [files: File[]];
+      remove: [key: string];
+      retry: [key: string];
+    }>();
+    expectTypeOf<FieldFileBindings['onAddFiles']>().toEqualTypeOf<(files: File[]) => void>();
+    expectTypeOf<FieldFileBindings['onRemove']>().toEqualTypeOf<(key: string) => void>();
+    expectTypeOf<FieldFileBindings['onRetry']>().toEqualTypeOf<(key: string) => void>();
     expectTypeOf<AdaptiveFormComponents<CustomFieldId>['file']>().toEqualTypeOf<
       Component<FieldFileProps<CustomFieldId>> | undefined
     >();
-    expectTypeOf<FieldRenderProps<CustomFieldId>['file']>().toEqualTypeOf<FieldFileProps<CustomFieldId> | undefined>();
+    expectTypeOf<FieldRenderProps<CustomFieldId>['file']>().toEqualTypeOf<
+      FieldFileBindings<CustomFieldId> | undefined
+    >();
     expect(VuePublicApi).not.toHaveProperty('FILE_MIME_TYPES');
   });
 
