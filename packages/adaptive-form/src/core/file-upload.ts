@@ -3,6 +3,8 @@ import type { FieldValue, FileConfig, FileMimeType } from '@kotaio/adaptive-requ
 
 import { FILE_DEFAULT_MAX_FILES, FILE_MAX_SIZE, FILE_MIME_TYPES } from '@kotaio/adaptive-requirements-engine';
 
+import { isEmptyValue } from './is-empty-value';
+
 const isDev = typeof process !== 'undefined' && process.env['NODE_ENV'] !== 'production';
 
 const FILE_TYPE_NAMES: Record<FileMimeType, string> = {
@@ -368,6 +370,18 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
     },
     getVersion: () => version,
   };
+}
+
+/**
+ * True while a file field's answer is empty but a file is uploading. Its only error then is
+ * "required", which the upload is about to fix, so renderers hold its errors back.
+ */
+export function isAwaitingUpload(
+  store: Pick<FileUploadStore, 'isFieldUploading'>,
+  fieldId: string,
+  value: FieldValue,
+): boolean {
+  return isEmptyValue(value) && store.isFieldUploading(fieldId);
 }
 
 export function getFileFieldState(

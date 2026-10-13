@@ -147,6 +147,7 @@ function ControlledForm({
   onData?: (data: FormData) => void;
   uploadFile?: UploadFile;
   onUploadStateChange?: (isUploading: boolean) => void;
+  showAllErrors?: boolean;
 }) {
   const [data, setData] = useState<FormData>(initialData);
   return (
@@ -329,6 +330,57 @@ describe('file fields — upload lifecycle', () => {
 
     expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
   });
+
+  it('does not show a required error while a file uploads into a touched field, and shows it if the upload fails', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    render(
+      <ControlledForm requirements={makeRequirements({ validation: { required: true } })} uploadFile={uploadFile} />,
+    );
+
+    pickFiles('doc', [makeFile('a.pdf')]);
+    await settle(calls[0]!, { id: 'file_a' });
+    fireEvent.click(screen.getByText('Remove upload-1'));
+    expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+
+    pickFiles('doc', [makeFile('b.pdf')]);
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+
+    await settle(calls[1]!, new Error('Upload failed'));
+    expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+  });
+
+  it('does not show a required error while a file uploads with showAllErrors', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    render(
+      <ControlledForm
+        requirements={makeRequirements({ validation: { required: true } })}
+        uploadFile={uploadFile}
+        showAllErrors
+      />,
+    );
+    expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+
+    pickFiles('doc', [makeFile('a.pdf')]);
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+
+    await settle(calls[0]!, new Error('Upload failed'));
+    expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+  });
+
+  it('aborts uploads still running when the form unmounts and ignores their results', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const onData = vi.fn();
+    const { unmount } = render(
+      <ControlledForm requirements={makeRequirements()} uploadFile={uploadFile} onData={onData} />,
+    );
+
+    pickFiles('doc', [makeFile('a.pdf')]);
+    unmount();
+    expect(calls[0]!.signal.aborted).toBeTruthy();
+
+    await settle(calls[0]!, { id: 'file_a' });
+    expect(onData).not.toHaveBeenCalled();
+  });
 });
 
 describe('file fields — writes against the latest form data', () => {
@@ -447,8 +499,8 @@ describe('file fields — blocking', () => {
     expect(screen.getByTestId('field-doc')).toBeTruthy();
     expect(screen.queryByTestId('error-doc')).toBeNull();
 
+    // Next touched the field, so the error shows as soon as the upload fails
     await settle(calls[0]!, new Error('Upload failed'));
-    fireEvent.click(screen.getByText('Next'));
     expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
   });
 

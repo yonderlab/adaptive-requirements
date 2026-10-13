@@ -46,7 +46,7 @@ import {
 } from 'vue';
 
 // eslint-disable-next-line import/no-relative-parent-imports
-import { getFileFieldState } from '../core/file-upload';
+import { getFileFieldState, isAwaitingUpload } from '../core/file-upload';
 // eslint-disable-next-line import/no-relative-parent-imports
 import { isEmptyValue } from '../core/is-empty-value';
 // eslint-disable-next-line import/no-relative-parent-imports
@@ -405,9 +405,8 @@ export const AdaptiveForm = defineComponent({
 
     const handleNext = () => {
       if (!currentStepIsValid.value) {
-        // A field still uploading is left untouched: its answer is empty until the upload lands.
         const visibleFieldIds = currentStepFields.value
-          .filter((field) => getFieldState(field.id).isVisible && !fileUploads.isFieldUploading(field.id))
+          .filter((field) => getFieldState(field.id).isVisible)
           .map((field) => field.id);
         markFieldsTouched(visibleFieldIds);
         return;
@@ -509,8 +508,8 @@ export const AdaptiveForm = defineComponent({
         if (fieldState.isReadOnly) {
           return;
         }
-        // Not touched here: the answer only gains an ID when the upload lands (which touches the
-        // field), so touching now would show "required" for the whole upload.
+        // Not touched here: picking a file isn't an answer yet. The field is touched when an
+        // upload lands (through its value change) or a file is removed.
         fileUploads.addFiles(field.id, files, field.fileConfig);
       },
       remove: (key: string) => {
@@ -529,7 +528,10 @@ export const AdaptiveForm = defineComponent({
       const fieldAsyncErrors = asyncFieldState?.errors ?? [];
       const fieldIsValidating = asyncFieldState?.isValidating ?? false;
       const mergedErrors = [...fieldState.errors, ...fieldAsyncErrors];
-      const displayErrors = getDisplayErrors(field.id, mergedErrors);
+      // A file field waiting on its first upload is empty, so "required" would show until the upload lands
+      const displayErrors = isAwaitingUpload(fileUploads, field.id, fieldState.value)
+        ? []
+        : getDisplayErrors(field.id, mergedErrors);
       const fileProps = field.type === 'file' ? getFileProps(field, fieldState, displayErrors) : undefined;
 
       const fieldSlot = slots['field'];

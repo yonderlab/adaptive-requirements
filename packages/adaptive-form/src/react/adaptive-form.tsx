@@ -27,7 +27,7 @@ import {
 import React, { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // eslint-disable-next-line import/no-relative-parent-imports
-import { getFileFieldState } from '../core/file-upload';
+import { getFileFieldState, isAwaitingUpload } from '../core/file-upload';
 // eslint-disable-next-line import/no-relative-parent-imports
 import { isEmptyValue } from '../core/is-empty-value';
 // eslint-disable-next-line import/no-relative-parent-imports
@@ -567,11 +567,8 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
 
   const handleNext = useCallback(() => {
     if (!currentStepIsValid) {
-      // Reveal errors for all visible fields in current step. A field still uploading is left
-      // untouched: its answer is empty until the upload lands, so touching it would flash "required".
-      const visibleFieldIds = currentStepFields
-        .filter((f) => getFieldState(f.id).isVisible && !fileUploads.isFieldUploading(f.id))
-        .map((f) => f.id);
+      // Reveal errors for all visible fields in current step
+      const visibleFieldIds = currentStepFields.filter((f) => getFieldState(f.id).isVisible).map((f) => f.id);
       markFieldsTouched(visibleFieldIds);
       return;
     }
@@ -584,7 +581,6 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     currentStepIsValid,
     currentStepFields,
     getFieldState,
-    fileUploads,
     markFieldsTouched,
     setCurrentStepId,
     markStepVisited,
@@ -682,8 +678,8 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
         if (fieldState.isReadOnly) {
           return;
         }
-        // Not touched here: the answer only gains an ID when the upload lands (which touches the
-        // field), so touching now would show "required" for the whole upload.
+        // Not touched here: picking a file isn't an answer yet. The field is touched when an
+        // upload lands (through its value change) or a file is removed.
         fileUploads.addFiles(field.id, files, field.fileConfig);
       },
       remove: (key: string) => {
@@ -705,7 +701,10 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       const fieldAsyncErrors = asyncFieldState?.errors ?? [];
       const fieldIsValidating = asyncFieldState?.isValidating ?? false;
       const mergedErrors = [...fieldState.errors, ...fieldAsyncErrors];
-      const displayErrors = getDisplayErrors(field.id, mergedErrors);
+      // A file field waiting on its first upload is empty, so "required" would show until the upload lands
+      const displayErrors = isAwaitingUpload(fileUploads, field.id, fieldState.value)
+        ? []
+        : getDisplayErrors(field.id, mergedErrors);
       const fileProps = field.type === 'file' ? getFileProps(field, fieldState, displayErrors) : undefined;
 
       if (renderField) {
@@ -813,6 +812,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       handleFieldBlur,
       getDisplayErrors,
       getFileProps,
+      fileUploads,
       touchedFields,
       asyncState,
     ],

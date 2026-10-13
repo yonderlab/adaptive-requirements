@@ -41,7 +41,11 @@ export function useFileUploads(options: UseFileUploadsOptions): UseFileUploadsRe
   const unsubscribe = store.subscribe(() => {
     version.value = store.getVersion();
   });
-  onScopeDispose(unsubscribe);
+  onScopeDispose(() => {
+    unsubscribe();
+    // Abort uploads still running on unmount, so they can't write to a form that's gone
+    store.reset();
+  });
 
   const track = () => version.value;
 

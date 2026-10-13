@@ -4,7 +4,7 @@ import type { FileUploadStore } from '../core/file-upload';
 import type { UploadFile } from '../core/file-upload-types';
 import type { FieldValue } from '@kotaio/adaptive-requirements-engine';
 
-import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 // eslint-disable-next-line import/no-relative-parent-imports
 import { createFileUploadStore } from '../core/file-upload';
@@ -43,6 +43,9 @@ export function useFileUploads(options: UseFileUploadsOptions): UseFileUploadsRe
       getUploadFile: () => optionsRef.current.uploadFile,
     }),
   );
+
+  // Abort uploads still running on unmount, so they can't write to a form that's gone
+  useEffect(() => () => store.reset(), [store]);
 
   const version = useSyncExternalStore(store.subscribe, store.getVersion, store.getVersion);
 
