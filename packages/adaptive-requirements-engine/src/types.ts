@@ -158,7 +158,7 @@ export const FILE_DEFAULT_MAX_FILES = 1;
 /**
  * File field configuration for accepted types, size limits, and file count.
  *
- * A file field's answer is an array of `file_` IDs returned by the upload
+ * A file field's answer is an array of file IDs returned by the upload
  * endpoint. The engine checks the answer's shape and `maxFiles`; `accept` and
  * `maxSize` describe the files themselves and are checked by the renderer
  * before upload and by the server on submit.

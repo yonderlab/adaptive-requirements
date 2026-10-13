@@ -278,6 +278,18 @@ describe(createFileUploadStore, () => {
     expect(store.getFiles('doc', values['doc'])[0]).toMatchObject({ status: 'error', error: 'Upload failed' });
   });
 
+  it('marks a response with an empty id as a failed upload', async () => {
+    const uploadFile = vi.fn<UploadFile>().mockResolvedValue({ id: '' });
+    const { store, values } = setup(uploadFile);
+
+    store.addFiles('doc', [makeFile('a.pdf')], undefined);
+    await flush();
+    await flush();
+
+    expect(store.getFiles('doc', values['doc'])[0]).toMatchObject({ status: 'error', error: 'Upload failed' });
+    expect(values['doc']).toBeUndefined();
+  });
+
   it('marks a file as failed when uploadFile throws synchronously', () => {
     const { store, values } = setup(throwingUploadFile);
 

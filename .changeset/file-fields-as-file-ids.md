@@ -3,7 +3,7 @@
 '@kotaio/adaptive-form': major
 ---
 
-File fields: a `type: 'file'` answer is now an array of `file_` IDs from the upload endpoint, and `@kotaio/adaptive-form` runs the upload itself through a new `uploadFile` prop.
+File fields: a `type: 'file'` answer is now an array of file IDs from the upload endpoint, and `@kotaio/adaptive-form` runs the upload itself through a new `uploadFile` prop.
 
 **Breaking schema change** (engine):
 
@@ -14,7 +14,7 @@ File fields: a `type: 'file'` answer is now an array of `file_` IDs from the upl
 
 **Breaking answer format** (engine):
 
-- A file answer must be an array of unique strings starting with `file_`, e.g. `["file_5b1e…"]`. The old `"name|size;name|size"` string now fails with "Must be a list of file IDs". More entries than `maxFiles` fail with "At most N files can be uploaded".
+- A file answer must be an array of unique, non-empty file ID strings, e.g. `["file_5b1e…"]`. The engine doesn't check the ID's format. The old `"name|size;name|size"` string now fails with "Must be a list of file IDs". More entries than `maxFiles` fail with "At most N files can be uploaded".
 - `checkField` no longer checks file type or size, which can't be read from an ID. Renderers check them before upload, and the server checks them on submit.
 
 **Breaking component contract** (adaptive-form):

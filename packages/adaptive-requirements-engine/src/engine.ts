@@ -23,8 +23,6 @@ import { isSupportedCountry, isValidPhoneNumber } from 'libphonenumber-js/min';
 import { isReservedOperationName } from './operations';
 import { FILE_DEFAULT_MAX_FILES } from './types';
 
-const FILE_ID_PREFIX = 'file_';
-
 /**
  * Context object for rule evaluation
  * Supports multiple path prefixes: data.*, answers.*, and direct access
@@ -302,9 +300,9 @@ export function runValidationRules(
 }
 
 /** @internal */
-/* File answer validation — a file field's answer is an array of unique `file_` IDs, at most `maxFiles` long */
+/* File answer validation — a file field's answer is an array of unique, non-empty file IDs, at most `maxFiles` long */
 function validateFileAnswer(value: FieldValue, maxFiles: number): string | null {
-  if (!Array.isArray(value) || !value.every((id) => typeof id === 'string' && id.startsWith(FILE_ID_PREFIX))) {
+  if (!Array.isArray(value) || !value.every((id) => typeof id === 'string' && id !== '')) {
     return 'Must be a list of file IDs';
   }
   if (new Set(value).size !== value.length) {
@@ -558,7 +556,7 @@ export function checkField<TFieldId extends string = string>(
     }
 
     if (!empty) {
-      // File fields: answer must be unique `file_` IDs, at most maxFiles of them
+      // File fields: answer must be unique file IDs, at most maxFiles of them
       if (field.type === 'file') {
         const fileError = validateFileAnswer(fieldValue, field.fileConfig?.maxFiles ?? FILE_DEFAULT_MAX_FILES);
         if (fileError) {

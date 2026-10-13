@@ -276,7 +276,7 @@ const errors = runCustomValidators(
 
 #### File fields
 
-A `type: 'file'` field's answer is an array of `file_` IDs returned by the upload endpoint, even when it holds one file. File bytes never pass through the engine.
+A `type: 'file'` field's answer is an array of file IDs returned by the upload endpoint, even when it holds one file. File bytes never pass through the engine.
 
 ```ts
 const field = {
@@ -294,7 +294,7 @@ const field = {
 checkField(requirements, 'proof_of_address', { proof_of_address: ['file_5b1e…', 'file_a3c1…'] });
 ```
 
-`checkField` checks that the answer is an array of unique `file_` IDs with at most `maxFiles` entries (default 1). `required` means at least one. `accept` and `maxSize` can't be checked from an ID: renderers check them before upload, and the server checks them on submit.
+`checkField` checks that the answer is an array of unique, non-empty file IDs with at most `maxFiles` entries (default 1). `required` means at least one. `accept` and `maxSize` can't be checked from an ID: renderers check them before upload, and the server checks them on submit.
 
 #### `validateRequirementsObject(input)`
 

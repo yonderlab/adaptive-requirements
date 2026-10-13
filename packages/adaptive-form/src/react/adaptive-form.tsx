@@ -186,7 +186,7 @@ export interface AdaptiveFormProps<TFieldId extends FieldId = FieldId> {
   onValidationStateChange?: (isValidating: boolean) => void;
 
   /**
-   * Uploads one file for a `type: 'file'` field and resolves with its `file_` ID.
+   * Uploads one file for a `type: 'file'` field and resolves with its file ID.
    * Required for file fields; without it, every picked file is marked as an error.
    */
   uploadFile?: UploadFile;

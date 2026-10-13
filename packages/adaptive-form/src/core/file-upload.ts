@@ -78,13 +78,17 @@ export function checkFile(file: File, limits: FileLimits): string | null {
   return null;
 }
 
-/** The `file_` IDs held in a file field's value. Anything that isn't an array of strings holds none. */
+/** The file IDs held in a file field's value. Anything that isn't an array of strings holds none. */
 export function toFileIds(value: FieldValue): string[] {
   return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
 }
 
 function isUploadResult(data: unknown): data is { id: string } {
-  return data !== null && typeof data === 'object' && typeof (data as Record<string, unknown>)['id'] === 'string';
+  if (data === null || typeof data !== 'object') {
+    return false;
+  }
+  const id = (data as Record<string, unknown>)['id'];
+  return typeof id === 'string' && id !== '';
 }
 
 /** A file picked in this session that isn't (yet) in the answer. */

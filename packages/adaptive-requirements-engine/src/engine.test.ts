@@ -1329,8 +1329,15 @@ describe('file field type', () => {
       expect(state.errors).toStrictEqual(['Must be a list of file IDs']);
     });
 
-    it('should reject entries without the file_ prefix', () => {
-      const state = checkField(fileField(), 'upload', { upload: ['doc.pdf'] });
+    it('should accept IDs in any format', () => {
+      const state = checkField(fileField({ fileConfig: { maxFiles: 2 } }), 'upload', {
+        upload: ['3f2a9c1e-7b4d-4e8a-9c6f-1d2e3f4a5b6c', 'doc-42'],
+      });
+      expect(state.errors).toStrictEqual([]);
+    });
+
+    it('should reject empty string entries', () => {
+      const state = checkField(fileField(), 'upload', { upload: [''] });
       expect(state.errors).toStrictEqual(['Must be a list of file IDs']);
     });
 

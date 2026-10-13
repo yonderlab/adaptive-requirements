@@ -1,7 +1,7 @@
 import type { Field } from '@kotaio/adaptive-requirements-engine';
 
 /**
- * Uploads one file and resolves with its `file_` ID.
+ * Uploads one file and resolves with its file ID.
  *
  * Supplied by the consumer as the `uploadFile` prop. It owns the transport: call the
  * upload endpoint directly (Kota embed) or go through your own backend (API partners).
@@ -16,7 +16,7 @@ export interface FileEntry {
   /** Stable key for list rendering and for `remove` / `retry`. */
   key: string;
   status: 'uploading' | 'uploaded' | 'error';
-  /** `file_` ID once uploaded. */
+  /** File ID once uploaded. */
   id?: string;
   /** Known for files picked in this session; absent for saved IDs from `defaultValue`. */
   name?: string;
@@ -28,7 +28,7 @@ export interface FileEntry {
  * Props for `type: 'file'` field components.
  *
  * The library runs the upload lifecycle and writes the field's answer (an array of
- * `file_` IDs). The component only draws: it never calls the network or sets the value.
+ * file IDs). The component only draws: it never calls the network or sets the value.
  */
 export interface FieldFileProps<TFieldId extends string = string> {
   field: Field<TFieldId>;

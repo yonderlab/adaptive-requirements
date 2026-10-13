@@ -304,7 +304,7 @@ You can target the fallback globally with CSS if you want a quick baseline (e.g.
 
 ### File fields — `FieldFileProps`
 
-File fields (`type: 'file'`) answer with an array of `file_` IDs from Kota's `POST /files` endpoint. AdaptiveForm owns the upload lifecycle — checking each file against the schema's limits, calling your `uploadFile`, tracking progress and errors, and writing the IDs into the form data. You supply two things:
+File fields (`type: 'file'`) answer with an array of file IDs (with Kota, the IDs returned by `POST /files`). AdaptiveForm owns the upload lifecycle — checking each file against the schema's limits, calling your `uploadFile`, tracking progress and errors, and writing the IDs into the form data. You supply two things:
 
 1. **`uploadFile`** — the transport, passed as a prop on `AdaptiveForm`. It's called once per file and resolves with `{ id }`. Whatever it throws becomes that file's error message.
 2. **A `file` component** — drawing only. It never calls the network or sets the value. There is no default `file` component; without one, file fields render nothing (with a development warning), like every other input type.
@@ -1130,7 +1130,7 @@ These are features expressed in the schema that AdaptiveForm handles automatical
 
 **Custom validators** — Schemas can reference built-in validators (date checks, ID format validation) with custom error messages.
 
-**File fields** — `fileConfig` sets accepted types, size limit and file count. Files are checked against it before upload, and the answer is an array of `file_` IDs (see [File fields](#file-fields--fieldfileprops)).
+**File fields** — `fileConfig` sets accepted types, size limit and file count. Files are checked against it before upload, and the answer is an array of file IDs (see [File fields](#file-fields--fieldfileprops)).
 
 ## License
 
