@@ -529,7 +529,8 @@ export const AdaptiveForm = defineComponent({
       const fieldAsyncErrors = asyncFieldState?.errors ?? [];
       const fieldIsValidating = asyncFieldState?.isValidating ?? false;
       const mergedErrors = [...fieldState.errors, ...fieldAsyncErrors];
-      const displayErrors = getDisplayErrors(field.id, mergedErrors);
+      const displayErrors =
+        field.type === 'file' && fileUploads.isFieldUploading(field.id) ? [] : getDisplayErrors(field.id, mergedErrors);
       const fileProps = field.type === 'file' ? getFileProps(field, fieldState, displayErrors) : undefined;
 
       const fieldSlot = slots['field'];

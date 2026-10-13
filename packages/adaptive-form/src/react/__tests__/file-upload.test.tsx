@@ -147,6 +147,7 @@ function ControlledForm({
   onData?: (data: FormData) => void;
   uploadFile?: UploadFile;
   onUploadStateChange?: (isUploading: boolean) => void;
+  showAllErrors?: boolean;
 }) {
   const [data, setData] = useState<FormData>(initialData);
   return (
@@ -269,6 +270,21 @@ describe('file fields — upload lifecycle', () => {
     expect(screen.queryByTestId('file-upload-1')).toBeNull();
   });
 
+  it('aborts an uploading file when the form unmounts and ignores its result', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const onData = vi.fn();
+    const { unmount } = render(
+      <ControlledForm requirements={makeRequirements()} uploadFile={uploadFile} onData={onData} />,
+    );
+
+    pickFiles('doc', [makeFile('a.pdf')]);
+    unmount();
+    expect(calls[0]!.signal.aborted).toBeTruthy();
+
+    await settle(calls[0]!, { id: 'file_a' });
+    expect(onData).not.toHaveBeenCalled();
+  });
+
   it('shows saved IDs from defaultValue as uploaded files without a name', () => {
     render(
       <AdaptiveFormProvider requirements={makeRequirements({ defaultValue: ['file_saved'] })}>
@@ -316,6 +332,23 @@ describe('file fields — upload lifecycle', () => {
     expect(screen.queryByTestId('error-doc')).toBeNull();
   });
 
+  it('hides a required error during an upload when showAllErrors is on', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    render(
+      <ControlledForm
+        requirements={makeRequirements({ validation: { required: true } })}
+        uploadFile={uploadFile}
+        showAllErrors
+      />,
+    );
+
+    expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+    pickFiles('doc', [makeFile('a.pdf')]);
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+
+    await settle(calls[0]!, { id: 'file_a' });
+  });
+
   it('shows field-level errors once the field is touched', async () => {
     const { uploadFile, calls } = deferredUploadFile();
     render(
@@ -328,6 +361,10 @@ describe('file fields — upload lifecycle', () => {
     fireEvent.click(screen.getByText('Remove upload-1'));
 
     expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+
+    pickFiles('doc', [makeFile('b.pdf')]);
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+    await settle(calls[1]!, { id: 'file_b' });
   });
 });
 

@@ -705,7 +705,8 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       const fieldAsyncErrors = asyncFieldState?.errors ?? [];
       const fieldIsValidating = asyncFieldState?.isValidating ?? false;
       const mergedErrors = [...fieldState.errors, ...fieldAsyncErrors];
-      const displayErrors = getDisplayErrors(field.id, mergedErrors);
+      const displayErrors =
+        field.type === 'file' && fileUploads.isFieldUploading(field.id) ? [] : getDisplayErrors(field.id, mergedErrors);
       const fileProps = field.type === 'file' ? getFileProps(field, fieldState, displayErrors) : undefined;
 
       if (renderField) {
@@ -813,6 +814,7 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       handleFieldBlur,
       getDisplayErrors,
       getFileProps,
+      fileUploads,
       touchedFields,
       asyncState,
     ],

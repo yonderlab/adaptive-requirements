@@ -46,6 +46,8 @@ export function useFileUploads(options: UseFileUploadsOptions): UseFileUploadsRe
 
   const version = useSyncExternalStore(store.subscribe, store.getVersion, store.getVersion);
 
+  useIsomorphicLayoutEffect(() => () => store.reset(), [store]);
+
   return useMemo(
     () => ({
       getFiles: store.getFiles,

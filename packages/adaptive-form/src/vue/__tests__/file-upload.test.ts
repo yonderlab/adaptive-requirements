@@ -246,6 +246,21 @@ describe('file fields — upload lifecycle', () => {
     expect(screen.queryByTestId('file-upload-2')).toBeNull();
   });
 
+  it('aborts an uploading file when the form unmounts and ignores its result', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { model, unmount } = renderControlledForm({
+      requirements: makeRequirements(),
+      formProps: { uploadFile },
+    });
+
+    await pickFiles('doc', [makeFile('a.pdf')]);
+    unmount();
+    expect(calls[0]!.signal.aborted).toBeTruthy();
+
+    await settle(calls[0]!, { id: 'file_a' });
+    expect(model.value['doc']).toBeUndefined();
+  });
+
   it('shows saved IDs from defaultValue as uploaded files without a name', () => {
     render({
       components: { AdaptiveFormProvider, AdaptiveForm },
@@ -280,6 +295,24 @@ describe('file fields — upload lifecycle', () => {
 
     await fireEvent.click(screen.getByText('Remove upload-1'));
     expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+
+    await pickFiles('doc', [makeFile('b.pdf')]);
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+    await settle(calls[1]!, { id: 'file_b' });
+  });
+
+  it('hides a required error during an upload when showAllErrors is on', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    renderControlledForm({
+      requirements: makeRequirements({ validation: { required: true } }),
+      formProps: { uploadFile, showAllErrors: true },
+    });
+
+    expect(screen.getByTestId('error-doc').textContent).toBe('This field is required');
+    await pickFiles('doc', [makeFile('a.pdf')]);
+    expect(screen.queryByTestId('error-doc')).toBeNull();
+
+    await settle(calls[0]!, { id: 'file_a' });
   });
 
   it('marks every file as an error and warns when uploadFile is not passed', async () => {

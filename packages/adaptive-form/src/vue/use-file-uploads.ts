@@ -41,7 +41,10 @@ export function useFileUploads(options: UseFileUploadsOptions): UseFileUploadsRe
   const unsubscribe = store.subscribe(() => {
     version.value = store.getVersion();
   });
-  onScopeDispose(unsubscribe);
+  onScopeDispose(() => {
+    unsubscribe();
+    store.reset();
+  });
 
   const track = () => version.value;
 
