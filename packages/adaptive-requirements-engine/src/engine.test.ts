@@ -12,6 +12,7 @@ import {
   createAdapter,
   initializeFormData,
   resolveFieldOptions,
+  resolveFileConfig,
   resolveLabel,
   runAsyncValidators,
   runRule,
@@ -1312,6 +1313,28 @@ describe('checkField with excludeWhen', () => {
 
 const fileField = (overrides: Partial<Field> = {}): RequirementsObject => ({
   fields: [{ id: 'upload', type: 'file', label: 'Upload', ...overrides }],
+});
+
+describe(resolveFileConfig, () => {
+  it('applies every default when fileConfig is absent', () => {
+    expect(resolveFileConfig(undefined)).toStrictEqual({
+      accept: ['application/pdf', 'image/png', 'image/jpeg'],
+      maxSize: 10_000_000,
+      maxFiles: 1,
+    });
+  });
+
+  it('treats an empty accept list as every type', () => {
+    expect(resolveFileConfig({ accept: [] }).accept).toStrictEqual(['application/pdf', 'image/png', 'image/jpeg']);
+  });
+
+  it('keeps configured values', () => {
+    expect(resolveFileConfig({ accept: ['image/png'], maxSize: 500, maxFiles: 3 })).toStrictEqual({
+      accept: ['image/png'],
+      maxSize: 500,
+      maxFiles: 3,
+    });
+  });
 });
 
 describe('file field type', () => {

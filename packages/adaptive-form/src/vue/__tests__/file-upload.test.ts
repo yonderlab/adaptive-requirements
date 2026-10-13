@@ -31,7 +31,6 @@ const TestFileField = defineComponent({
     acceptAttribute: { type: String, default: '' },
     limitsText: { type: String, default: '' },
     canAddMore: { type: Boolean, default: true },
-    isUploading: { type: Boolean, default: false },
   },
   setup(props) {
     return () => {
@@ -55,13 +54,15 @@ const TestFileField = defineComponent({
           props.files.map((file) =>
             h('li', { key: file.key, 'data-testid': `file-${file.key}`, 'data-status': file.status }, [
               h('span', file.name ?? 'Uploaded file'),
-              file.error ? h('span', { 'data-testid': `file-error-${file.key}` }, file.error) : null,
+              file.status === 'error' ? h('span', { 'data-testid': `file-error-${file.key}` }, file.error) : null,
               h('button', { type: 'button', onClick: () => props.retry(file.key) }, `Retry ${file.key}`),
               h('button', { type: 'button', onClick: () => props.remove(file.key) }, `Remove ${file.key}`),
             ]),
           ),
         ),
-        props.isUploading ? h('span', { 'data-testid': `uploading-${fieldId}` }, 'Uploading') : null,
+        props.files.some((file) => file.status === 'uploading')
+          ? h('span', { 'data-testid': `uploading-${fieldId}` }, 'Uploading')
+          : null,
         props.errors.length > 0
           ? h('span', { 'data-testid': `error-${fieldId}`, role: 'alert' }, props.errors.join(', '))
           : null,
@@ -187,7 +188,7 @@ describe('file fields — upload lifecycle', () => {
     const { model } = renderControlledForm({ requirements: makeRequirements(), formProps: { uploadFile } });
 
     await pickFiles('doc', [makeFile('passport.pdf')]);
-    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), { fieldId: 'doc', signal: expect.any(AbortSignal) });
+    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), { signal: expect.any(AbortSignal) });
     expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('uploading');
     expect(screen.getByTestId('uploading-doc')).toBeTruthy();
 

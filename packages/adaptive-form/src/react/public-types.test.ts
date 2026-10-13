@@ -7,12 +7,12 @@ import type {
   FileEntry,
   UploadFile,
 } from './index';
-import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type { FileConfig, FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 import type { ReactNode } from 'react';
 
 import { expect, expectTypeOf, test } from 'vitest';
 
-import { FILE_MIME_TYPES } from './index';
+import * as ReactPublicApi from './index';
 
 test('exports first-class consumer type aliases', () => {
   type FieldId = 'firstName' | 'lastName';
@@ -30,13 +30,17 @@ test('exports file upload types and the file component contract', () => {
 
   expectTypeOf<NonNullable<AdaptiveFormProps['uploadFile']>>().toEqualTypeOf<UploadFile>();
   expectTypeOf<NonNullable<AdaptiveFormProps['onUploadStateChange']>>().toEqualTypeOf<(isUploading: boolean) => void>();
-  expectTypeOf<UploadFile>().parameters.toEqualTypeOf<[File, { fieldId: string; signal: AbortSignal }]>();
+  expectTypeOf<UploadFile>().parameters.toEqualTypeOf<[File, { signal: AbortSignal }]>();
   expectTypeOf<UploadFile>().returns.toEqualTypeOf<Promise<{ id: string }>>();
   expectTypeOf<FieldFileProps<FieldId>['field']['id']>().toEqualTypeOf<FieldId>();
   expectTypeOf<FieldFileProps['files']>().toEqualTypeOf<FileEntry[]>();
   expectTypeOf<FileEntry['status']>().toEqualTypeOf<'uploading' | 'uploaded' | 'error'>();
+  expectTypeOf<Extract<FileEntry, { status: 'uploaded' }>['id']>().toEqualTypeOf<string>();
+  expectTypeOf<Extract<FileEntry, { status: 'error' }>['error']>().toEqualTypeOf<string>();
+  expectTypeOf<FieldFileProps['limits']>().toEqualTypeOf<Required<FileConfig>>();
+  expectTypeOf<FieldFileProps>().not.toHaveProperty('isUploading');
   expectTypeOf<NonNullable<AdaptiveFormProps<FieldId>['components']>['file']>().toEqualTypeOf<
     ((props: FieldFileProps<FieldId>) => ReactNode) | undefined
   >();
-  expect(FILE_MIME_TYPES).toStrictEqual(['application/pdf', 'image/png', 'image/jpeg']);
+  expect(ReactPublicApi).not.toHaveProperty('FILE_MIME_TYPES');
 });

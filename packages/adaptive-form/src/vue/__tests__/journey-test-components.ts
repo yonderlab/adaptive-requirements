@@ -203,7 +203,11 @@ export const TestFile = defineComponent({
       }
       const fieldId = props.field.id;
       return h('div', { 'data-testid': `field-${fieldId}` }, [
-        h('span', { 'data-testid': `value-${fieldId}` }, props.files.map((file) => file.id).join(',')),
+        h(
+          'span',
+          { 'data-testid': `value-${fieldId}` },
+          props.files.map((file) => (file.status === 'uploaded' ? file.id : '')).join(','),
+        ),
       ]);
     };
   },

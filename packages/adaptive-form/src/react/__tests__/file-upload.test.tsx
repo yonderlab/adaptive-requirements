@@ -21,7 +21,6 @@ function TestFileField({
   errors,
   isVisible,
   canAddMore,
-  isUploading,
   acceptAttribute,
   limitsText,
 }: FieldFileProps) {
@@ -46,7 +45,7 @@ function TestFileField({
         {files.map((file) => (
           <li key={file.key} data-testid={`file-${file.key}`} data-status={file.status}>
             <span>{file.name ?? 'Uploaded file'}</span>
-            {file.error && <span data-testid={`file-error-${file.key}`}>{file.error}</span>}
+            {file.status === 'error' && <span data-testid={`file-error-${file.key}`}>{file.error}</span>}
             <button type="button" onClick={() => retry(file.key)}>
               Retry {file.key}
             </button>
@@ -56,7 +55,9 @@ function TestFileField({
           </li>
         ))}
       </ul>
-      {isUploading && <span data-testid={`uploading-${field.id}`}>Uploading</span>}
+      {files.some((file) => file.status === 'uploading') && (
+        <span data-testid={`uploading-${field.id}`}>Uploading</span>
+      )}
       {errors.length > 0 && (
         <span data-testid={`error-${field.id}`} role="alert">
           {errors.join(', ')}
@@ -185,7 +186,7 @@ describe('file fields — upload lifecycle', () => {
     render(<ControlledForm requirements={makeRequirements()} uploadFile={uploadFile} onData={onData} />);
 
     pickFiles('doc', [makeFile('passport.pdf')]);
-    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), { fieldId: 'doc', signal: expect.any(AbortSignal) });
+    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), { signal: expect.any(AbortSignal) });
     expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('uploading');
     expect(screen.getByTestId('uploading-doc')).toBeTruthy();
 

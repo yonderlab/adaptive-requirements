@@ -171,7 +171,9 @@ function TestFile({ field, isVisible, files }: FieldFileProps) {
   }
   return (
     <div data-testid={`field-${field.id}`}>
-      <span data-testid={`value-${field.id}`}>{files.map((file) => file.id).join(',')}</span>
+      <span data-testid={`value-${field.id}`}>
+        {files.map((file) => (file.status === 'uploaded' ? file.id : '')).join(',')}
+      </span>
     </div>
   );
 }

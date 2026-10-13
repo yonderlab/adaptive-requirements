@@ -25,7 +25,13 @@ import type {
   UseAsyncValidationOptions,
   UseAsyncValidationReturn,
 } from './index';
-import type { FieldValue, FormData, NoticeField, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
+import type {
+  FieldValue,
+  FileConfig,
+  FormData,
+  NoticeField,
+  RequirementsObject,
+} from '@kotaio/adaptive-requirements-engine';
 import type { Component, ComputedRef } from 'vue';
 
 import { readFileSync } from 'node:fs';
@@ -40,7 +46,6 @@ describe('vue public API runtime exports', () => {
   const expectedRuntimeExports = [
     'AdaptiveForm',
     'AdaptiveFormProvider',
-    'FILE_MIME_TYPES',
     'NOTICE_VARIANTS',
     'useAdaptiveFormContext',
     'useAsyncValidation',
@@ -186,16 +191,20 @@ describe('vue public API type contracts', () => {
     type CustomFieldId = 'proof_of_address';
 
     expectTypeOf<NonNullable<AdaptiveFormProps['uploadFile']>>().toEqualTypeOf<UploadFile>();
-    expectTypeOf<UploadFile>().parameters.toEqualTypeOf<[File, { fieldId: string; signal: AbortSignal }]>();
+    expectTypeOf<UploadFile>().parameters.toEqualTypeOf<[File, { signal: AbortSignal }]>();
     expectTypeOf<UploadFile>().returns.toEqualTypeOf<Promise<{ id: string }>>();
     expectTypeOf<FieldFileProps<CustomFieldId>['field']['id']>().toEqualTypeOf<CustomFieldId>();
     expectTypeOf<FieldFileProps['files']>().toEqualTypeOf<FileEntry[]>();
     expectTypeOf<FileEntry['status']>().toEqualTypeOf<'uploading' | 'uploaded' | 'error'>();
+    expectTypeOf<Extract<FileEntry, { status: 'uploaded' }>['id']>().toEqualTypeOf<string>();
+    expectTypeOf<Extract<FileEntry, { status: 'error' }>['error']>().toEqualTypeOf<string>();
+    expectTypeOf<FieldFileProps['limits']>().toEqualTypeOf<Required<FileConfig>>();
+    expectTypeOf<FieldFileProps>().not.toHaveProperty('isUploading');
     expectTypeOf<AdaptiveFormComponents<CustomFieldId>['file']>().toEqualTypeOf<
       Component<FieldFileProps<CustomFieldId>> | undefined
     >();
     expectTypeOf<FieldRenderProps<CustomFieldId>['file']>().toEqualTypeOf<FieldFileProps<CustomFieldId> | undefined>();
-    expect(VuePublicApi.FILE_MIME_TYPES).toStrictEqual(['application/pdf', 'image/png', 'image/jpeg']);
+    expect(VuePublicApi).not.toHaveProperty('FILE_MIME_TYPES');
   });
 
   it('re-exports notice constants and engine notice types', () => {

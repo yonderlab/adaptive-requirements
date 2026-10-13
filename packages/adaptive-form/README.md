@@ -324,10 +324,10 @@ File fields (`type: 'file'`) answer with an array of file IDs (with Kota, the ID
 | `retry`           | `(key: string) => void`   | Check and upload a failed file again                                               |
 | `acceptAttribute` | `string`                  | For `<input accept>`, e.g. `"application/pdf,image/png,image/jpeg"`                |
 | `limitsText`      | `string`                  | e.g. `"PDF, PNG or JPEG · up to 5 MB · up to 2 files"`                             |
+| `limits`          | `Required<FileConfig>`    | `field.fileConfig` with defaults applied: `accept`, `maxSize`, `maxFiles`          |
 | `canAddMore`      | `boolean`                 | False once the field holds `fileConfig.maxFiles` files                             |
-| `isUploading`     | `boolean`                 | Whether any file in this field is uploading                                        |
 
-Each `FileEntry` has a stable `key`, a `status` (`'uploading' | 'uploaded' | 'error'`), and, where known, `id`, `name`, `size` and `error`. Saved IDs from the field's `defaultValue` (a reopened requirement) appear as `uploaded` entries with no `name` — show something like "Uploaded file".
+Each `FileEntry` has a stable `key` and a `status`. Narrow on `status` to reach the rest: `uploaded` entries have an `id`, `error` entries have an `error` message, and `uploading` and `error` entries have the file's `name` and `size`. Saved IDs from the field's `defaultValue` (a reopened requirement) appear as `uploaded` entries with no `name` — show something like "Uploaded file".
 
 **What happens when the component calls `addFiles`:**
 
@@ -461,7 +461,7 @@ function FileField({
 />;
 ```
 
-The answers object you submit then contains file IDs — e.g. `{ "company_registration_extract": ["file_5b1e…"] }` — and goes through your existing answers call unchanged. `limitsText` and the pre-upload error messages are in English; build your own copy from `field.fileConfig` (and `FILE_MIME_TYPES`) if you need translations.
+The answers object you submit then contains file IDs — e.g. `{ "company_registration_extract": ["file_5b1e…"] }` — and goes through your existing answers call unchanged. `limitsText` and the pre-upload error messages are in English; build your own copy from `limits` if you need translations.
 
 ### Custom render function
 
@@ -1046,7 +1046,7 @@ Safe for SSR and hydration when rendered with Vue's server renderer:
 
 - Components: `AdaptiveFormProvider`, `AdaptiveForm`
 - Composables: `useStepNavigation`, `useFormInfo` (deprecated), `useAdaptiveFormContext`, `useAsyncValidation`
-- Constants: `NOTICE_VARIANTS`, `FILE_MIME_TYPES`
+- Constants: `NOTICE_VARIANTS`
 
 **Type exports:**
 

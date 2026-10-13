@@ -1,4 +1,4 @@
-import type { Field } from '@kotaio/adaptive-requirements-engine';
+import type { Field, FileConfig } from '@kotaio/adaptive-requirements-engine';
 
 /**
  * Uploads one file and resolves with its file ID.
@@ -6,22 +6,24 @@ import type { Field } from '@kotaio/adaptive-requirements-engine';
  * Supplied by the consumer as the `uploadFile` prop. It owns the transport.
  * Whatever it throws becomes the file's `FileEntry.error` message.
  */
-export type UploadFile = (file: File, context: { fieldId: string; signal: AbortSignal }) => Promise<{ id: string }>;
+export type UploadFile = (file: File, context: { signal: AbortSignal }) => Promise<{ id: string }>;
 
 /**
  * One file in a file field: uploaded (its ID is in the answer), uploading, or failed.
+ * Narrow on `status` to reach the fields each state carries.
  */
-export interface FileEntry {
-  /** Stable key for list rendering and for `remove` / `retry`. */
-  key: string;
-  status: 'uploading' | 'uploaded' | 'error';
-  /** File ID once uploaded. */
-  id?: string;
-  /** Known for files picked in this session; absent for saved IDs from `defaultValue`. */
-  name?: string;
-  size?: number;
-  error?: string;
-}
+export type FileEntry =
+  | {
+      /** Stable key for list rendering and for `remove` / `retry`. */
+      key: string;
+      status: 'uploaded';
+      id: string;
+      /** Known for files uploaded in this session; absent for saved IDs from `defaultValue`. */
+      name?: string;
+      size?: number;
+    }
+  | { key: string; status: 'uploading'; name: string; size: number }
+  | { key: string; status: 'error'; name: string; size: number; error: string };
 
 /**
  * Props for `type: 'file'` field components.
@@ -51,8 +53,8 @@ export interface FieldFileProps<TFieldId extends string = string> {
   acceptAttribute: string;
   /** Human-readable limits, e.g. "PDF, PNG or JPEG · up to 5 MB · up to 2 files" */
   limitsText: string;
+  /** `field.fileConfig` with defaults applied, for building your own (e.g. translated) limits copy */
+  limits: Required<FileConfig>;
   /** False once the field holds `maxFiles` files */
   canAddMore: boolean;
-  /** Whether any file in this field is uploading */
-  isUploading: boolean;
 }

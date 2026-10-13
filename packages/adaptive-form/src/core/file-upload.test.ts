@@ -1,6 +1,7 @@
 import type { UploadFile } from './file-upload-types';
 import type { FieldValue, FileConfig } from '@kotaio/adaptive-requirements-engine';
 
+import { resolveFileConfig } from '@kotaio/adaptive-requirements-engine';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -11,7 +12,6 @@ import {
   getAcceptAttribute,
   getFileFieldState,
   getLimitsText,
-  resolveFileLimits,
   toFileIds,
 } from './file-upload';
 
@@ -61,24 +61,6 @@ async function flush() {
   await Promise.resolve();
 }
 
-describe(resolveFileLimits, () => {
-  it('applies every default when fileConfig is absent', () => {
-    expect(resolveFileLimits(undefined)).toStrictEqual({
-      accept: ['application/pdf', 'image/png', 'image/jpeg'],
-      maxSize: 10_000_000,
-      maxFiles: 1,
-    });
-  });
-
-  it('keeps configured values', () => {
-    expect(resolveFileLimits({ accept: ['image/png'], maxSize: 500, maxFiles: 3 })).toStrictEqual({
-      accept: ['image/png'],
-      maxSize: 500,
-      maxFiles: 3,
-    });
-  });
-});
-
 describe('file limit formatting', () => {
   it.each([
     [['application/pdf'], 'PDF'],
@@ -99,21 +81,21 @@ describe('file limit formatting', () => {
   });
 
   it('builds limits text, leaving out the count for a single file', () => {
-    expect(getLimitsText(resolveFileLimits({ maxSize: 5_000_000 }))).toBe('PDF, PNG or JPEG · up to 5 MB');
-    expect(getLimitsText(resolveFileLimits({ maxSize: 5_000_000, maxFiles: 2 }))).toBe(
+    expect(getLimitsText(resolveFileConfig({ maxSize: 5_000_000 }))).toBe('PDF, PNG or JPEG · up to 5 MB');
+    expect(getLimitsText(resolveFileConfig({ maxSize: 5_000_000, maxFiles: 2 }))).toBe(
       'PDF, PNG or JPEG · up to 5 MB · up to 2 files',
     );
   });
 
   it('builds the accept attribute', () => {
-    expect(getAcceptAttribute(resolveFileLimits({ accept: ['application/pdf', 'image/png'] }))).toBe(
+    expect(getAcceptAttribute(resolveFileConfig({ accept: ['application/pdf', 'image/png'] }))).toBe(
       'application/pdf,image/png',
     );
   });
 });
 
 describe(checkFile, () => {
-  const limits = resolveFileLimits({ accept: ['application/pdf', 'image/png'], maxSize: 5_000_000 });
+  const limits = resolveFileConfig({ accept: ['application/pdf', 'image/png'], maxSize: 5_000_000 });
 
   it('accepts a file within limits', () => {
     expect(checkFile(makeFile('a.pdf', 'application/pdf', 5_000_000), limits)).toBeNull();
@@ -144,7 +126,7 @@ describe(createFileUploadStore, () => {
     const { store, values } = setup(uploadFile);
 
     store.addFiles('doc', [makeFile('a.pdf')], config);
-    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), { fieldId: 'doc', signal: expect.any(AbortSignal) });
+    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), { signal: expect.any(AbortSignal) });
     expect(store.isFieldUploading('doc')).toBeTruthy();
     expect(store.getFiles('doc', values['doc'])).toStrictEqual([
       { key: 'upload-1', status: 'uploading', name: 'a.pdf', size: 1000 },
@@ -232,7 +214,10 @@ describe(createFileUploadStore, () => {
     await flush();
 
     store.retry('doc', 'upload-1', undefined);
-    expect(store.getFiles('doc', values['doc'])[0]).toMatchObject({ key: 'upload-1', status: 'uploading' });
+    // The retried entry drops its old error
+    expect(store.getFiles('doc', values['doc'])).toStrictEqual([
+      { key: 'upload-1', status: 'uploading', name: 'a.pdf', size: 1000 },
+    ]);
 
     calls[1]!.resolve({ id: 'file_a' });
     await flush();
@@ -344,8 +329,8 @@ describe(getFileFieldState, () => {
       files: [{ key: 'file_saved', status: 'uploaded', id: 'file_saved' }],
       acceptAttribute: 'application/pdf,image/png,image/jpeg',
       limitsText: 'PDF, PNG or JPEG · up to 5 MB · up to 2 files',
+      limits: { accept: ['application/pdf', 'image/png', 'image/jpeg'], maxSize: 5_000_000, maxFiles: 2 },
       canAddMore: true,
-      isUploading: false,
     });
   });
 });

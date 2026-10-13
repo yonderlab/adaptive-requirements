@@ -7,7 +7,7 @@ File fields: a `type: 'file'` answer is now an array of file IDs from the upload
 
 **Breaking schema change** (engine):
 
-- `fileConfig.accept` takes exact MIME types only (`application/pdf`, `image/png`, `image/jpeg`). Extensions such as `.pdf` and wildcards such as `image/*` are rejected at publish. It is typed as `FileMimeType[]`.
+- `fileConfig.accept` takes exact MIME types only (`application/pdf`, `image/png`, `image/jpeg`). Extensions such as `.pdf` and wildcards such as `image/*` are rejected at publish. It is typed as `readonly FileMimeType[]`.
 - `fileConfig.multiple` is removed. Use `maxFiles` to allow more than one file.
 - `fileConfig.maxFiles` defaults to 1 and is always checked.
 - `validateRequirementsObject` now rejects: `fileConfig` on a non-file field, an empty or unsupported `accept`, `maxSize` outside 1–10,000,000, `maxFiles` outside 1–10, `fileConfig.multiple`, and `validation.rules` on file fields.
@@ -24,16 +24,17 @@ File fields: a `type: 'file'` answer is now an array of file IDs from the upload
 
 **New** (adaptive-form):
 
-- `uploadFile` prop (React) / `:upload-file` (Vue): `(file, { fieldId, signal }) => Promise<{ id }>`. Call `POST /files` directly with an embed session token, or go through your own backend with your secret key.
-- `FieldFileProps`: `files`, `addFiles`, `remove`, `retry`, `acceptAttribute`, `limitsText`, `canAddMore`, `isUploading`, plus the usual `label`, `description`, `errors`, `isRequired`, `isVisible`, `isReadOnly`.
+- `uploadFile` prop (React) / `:upload-file` (Vue): `(file, { signal }) => Promise<{ id }>`. Call `POST /files` directly with an embed session token, or go through your own backend with your secret key.
+- `FieldFileProps`: `files`, `addFiles`, `remove`, `retry`, `acceptAttribute`, `limitsText`, `limits` (the field's `fileConfig` with defaults applied), `canAddMore`, plus the usual `label`, `description`, `errors`, `isRequired`, `isVisible`, `isReadOnly`.
+- `FileEntry` is a union on `status`: `uploaded` entries carry `id`, `error` entries carry `error`, and `uploading` / `error` entries carry `name` and `size`.
 - The library checks each file against `fileConfig.accept`, `maxSize` and `maxFiles` before upload, uploads the rest, keeps answers in the order files were added, and supports retry and remove. Saved IDs from `defaultValue` show as uploaded entries without a name.
 - Next is blocked while a file in the current step is uploading. `onUploadStateChange` (React) / `upload-state-change` (Vue) reports aggregate upload state for your own submit button.
 - `renderField` (React) and the `#field` slot (Vue) receive `file` with the same props for file fields.
 
 **New exports:**
 
-- Engine: `FILE_MIME_TYPES`, `FileMimeType`, `FILE_MAX_SIZE`, `FILE_MAX_FILES`, `FILE_DEFAULT_MAX_FILES`.
-- adaptive-form: `UploadFile`, `FieldFileProps` and `FileEntry` types, and `FILE_MIME_TYPES` / `FileMimeType` re-exported from the engine.
+- Engine: `FILE_MIME_TYPES`, `FileMimeType`, `FILE_MAX_SIZE`, and `resolveFileConfig(fileConfig)`, which returns a `fileConfig` with every default applied.
+- adaptive-form: `UploadFile`, `FieldFileProps` and `FileEntry` types, and the `FileMimeType` type re-exported from the engine.
 
 **Fixed** (adaptive-form):
 

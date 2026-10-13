@@ -21,7 +21,7 @@ export type {
 } from './adaptive-form';
 // Re-export shared schema constants and types from the engine so consumers can import
 // everything from a single package when authoring or rendering forms.
-export { FILE_MIME_TYPES, NOTICE_VARIANTS } from '@kotaio/adaptive-requirements-engine';
+export { NOTICE_VARIANTS } from '@kotaio/adaptive-requirements-engine';
 export type { FileMimeType, NoticeField, NoticeVariant } from '@kotaio/adaptive-requirements-engine';
 export { useAsyncValidation } from './use-async-validation';
 export type {

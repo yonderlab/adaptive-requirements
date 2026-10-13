@@ -1,7 +1,7 @@
 import type { FieldFileProps, FileEntry, UploadFile } from './file-upload-types';
 import type { FieldValue, FileConfig, FileMimeType } from '@kotaio/adaptive-requirements-engine';
 
-import { FILE_DEFAULT_MAX_FILES, FILE_MAX_SIZE, FILE_MIME_TYPES } from '@kotaio/adaptive-requirements-engine';
+import { resolveFileConfig } from '@kotaio/adaptive-requirements-engine';
 
 import { isEmptyValue } from './is-empty-value';
 
@@ -16,19 +16,8 @@ const FILE_TYPE_NAMES: Record<FileMimeType, string> = {
 export const UPLOAD_FAILED_MESSAGE = 'Upload failed';
 export const UPLOADS_UNAVAILABLE_MESSAGE = 'File uploads are not available';
 
-export interface FileLimits {
-  accept: readonly FileMimeType[];
-  maxSize: number;
-  maxFiles: number;
-}
-
-export function resolveFileLimits(fileConfig: FileConfig | undefined): FileLimits {
-  return {
-    accept: fileConfig?.accept && fileConfig.accept.length > 0 ? fileConfig.accept : FILE_MIME_TYPES,
-    maxSize: fileConfig?.maxSize ?? FILE_MAX_SIZE,
-    maxFiles: fileConfig?.maxFiles ?? FILE_DEFAULT_MAX_FILES,
-  };
-}
+/** A field's `fileConfig` with defaults applied (see `resolveFileConfig`). */
+type FileLimits = Required<FileConfig>;
 
 export function formatFileTypes(accept: readonly FileMimeType[]): string {
   const names = accept.map((type) => FILE_TYPE_NAMES[type] ?? type);
@@ -91,17 +80,17 @@ function isUploadResult(data: unknown): data is { id: string } {
   return typeof id === 'string' && id !== '';
 }
 
-/** A file picked in this session that isn't (yet) in the answer. */
-interface PendingFile {
+interface PendingFileBase {
   key: string;
   seq: number;
   file: File;
-  status: 'uploading' | 'error';
-  error?: string;
   /** True once the file passed the pre-upload checks; it holds a `maxFiles` slot until removed. */
   passedChecks: boolean;
   controller?: AbortController;
 }
+
+/** A file picked in this session that isn't (yet) in the answer. */
+type PendingFile = (PendingFileBase & { status: 'uploading' }) | (PendingFileBase & { status: 'error'; error: string });
 
 /** What the session knows about an uploaded ID, so the entry keeps its key, name and position. */
 interface UploadedFile {
@@ -202,7 +191,7 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
 
     void (async () => {
       try {
-        const result: unknown = await uploadFile(entry.file, { fieldId, signal: controller.signal });
+        const result: unknown = await uploadFile(entry.file, { signal: controller.signal });
         if (controller.signal.aborted) {
           return;
         }
@@ -215,15 +204,16 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
           return;
         }
         const uploads = getField(fieldId);
-        uploads.pending = uploads.pending.map((pending) =>
-          pending.key === entry.key
-            ? {
-                ...pending,
-                status: 'error',
-                error: error instanceof Error && error.message ? error.message : UPLOAD_FAILED_MESSAGE,
-                controller: undefined,
-              }
-            : pending,
+        uploads.pending = uploads.pending.map(
+          (pending): PendingFile =>
+            pending.key === entry.key
+              ? {
+                  ...pending,
+                  status: 'error',
+                  error: error instanceof Error && error.message ? error.message : UPLOAD_FAILED_MESSAGE,
+                  controller: undefined,
+                }
+              : pending,
         );
         notify();
       }
@@ -237,19 +227,21 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
     entry: Pick<PendingFile, 'key' | 'seq' | 'file'>,
     fileConfig: FileConfig | undefined,
   ): PendingFile => {
+    // Rebuilt from scratch so a retried entry doesn't carry its old error or controller
+    const base = { key: entry.key, seq: entry.seq, file: entry.file };
     if (!options.getUploadFile()) {
-      return { ...entry, status: 'error', error: UPLOADS_UNAVAILABLE_MESSAGE, passedChecks: false };
+      return { ...base, status: 'error', error: UPLOADS_UNAVAILABLE_MESSAGE, passedChecks: false };
     }
-    const limits = resolveFileLimits(fileConfig);
+    const limits = resolveFileConfig(fileConfig);
     const error =
       checkFile(entry.file, limits) ??
       (countSlots(fieldId, options.getValue(fieldId), entry.key) >= limits.maxFiles
         ? formatMaxFilesMessage(limits.maxFiles)
         : null);
     if (error) {
-      return { ...entry, status: 'error', error, passedChecks: false };
+      return { ...base, status: 'error', error, passedChecks: false };
     }
-    return { ...entry, status: 'uploading', passedChecks: true };
+    return { ...base, status: 'uploading', passedChecks: true };
   };
 
   const addFiles = (fieldId: string, files: File[], fileConfig: FileConfig | undefined) => {
@@ -327,15 +319,11 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
       return { seq: known?.seq ?? -1, entry };
     });
     const pendingEntries = (uploads?.pending ?? []).map((pending) => {
-      const entry: FileEntry = {
-        key: pending.key,
-        status: pending.status,
-        name: pending.file.name,
-        size: pending.file.size,
-      };
-      if (pending.error !== undefined) {
-        entry.error = pending.error;
-      }
+      const { key, file } = pending;
+      const entry: FileEntry =
+        pending.status === 'error'
+          ? { key, status: 'error', name: file.name, size: file.size, error: pending.error }
+          : { key, status: 'uploading', name: file.name, size: file.size };
       return { seq: pending.seq, entry };
     });
     // eslint-disable-next-line unicorn/no-array-sort -- sorts a fresh copy
@@ -360,7 +348,7 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
 
   return {
     getFiles,
-    canAddMore: (fieldId, value, fileConfig) => countSlots(fieldId, value) < resolveFileLimits(fileConfig).maxFiles,
+    canAddMore: (fieldId, value, fileConfig) => countSlots(fieldId, value) < resolveFileConfig(fileConfig).maxFiles,
     isFieldUploading,
     isUploading: () => [...fields.keys()].some((fieldId) => isFieldUploading(fieldId)),
     addFiles,
@@ -390,17 +378,17 @@ export function isAwaitingUpload(
 }
 
 export function getFileFieldState(
-  store: Pick<FileUploadStore, 'getFiles' | 'canAddMore' | 'isFieldUploading'>,
+  store: Pick<FileUploadStore, 'getFiles' | 'canAddMore'>,
   fieldId: string,
   value: FieldValue,
   fileConfig: FileConfig | undefined,
-): Pick<FieldFileProps, 'files' | 'acceptAttribute' | 'limitsText' | 'canAddMore' | 'isUploading'> {
-  const limits = resolveFileLimits(fileConfig);
+): Pick<FieldFileProps, 'files' | 'acceptAttribute' | 'limitsText' | 'limits' | 'canAddMore'> {
+  const limits = resolveFileConfig(fileConfig);
   return {
     files: store.getFiles(fieldId, value),
     acceptAttribute: getAcceptAttribute(limits),
     limitsText: getLimitsText(limits),
+    limits,
     canAddMore: store.canAddMore(fieldId, value, fileConfig),
-    isUploading: store.isFieldUploading(fieldId),
   };
 }

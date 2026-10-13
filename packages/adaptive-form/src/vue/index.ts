@@ -26,7 +26,7 @@ export type {
   FileEntry,
   UploadFile,
 } from './types';
-export { FILE_MIME_TYPES, NOTICE_VARIANTS } from '@kotaio/adaptive-requirements-engine';
+export { NOTICE_VARIANTS } from '@kotaio/adaptive-requirements-engine';
 export type { FileMimeType, NoticeField, NoticeVariant } from '@kotaio/adaptive-requirements-engine';
 export { useAsyncValidation } from './use-async-validation';
 export type {

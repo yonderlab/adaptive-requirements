@@ -149,10 +149,10 @@ export type FileMimeType = (typeof FILE_MIME_TYPES)[number];
 /** Largest file the upload endpoint accepts, in bytes. Also the default `fileConfig.maxSize`. */
 export const FILE_MAX_SIZE = 10_000_000;
 
-/** Upper bound for `fileConfig.maxFiles`. */
+/** Upper bound for `fileConfig.maxFiles`, checked at publish. Not exported from the package. */
 export const FILE_MAX_FILES = 10;
 
-/** Default `fileConfig.maxFiles` when the schema omits it. */
+/** Default `fileConfig.maxFiles`. Not exported from the package: consumers use `resolveFileConfig`. */
 export const FILE_DEFAULT_MAX_FILES = 1;
 
 /**
@@ -165,10 +165,10 @@ export const FILE_DEFAULT_MAX_FILES = 1;
  */
 export interface FileConfig {
   /** Accepted MIME types (exact match, no wildcards or extensions). Defaults to every type in `FILE_MIME_TYPES`. */
-  accept?: FileMimeType[];
+  accept?: readonly FileMimeType[];
   /** Maximum size per file in bytes, 1 to `FILE_MAX_SIZE`. Defaults to `FILE_MAX_SIZE`. */
   maxSize?: number;
-  /** Maximum number of files, 1 to `FILE_MAX_FILES`. Defaults to `FILE_DEFAULT_MAX_FILES`. */
+  /** Maximum number of files, 1 to 10. Defaults to 1. */
   maxFiles?: number;
 }
 
