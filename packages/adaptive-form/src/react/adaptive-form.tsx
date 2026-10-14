@@ -422,10 +422,12 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
     if (!flow || !showAllSteps) {
       return [];
     }
-    return flow.steps.map((step) => ({
-      step,
-      fields: step.fields.map((id) => idToField.get(id)).filter((f): f is Field<TFieldId> => f != null),
-    }));
+    return flow.steps
+      .map((step) => ({
+        step,
+        fields: step.fields.map((id) => idToField.get(id)).filter((f): f is Field<TFieldId> => f != null),
+      }))
+      .filter(({ fields }) => fields.length === 0 || fields.some((field) => field.type !== 'hidden'));
   }, [flow, showAllSteps, idToField]);
 
   const currentStepIsValid = useMemo(() => {
@@ -651,6 +653,10 @@ export function AdaptiveForm<TFieldId extends FieldId = FieldId>(props: Adaptive
       const noticeVariant: NoticeVariant = isNoticeField ? coerceNoticeVariant(field.variant) : 'info';
 
       if (!renderFn) {
+        // Hidden fields carry a value but are never shown, so they need no renderer.
+        if (fieldType === 'hidden') {
+          return null;
+        }
         if (isNoticeField) {
           if (!fieldState.isVisible) {
             return null;

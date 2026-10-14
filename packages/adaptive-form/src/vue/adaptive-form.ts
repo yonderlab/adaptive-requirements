@@ -281,10 +281,12 @@ export const AdaptiveForm = defineComponent({
       if (!flow.value || !props.showAllSteps) {
         return [];
       }
-      return flow.value.steps.map((step) => ({
-        step,
-        fields: step.fields.map((id) => idToField.value.get(id)).filter((field): field is Field => field != null),
-      }));
+      return flow.value.steps
+        .map((step) => ({
+          step,
+          fields: step.fields.map((id) => idToField.value.get(id)).filter((field): field is Field => field != null),
+        }))
+        .filter(({ fields }) => fields.length === 0 || fields.some((field) => field.type !== 'hidden'));
     });
 
     const isStepFieldsValid = (fields: readonly string[]): boolean =>
@@ -489,6 +491,10 @@ export const AdaptiveForm = defineComponent({
       const noticeVariant: NoticeVariant = isNoticeField ? coerceNoticeVariant(field.variant) : 'info';
 
       if (!component) {
+        // Hidden fields carry a value but are never shown, so they need no renderer.
+        if (fieldType === 'hidden') {
+          return null;
+        }
         if (isNoticeField) {
           return renderNoticeFallback(field as NoticeField, noticeVariant, fieldState.isVisible);
         }

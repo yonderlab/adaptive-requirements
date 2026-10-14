@@ -997,6 +997,30 @@ describe('adaptiveForm flow rendering', () => {
     expect(screen.queryByText('Next')).toBeNull();
   });
 
+  it('drops all-hidden steps in showAllSteps mode and needs no hidden renderer', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
+    const requirements = makeRequirements(
+      [
+        { id: 'name', type: 'text' },
+        { id: 'payroll_iban', type: 'hidden', defaultValue: 'PT50000201231234567890154' },
+      ],
+      {
+        mode: 'manual',
+        steps: [
+          { id: 'step1', title: 'Step One', fields: ['name'] },
+          { id: 'step2', title: 'Payroll', fields: ['payroll_iban'] },
+        ],
+      },
+    );
+
+    renderForm({ requirements, props: { defaultValue: {}, showAllSteps: true, components: testComponents } });
+
+    expect(screen.getByText('Step One')).toBeTruthy();
+    expect(screen.queryByText('Payroll')).toBeNull();
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   it('skips empty initial steps using form data', async () => {
     const requirements = makeRequirements(
       [
