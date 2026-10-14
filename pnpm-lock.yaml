@@ -40,6 +40,9 @@ importers:
       oxlint:
         specifier: ^1.51.0
         version: 1.51.0
+      pkg-pr-new:
+        specifier: ^0.0.91
+        version: 0.0.91
       ultracite:
         specifier: ^7.2.4
         version: 7.2.4(oxlint@1.51.0)
@@ -2075,6 +2078,10 @@ packages:
   pify@4.0.1:
     resolution: {integrity: sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g==}
     engines: {node: '>=6'}
+
+  pkg-pr-new@0.0.91:
+    resolution: {integrity: sha512-FQPmjspKRKYV4MlHQnun9snJqlYm6Yhmo12x1O3pgE2Akim/y/BZjMOppK//BFdh222WOj6WGqlmeZfrtUtfgQ==}
+    hasBin: true
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -4503,6 +4510,8 @@ snapshots:
   picomatch@4.0.7: {}
 
   pify@4.0.1: {}
+
+  pkg-pr-new@0.0.91: {}
 
   possible-typed-array-names@1.1.0: {}
 
