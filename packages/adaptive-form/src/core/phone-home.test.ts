@@ -230,3 +230,26 @@ describe('ssr guard', () => {
     globalThis.window = originalWindow;
   });
 });
+
+describe('non-browser guard', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it.each(['sessionStorage', 'location', 'fetch'])('does nothing when %s is missing', async (missing) => {
+    const fetchSpy = vi.fn();
+    const runtime: Record<string, unknown> = Object.fromEntries(
+      Object.entries({
+        sessionStorage: { getItem: vi.fn(), setItem: vi.fn() },
+        location: { origin: 'https://example.com' },
+        fetch: fetchSpy,
+      }).filter(([key]) => key !== missing),
+    );
+    vi.stubGlobal('window', runtime);
+    vi.stubGlobal('sessionStorage', runtime['sessionStorage']);
+    vi.stubGlobal('fetch', runtime['fetch']);
+
+    await expect(checkVersion()).resolves.toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});

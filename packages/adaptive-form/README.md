@@ -692,23 +692,53 @@ function StepFooter({ requirements, formData }) {
 
 ### AdaptiveForm props (React)
 
-| Prop                      | Type                                   | Default         | Description                                                                                   |
-| ------------------------- | -------------------------------------- | --------------- | --------------------------------------------------------------------------------------------- |
-| `requirements`            | `RequirementsObject`                   | required        | The schema from the API                                                                       |
-| `defaultValue`            | `FormData`                             | schema defaults | Initial data override (uncontrolled mode); when omitted, field-level `defaultValue`s are used |
-| `value`                   | `FormData`                             | —               | Current data (controlled mode)                                                                |
-| `onChange`                | `(data: FormData) => void`             | —               | Change handler (required in controlled mode)                                                  |
-| `onValidationStateChange` | `(isValidating: boolean) => void`      | —               | Called when async validation state transitions                                                |
-| `components`              | `Record<string, (props) => ReactNode>` | —               | Map of field type → render function                                                           |
-| `renderField`             | `(props) => ReactNode`                 | —               | Custom per-field render function                                                              |
-| `renderStepNavigation`    | `(props) => ReactNode`                 | —               | Custom step navigation UI                                                                     |
-| `mapping`                 | `FieldMapping`                         | —               | Field ID remapping                                                                            |
-| `clearHiddenValues`       | `boolean`                              | `false`         | Clear values when fields become hidden                                                        |
-| `showAllSteps`            | `boolean`                              | `false`         | Render all flow steps as sections                                                             |
-| `showAllErrors`           | `boolean`                              | `false`         | Show validation errors before interaction                                                     |
-| `className`               | `string`                               | —               | Container class name                                                                          |
-| `groupClassName`          | `string`                               | —               | Field group container class name                                                              |
-| `children`                | `ReactNode`                            | —               | Content rendered after fields                                                                 |
+| Prop                      | Type                                                   | Default         | Description                                                                                   |
+| ------------------------- | ------------------------------------------------------ | --------------- | --------------------------------------------------------------------------------------------- |
+| `requirements`            | `RequirementsObject`                                   | required        | The schema from the API                                                                       |
+| `defaultValue`            | `FormData`                                             | schema defaults | Initial data override (uncontrolled mode); when omitted, field-level `defaultValue`s are used |
+| `value`                   | `FormData`                                             | —               | Current data (controlled mode)                                                                |
+| `onChange`                | `(data: FormData) => void`                             | —               | Change handler (required in controlled mode)                                                  |
+| `onValidationStateChange` | `(isValidating: boolean) => void`                      | —               | Called when async validation state transitions                                                |
+| `components`              | `Record<string, (props) => ReactNode>`                 | —               | Map of field type → render function                                                           |
+| `renderField`             | `(props) => ReactNode`                                 | —               | Custom per-field render function                                                              |
+| `renderStepNavigation`    | `(props) => ReactNode`                                 | —               | Custom step navigation UI                                                                     |
+| `renderContainer`         | `({ children, label }) => ReactNode`                   | `div`           | Outer form container                                                                          |
+| `renderStepHeader`        | `({ stepId, title, subtitle }) => ReactNode`           | `h2` / `p`      | Step title and subtitle                                                                       |
+| `renderGroup`             | `({ children, stepId, title, subtitle }) => ReactNode` | `div`           | Field group for a step                                                                        |
+| `mapping`                 | `FieldMapping`                                         | —               | Field ID remapping                                                                            |
+| `clearHiddenValues`       | `boolean`                                              | `false`         | Clear values when fields become hidden                                                        |
+| `showAllSteps`            | `boolean`                                              | `false`         | Render all flow steps as sections                                                             |
+| `showAllErrors`           | `boolean`                                              | `false`         | Show validation errors before interaction                                                     |
+| `className`               | `string`                                               | —               | Container class name                                                                          |
+| `groupClassName`          | `string`                                               | —               | Field group container class name                                                              |
+| `children`                | `ReactNode`                                            | —               | Content rendered after fields                                                                 |
+
+### Headless usage (React Native)
+
+The React entry renders DOM elements only as defaults. Supply `renderContainer`, `renderStepHeader`, `renderGroup`, `renderStepNavigation` and a `components` map (including `notice` if your schema has notice fields) and no DOM element is rendered, so the same entry works on React Native. The version check is skipped outside a browser.
+
+```tsx
+import { Pressable, Text, View } from 'react-native';
+
+<AdaptiveFormProvider requirements={requirements}>
+  <AdaptiveForm
+    components={components}
+    renderContainer={({ children }) => <View>{children}</View>}
+    renderStepHeader={({ title, subtitle }) => (
+      <View>
+        {title ? <Text>{title}</Text> : null}
+        {subtitle ? <Text>{subtitle}</Text> : null}
+      </View>
+    )}
+    renderGroup={({ children }) => <View style={{ gap: 12 }}>{children}</View>}
+    renderStepNavigation={({ canGoNext, onNext }) => (
+      <Pressable disabled={!canGoNext} onPress={onNext}>
+        <Text>Next</Text>
+      </Pressable>
+    )}
+  />
+</AdaptiveFormProvider>;
+```
 
 ## Vue integration
 
