@@ -5,8 +5,15 @@ import type { Field } from '@kotaio/adaptive-requirements-engine';
  *
  * Supplied by the consumer as the `uploadFile` prop. It owns the transport.
  * Whatever it throws becomes the file's `FileEntry.error` message.
+ *
+ * `onProgress` takes the fraction sent so far, from 0 to 1, and shows on the
+ * file's `uploading` entry as `progress`. Calling it is optional. `fetch` can't
+ * report upload progress, so an uploader that wants to needs `XMLHttpRequest`.
  */
-export type UploadFile = (file: File, context: { signal: AbortSignal }) => Promise<{ id: string }>;
+export type UploadFile = (
+  file: File,
+  context: { signal: AbortSignal; onProgress: (fraction: number) => void },
+) => Promise<{ id: string }>;
 
 /**
  * One file in a file field: uploaded (its ID is in the answer), uploading, or failed.
@@ -22,7 +29,14 @@ export type FileEntry =
       name?: string;
       size?: number;
     }
-  | { key: string; status: 'uploading'; name: string; size: number }
+  | {
+      key: string;
+      status: 'uploading';
+      name: string;
+      size: number;
+      /** Fraction sent so far, from 0 to 1. Absent until `uploadFile` reports progress. */
+      progress?: number;
+    }
   | { key: string; status: 'error'; name: string; size: number; error: string };
 
 /**

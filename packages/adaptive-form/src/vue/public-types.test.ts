@@ -187,13 +187,16 @@ describe('vue public API type contracts', () => {
     type CustomFieldId = 'proof_of_address';
 
     expectTypeOf<NonNullable<AdaptiveFormProps['uploadFile']>>().toEqualTypeOf<UploadFile>();
-    expectTypeOf<UploadFile>().parameters.toEqualTypeOf<[File, { signal: AbortSignal }]>();
+    expectTypeOf<UploadFile>().parameters.toEqualTypeOf<
+      [File, { signal: AbortSignal; onProgress: (fraction: number) => void }]
+    >();
     expectTypeOf<UploadFile>().returns.toEqualTypeOf<Promise<{ id: string }>>();
     expectTypeOf<FieldFileProps<CustomFieldId>['field']['id']>().toEqualTypeOf<CustomFieldId>();
     expectTypeOf<FieldFileProps['files']>().toEqualTypeOf<FileEntry[]>();
     expectTypeOf<FileEntry['status']>().toEqualTypeOf<'uploading' | 'uploaded' | 'error'>();
     expectTypeOf<Extract<FileEntry, { status: 'uploaded' }>['id']>().toEqualTypeOf<string>();
     expectTypeOf<Extract<FileEntry, { status: 'error' }>['error']>().toEqualTypeOf<string>();
+    expectTypeOf<Extract<FileEntry, { status: 'uploading' }>['progress']>().toEqualTypeOf<number | undefined>();
     expectTypeOf<FieldFileProps>().not.toHaveProperty('isUploading');
     expectTypeOf<FieldFileProps>().not.toHaveProperty('limits');
     expectTypeOf<FieldFileProps>().not.toHaveProperty('limitsText');

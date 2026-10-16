@@ -24,9 +24,9 @@ File fields: a `type: 'file'` answer is now an array of file IDs from the upload
 
 **New** (adaptive-form):
 
-- `uploadFile` prop (React) / `:upload-file` (Vue): `(file, { signal }) => Promise<{ id }>`. Call `POST /files` directly with an embed session token, or go through your own backend with your secret key.
+- `uploadFile` prop (React) / `:upload-file` (Vue): `(file, { signal, onProgress }) => Promise<{ id }>`. Call `POST /files` directly with an embed session token, or go through your own backend with your secret key. `onProgress(fraction)` is optional to call: report the fraction sent, from 0 to 1, and it shows on the file's entry as `progress`. `fetch` can't report upload progress, so use `XMLHttpRequest` if you want it.
 - `FieldFileProps`: `files` and `canAddMore`, plus the usual `field`, `label`, `description`, `errors`, `isRequired`, `isVisible`, `isReadOnly`. Limits are read from `field.fileConfig`. React adds `addFiles`, `remove` and `retry` as function props. Vue declares them as emits (`FieldFileEmits`), the same way input components emit `update:modelValue` and `blur`; `FieldFileBindings` is the props plus `onAddFiles` / `onRemove` / `onRetry`.
-- `FileEntry` is a union on `status`: `uploaded` entries carry `id`, `error` entries carry `error`, and `uploading` / `error` entries carry `name` and `size`.
+- `FileEntry` is a union on `status`: `uploaded` entries carry `id`, `error` entries carry `error`, and `uploading` / `error` entries carry `name` and `size`. `uploading` entries also carry `progress` (0 to 1) once `uploadFile` reports it.
 - The library checks each file against `fileConfig.accept`, `maxSize` and `maxFiles` before upload, uploads the rest, keeps answers in the order files were added, and supports retry and remove. Saved IDs from `defaultValue` show as uploaded entries without a name.
 - Next is blocked while a file in the current step is uploading. `onUploadStateChange` (React) / `upload-state-change` (Vue) reports aggregate upload state for your own submit button.
 - `renderField` (React) receives `file` with the same `FieldFileProps` for file fields. The `#field` slot (Vue) receives `file` as `FieldFileBindings`, matching its existing `onUpdate:modelValue` / `onBlur`.

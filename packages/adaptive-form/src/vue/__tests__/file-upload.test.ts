@@ -54,6 +54,9 @@ const TestFileField = defineComponent({
             h('li', { key: file.key, 'data-testid': `file-${file.key}`, 'data-status': file.status }, [
               h('span', file.name ?? 'Uploaded file'),
               file.status === 'error' ? h('span', { 'data-testid': `file-error-${file.key}` }, file.error) : null,
+              file.status === 'uploading' && file.progress !== undefined
+                ? h('span', { 'data-testid': `file-progress-${file.key}` }, `${Math.round(file.progress * 100)}%`)
+                : null,
               h('button', { type: 'button', onClick: () => emit('retry', file.key) }, `Retry ${file.key}`),
               h('button', { type: 'button', onClick: () => emit('remove', file.key) }, `Remove ${file.key}`),
             ]),
@@ -103,16 +106,17 @@ interface Deferred {
   resolve: (value: { id: string }) => void;
   reject: (error: unknown) => void;
   signal: AbortSignal;
+  onProgress: (fraction: number) => void;
 }
 
 /** uploadFile mock whose calls resolve only when the test says so. */
 function deferredUploadFile() {
   const calls: Deferred[] = [];
   const uploadFile = vi.fn<UploadFile>(
-    (_file, { signal }) =>
+    (_file, { signal, onProgress }) =>
       // eslint-disable-next-line promise/avoid-new
       new Promise((resolve, reject) => {
-        calls.push({ resolve, reject, signal });
+        calls.push({ resolve, reject, signal, onProgress });
       }),
   );
   return { uploadFile, calls };
@@ -245,7 +249,10 @@ describe('file fields — upload lifecycle', () => {
     const { model } = renderControlledForm({ requirements: makeRequirements(), formProps: { uploadFile } });
 
     await pickFiles('doc', [makeFile('passport.pdf')]);
-    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), { signal: expect.any(AbortSignal) });
+    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), {
+      signal: expect.any(AbortSignal),
+      onProgress: expect.any(Function),
+    });
     expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('uploading');
     expect(screen.getByTestId('uploading-doc')).toBeTruthy();
 
@@ -256,6 +263,22 @@ describe('file fields — upload lifecycle', () => {
     expect(screen.getByTestId('file-upload-1').textContent).toContain('passport.pdf');
     expect(screen.queryByTestId('uploading-doc')).toBeNull();
     expect(screen.queryByTestId('input-doc')).toBeNull();
+  });
+
+  it('shows the progress uploadFile reports on the uploading entry', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    renderControlledForm({ requirements: makeRequirements(), formProps: { uploadFile } });
+
+    await pickFiles('doc', [makeFile('passport.pdf')]);
+    expect(screen.queryByTestId('file-progress-upload-1')).toBeNull();
+
+    calls[0]!.onProgress(0.42);
+    await nextTick();
+    expect(screen.getByTestId('file-progress-upload-1').textContent).toBe('42%');
+
+    await settle(calls[0]!, { id: 'file_a' });
+    expect(screen.queryByTestId('file-progress-upload-1')).toBeNull();
+    expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('uploaded');
   });
 
   it('marks files failing the checks as errors without uploading them', async () => {

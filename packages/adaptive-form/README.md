@@ -326,12 +326,12 @@ File fields (`type: 'file'`) answer with an array of file IDs (with Kota, the ID
 
 `fileConfig` is required on file fields, with all three keys set and no defaults, so read it as is: `field.fileConfig?.accept.join(',')` is the value for `<input accept>`. (`Field` marks `fileConfig` optional only because other field types don't have one.) The schema's publish check guarantees it; if an unvalidated schema has none, every picked file becomes an error ("This field is not configured for file uploads").
 
-Each `FileEntry` has a stable `key` and a `status`. Narrow on `status` to reach the rest: `uploaded` entries have an `id`, `error` entries have an `error` message, and `uploading` and `error` entries have the file's `name` and `size`. Saved IDs from the field's `defaultValue` (a reopened requirement) appear as `uploaded` entries with no `name` — show something like "Uploaded file".
+Each `FileEntry` has a stable `key` and a `status`. Narrow on `status` to reach the rest: `uploaded` entries have an `id`, `error` entries have an `error` message, and `uploading` and `error` entries have the file's `name` and `size`. An `uploading` entry also has `progress`, the fraction sent from 0 to 1, once your `uploadFile` reports it (see [Reporting progress](#reporting-progress)); until then it's absent, so show an indeterminate spinner. Saved IDs from the field's `defaultValue` (a reopened requirement) appear as `uploaded` entries with no `name` — show something like "Uploaded file".
 
 **What happens when the component calls `addFiles`:**
 
 1. Each file is checked against `fileConfig.accept` and `maxSize`, and the total against `maxFiles`. A file that fails becomes an `error` entry and is never uploaded.
-2. Each file that passes becomes an `uploading` entry and `uploadFile` is called for it.
+2. Each file that passes becomes an `uploading` entry and `uploadFile` is called for it. Progress it reports shows on the entry as `progress`.
 3. On success the entry becomes `uploaded` and its ID is added to the answer, in the order files were added. The answer is written against the latest form data, so edits made to other fields during the upload are kept.
 4. On failure the entry becomes `error` with the thrown message. `retry` uploads it again; `remove` drops it.
 
@@ -384,6 +384,40 @@ export const uploadFile: UploadFile = async (file, { signal }) => {
 };
 ```
 
+#### Reporting progress
+
+`uploadFile` also receives `onProgress`. Call it with the fraction sent so far, from 0 to 1, and the file's `uploading` entry shows it as `progress`. It's optional: if you never call it, `progress` stays absent. Values are clamped to 0–1, and the form only re-renders when the whole percentage changes.
+
+`fetch` can't report upload progress, so use `XMLHttpRequest`:
+
+```ts
+export const uploadFile: UploadFile = (file, { signal, onProgress }) =>
+  new Promise((resolve, reject) => {
+    const body = new FormData();
+    body.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/files');
+    xhr.responseType = 'json';
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.response); // { id: "file_…" }
+      } else {
+        reject(new Error(xhr.response?.errors?.file?.[0] ?? 'Upload failed'));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Upload failed'));
+    xhr.onabort = () => reject(new DOMException('Upload aborted', 'AbortError'));
+    signal.addEventListener('abort', () => xhr.abort(), { once: true });
+    xhr.send(body);
+  });
+```
+
+When you upload through your own backend, this measures the browser-to-backend leg only, which is usually the slow one.
+
 The upload endpoint accepts files up to 10,000,000 bytes; make sure your backend allows request bodies that size. Use `https://test.api.kota.io/files` with a `pk_test_` key in sandbox.
 
 #### Example component
@@ -435,7 +469,12 @@ function FileField({
         {files.map((file) => (
           <li key={file.key}>
             <span>{file.name ?? 'Uploaded file'}</span>
-            {file.status === 'uploading' && <Spinner />}
+            {file.status === 'uploading' &&
+              (file.progress === undefined ? (
+                <Spinner />
+              ) : (
+                <progress max={1} value={file.progress} aria-label={`Uploading ${file.name}`} />
+              ))}
             {file.status === 'error' && (
               <>
                 <span className="error">{file.error}</span>

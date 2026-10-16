@@ -23,16 +23,17 @@ interface Deferred {
   resolve: (value: { id: string }) => void;
   reject: (error: unknown) => void;
   signal: AbortSignal;
+  onProgress: (fraction: number) => void;
 }
 
 /** uploadFile mock whose calls resolve only when the test says so. */
 function deferredUploadFile() {
   const calls: Deferred[] = [];
   const uploadFile = vi.fn<UploadFile>(
-    (_file, { signal }) =>
+    (_file, { signal, onProgress }) =>
       // eslint-disable-next-line promise/avoid-new
       new Promise((resolve, reject) => {
-        calls.push({ resolve, reject, signal });
+        calls.push({ resolve, reject, signal, onProgress });
       }),
   );
   return { uploadFile, calls };
@@ -129,7 +130,10 @@ describe(createFileUploadStore, () => {
     const { store, values } = setup(uploadFile);
 
     store.addFiles('doc', [makeFile('a.pdf')], config);
-    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), { signal: expect.any(AbortSignal) });
+    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), {
+      signal: expect.any(AbortSignal),
+      onProgress: expect.any(Function),
+    });
     expect(store.isFieldUploading('doc')).toBeTruthy();
     expect(store.getFiles('doc', values['doc'])).toStrictEqual([
       { key: 'upload-1', status: 'uploading', name: 'a.pdf', size: 1000 },
@@ -352,6 +356,113 @@ describe(createFileUploadStore, () => {
     expect(calls[0]!.signal.aborted).toBeTruthy();
     expect(store.isUploading()).toBeFalsy();
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+});
+
+/** The first `doc` entry's progress, or 'not uploading' when it isn't an uploading entry. */
+function progressOf(store: ReturnType<typeof setup>['store'], values: Record<string, FieldValue>) {
+  const [entry] = store.getFiles('doc', values['doc']);
+  return entry?.status === 'uploading' ? entry.progress : 'not uploading';
+}
+
+describe('upload progress', () => {
+  it('has no progress until uploadFile reports it, then shows the fraction sent', () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { store, values } = setup(uploadFile);
+
+    store.addFiles('doc', [makeFile('a.pdf')], single);
+    expect(store.getFiles('doc', values['doc'])[0]).not.toHaveProperty('progress');
+
+    calls[0]!.onProgress(0.25);
+    expect(progressOf(store, values)).toBe(0.25);
+  });
+
+  it.each([
+    [-0.5, 0],
+    [1.5, 1],
+  ])('clamps %d to %d', (reported, shown) => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { store, values } = setup(uploadFile);
+
+    store.addFiles('doc', [makeFile('a.pdf')], single);
+    calls[0]!.onProgress(reported);
+    expect(progressOf(store, values)).toBe(shown);
+  });
+
+  it('ignores a report that is not a finite number', () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { store, values } = setup(uploadFile);
+
+    store.addFiles('doc', [makeFile('a.pdf')], single);
+    calls[0]!.onProgress(0.4);
+    calls[0]!.onProgress(Number.NaN);
+    calls[0]!.onProgress(Number.POSITIVE_INFINITY);
+    expect(progressOf(store, values)).toBe(0.4);
+  });
+
+  it('notifies only when the whole percentage changes', () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { store, values } = setup(uploadFile);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
+    const listener = vi.fn();
+    store.subscribe(listener);
+
+    for (const fraction of [0.1, 0.101, 0.105, 0.109, 0.11, 0.2]) {
+      calls[0]!.onProgress(fraction);
+    }
+    // 10%, 11% and 20% notify; 10.1–10.9% only update the stored value
+    expect(listener).toHaveBeenCalledTimes(3);
+    expect(progressOf(store, values)).toBe(0.2);
+  });
+
+  it('ignores reports after the upload finishes', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { store, values } = setup(uploadFile);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
+
+    calls[0]!.resolve({ id: 'file_a' });
+    await flush();
+    const listener = vi.fn();
+    store.subscribe(listener);
+    calls[0]!.onProgress(0.5);
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(store.getFiles('doc', values['doc'])).toStrictEqual([
+      { key: 'upload-1', status: 'uploaded', id: 'file_a', name: 'a.pdf', size: 1000 },
+    ]);
+  });
+
+  it('ignores reports after the file is removed', () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { store, values } = setup(uploadFile);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
+    store.remove('doc', 'upload-1');
+
+    const listener = vi.fn();
+    store.subscribe(listener);
+    calls[0]!.onProgress(0.5);
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(store.getFiles('doc', values['doc'])).toStrictEqual([]);
+  });
+
+  it('starts a retried upload without progress, and ignores the failed attempt', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    const { store, values } = setup(uploadFile);
+    store.addFiles('doc', [makeFile('a.pdf')], single);
+    calls[0]!.onProgress(0.6);
+    calls[0]!.reject(new Error('Network down'));
+    await flush();
+
+    store.retry('doc', 'upload-1', single);
+    expect(store.getFiles('doc', values['doc'])[0]).not.toHaveProperty('progress');
+
+    // A late report from the first attempt doesn't reach the retry
+    calls[0]!.onProgress(0.9);
+    expect(store.getFiles('doc', values['doc'])[0]).not.toHaveProperty('progress');
+
+    calls[1]!.onProgress(0.3);
+    expect(progressOf(store, values)).toBe(0.3);
   });
 });
 

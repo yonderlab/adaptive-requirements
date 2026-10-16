@@ -30,13 +30,16 @@ test('exports file upload types and the file component contract', () => {
 
   expectTypeOf<NonNullable<AdaptiveFormProps['uploadFile']>>().toEqualTypeOf<UploadFile>();
   expectTypeOf<NonNullable<AdaptiveFormProps['onUploadStateChange']>>().toEqualTypeOf<(isUploading: boolean) => void>();
-  expectTypeOf<UploadFile>().parameters.toEqualTypeOf<[File, { signal: AbortSignal }]>();
+  expectTypeOf<UploadFile>().parameters.toEqualTypeOf<
+    [File, { signal: AbortSignal; onProgress: (fraction: number) => void }]
+  >();
   expectTypeOf<UploadFile>().returns.toEqualTypeOf<Promise<{ id: string }>>();
   expectTypeOf<FieldFileProps<FieldId>['field']['id']>().toEqualTypeOf<FieldId>();
   expectTypeOf<FieldFileProps['files']>().toEqualTypeOf<FileEntry[]>();
   expectTypeOf<FileEntry['status']>().toEqualTypeOf<'uploading' | 'uploaded' | 'error'>();
   expectTypeOf<Extract<FileEntry, { status: 'uploaded' }>['id']>().toEqualTypeOf<string>();
   expectTypeOf<Extract<FileEntry, { status: 'error' }>['error']>().toEqualTypeOf<string>();
+  expectTypeOf<Extract<FileEntry, { status: 'uploading' }>['progress']>().toEqualTypeOf<number | undefined>();
   expectTypeOf<FieldFileProps['addFiles']>().toEqualTypeOf<(files: File[]) => void>();
   expectTypeOf<FieldFileProps['remove']>().toEqualTypeOf<(key: string) => void>();
   expectTypeOf<FieldFileProps['retry']>().toEqualTypeOf<(key: string) => void>();

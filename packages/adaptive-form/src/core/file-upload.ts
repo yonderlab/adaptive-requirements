@@ -80,6 +80,8 @@ interface PendingFileBase {
   /** True once the file passed the pre-upload checks; it holds a `maxFiles` slot until removed. */
   passedChecks: boolean;
   controller?: AbortController;
+  /** Fraction sent so far, 0 to 1, once `uploadFile` reports it. */
+  progress?: number;
 }
 
 /** A file picked in this session that isn't (yet) in the answer. */
@@ -185,9 +187,29 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
     const controller = new AbortController();
     entry.controller = controller;
 
+    // Looked up by controller, so a report after the upload finished, failed, was
+    // removed or retried finds nothing. Listeners hear only whole-percent changes,
+    // so a chatty uploader can't re-render the form on every progress event.
+    const onProgress = (fraction: number) => {
+      if (controller.signal.aborted || !Number.isFinite(fraction)) {
+        return;
+      }
+      const pending = fields.get(fieldId)?.pending.find((candidate) => candidate.controller === controller);
+      if (pending?.status !== 'uploading') {
+        return;
+      }
+      const progress = Math.min(1, Math.max(0, fraction));
+      const percentChanged =
+        pending.progress === undefined || Math.floor(pending.progress * 100) !== Math.floor(progress * 100);
+      pending.progress = progress;
+      if (percentChanged) {
+        notify();
+      }
+    };
+
     void (async () => {
       try {
-        const result: unknown = await uploadFile(entry.file, { signal: controller.signal });
+        const result: unknown = await uploadFile(entry.file, { signal: controller.signal, onProgress });
         if (controller.signal.aborted) {
           return;
         }
@@ -323,11 +345,17 @@ export function createFileUploadStore(options: FileUploadStoreOptions): FileUplo
       return { seq: known?.seq ?? -1, entry };
     });
     const pendingEntries = (uploads?.pending ?? []).map((pending) => {
-      const { key, file } = pending;
+      const { key, file, progress } = pending;
       const entry: FileEntry =
         pending.status === 'error'
           ? { key, status: 'error', name: file.name, size: file.size, error: pending.error }
-          : { key, status: 'uploading', name: file.name, size: file.size };
+          : {
+              key,
+              status: 'uploading',
+              name: file.name,
+              size: file.size,
+              ...(progress === undefined ? {} : { progress }),
+            };
       return { seq: pending.seq, entry };
     });
     // eslint-disable-next-line unicorn/no-array-sort -- sorts a fresh copy

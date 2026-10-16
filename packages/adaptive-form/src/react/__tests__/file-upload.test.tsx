@@ -43,6 +43,9 @@ function TestFileField({
           <li key={file.key} data-testid={`file-${file.key}`} data-status={file.status}>
             <span>{file.name ?? 'Uploaded file'}</span>
             {file.status === 'error' && <span data-testid={`file-error-${file.key}`}>{file.error}</span>}
+            {file.status === 'uploading' && file.progress !== undefined && (
+              <span data-testid={`file-progress-${file.key}`}>{Math.round(file.progress * 100)}%</span>
+            )}
             <button type="button" onClick={() => retry(file.key)}>
               Retry {file.key}
             </button>
@@ -92,16 +95,17 @@ interface Deferred {
   resolve: (value: { id: string }) => void;
   reject: (error: unknown) => void;
   signal: AbortSignal;
+  onProgress: (fraction: number) => void;
 }
 
 /** uploadFile mock whose calls resolve only when the test says so. */
 function deferredUploadFile() {
   const calls: Deferred[] = [];
   const uploadFile = vi.fn<UploadFile>(
-    (_file, { signal }) =>
+    (_file, { signal, onProgress }) =>
       // eslint-disable-next-line promise/avoid-new
       new Promise((resolve, reject) => {
-        calls.push({ resolve, reject, signal });
+        calls.push({ resolve, reject, signal, onProgress });
       }),
   );
   return { uploadFile, calls };
@@ -201,7 +205,10 @@ describe('file fields — upload lifecycle', () => {
     render(<ControlledForm requirements={makeRequirements()} uploadFile={uploadFile} onData={onData} />);
 
     pickFiles('doc', [makeFile('passport.pdf')]);
-    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), { signal: expect.any(AbortSignal) });
+    expect(uploadFile).toHaveBeenCalledWith(expect.any(File), {
+      signal: expect.any(AbortSignal),
+      onProgress: expect.any(Function),
+    });
     expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('uploading');
     expect(screen.getByTestId('uploading-doc')).toBeTruthy();
 
@@ -213,6 +220,23 @@ describe('file fields — upload lifecycle', () => {
     expect(screen.queryByTestId('uploading-doc')).toBeNull();
     // Single-file field is now full
     expect(screen.queryByTestId('input-doc')).toBeNull();
+  });
+
+  it('shows the progress uploadFile reports on the uploading entry', async () => {
+    const { uploadFile, calls } = deferredUploadFile();
+    render(<ControlledForm requirements={makeRequirements()} uploadFile={uploadFile} />);
+
+    pickFiles('doc', [makeFile('passport.pdf')]);
+    expect(screen.queryByTestId('file-progress-upload-1')).toBeNull();
+
+    act(() => {
+      calls[0]!.onProgress(0.42);
+    });
+    expect(screen.getByTestId('file-progress-upload-1').textContent).toBe('42%');
+
+    await settle(calls[0]!, { id: 'file_a' });
+    expect(screen.queryByTestId('file-progress-upload-1')).toBeNull();
+    expect(screen.getByTestId('file-upload-1').dataset['status']).toBe('uploaded');
   });
 
   it('marks files failing accept or maxSize as errors without uploading them', () => {
