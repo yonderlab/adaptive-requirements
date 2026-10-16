@@ -1,5 +1,5 @@
 /* eslint-disable import/no-relative-parent-imports */
-import type { FieldComputedProps, FieldInputProps } from '../adaptive-form';
+import type { FieldComputedProps, FieldFileProps, FieldInputProps } from '../adaptive-form';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 
 import { claimsSubmissionSchema as schema } from '@kotaio/adaptive-requirements-engine/test-fixtures/claims-submission';
@@ -137,6 +137,19 @@ function TestComputed({ field, value, isVisible }: FieldComputedProps) {
   );
 }
 
+function TestFile({ field, isVisible, files }: FieldFileProps) {
+  if (!isVisible) {
+    return null;
+  }
+  return (
+    <div data-testid={`field-${field.id}`}>
+      <span data-testid={`value-${field.id}`}>
+        {files.map((file) => (file.status === 'uploaded' ? file.id : '')).join(',')}
+      </span>
+    </div>
+  );
+}
+
 const testComponents = {
   text: (props: FieldInputProps) => <TestInput {...props} />,
   number: (props: FieldInputProps) => <TestInput {...props} />,
@@ -148,7 +161,7 @@ const testComponents = {
   checkbox: (props: FieldInputProps) => <TestCheckbox {...props} />,
   radio: (props: FieldInputProps) => <TestRadio {...props} />,
   computed: (props: FieldComputedProps) => <TestComputed {...props} />,
-  file: (props: FieldInputProps) => <TestInput {...props} />,
+  file: (props: FieldFileProps) => <TestFile {...props} />,
 };
 
 function ControlledForm({

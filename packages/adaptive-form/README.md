@@ -302,6 +302,215 @@ If you don't supply a `notice` renderer, AdaptiveForm renders a deliberately uns
 
 You can target the fallback globally with CSS if you want a quick baseline (e.g. `[data-adaptive-form-default-renderer="notice"] { padding: 12px; border: 1px solid; }`), but a real renderer in `components` is the recommended path.
 
+### File fields — `FieldFileProps`
+
+File fields (`type: 'file'`) answer with an array of file IDs (with Kota, the IDs returned by `POST /files`). AdaptiveForm owns the upload lifecycle — checking each file against the schema's limits, calling your `uploadFile`, tracking progress and errors, and writing the IDs into the form data. You supply two things:
+
+1. **`uploadFile`** — the transport, passed as a prop on `AdaptiveForm`. It's called once per file and resolves with `{ id }`. Whatever it throws becomes that file's error message.
+2. **A `file` component** — drawing only. It never calls the network or sets the value. There is no default `file` component; without one, file fields render nothing (with a development warning), like every other input type.
+
+| Prop          | Type                      | Description                                                                                 |
+| ------------- | ------------------------- | ------------------------------------------------------------------------------------------- |
+| `field`       | `Field`                   | The field definition. Its `fileConfig` holds the limits: `accept`, `maxSize` and `maxFiles` |
+| `label`       | `string \| undefined`     | Resolved label (after localization)                                                         |
+| `description` | `string \| undefined`     | Resolved description (after localization)                                                   |
+| `isRequired`  | `boolean`                 | Whether at least one file is required                                                       |
+| `isVisible`   | `boolean`                 | Whether the field should be rendered                                                        |
+| `isReadOnly`  | `boolean`                 | Whether the field is read-only (`addFiles`, `remove` and `retry` are ignored)               |
+| `errors`      | `string[]`                | Field-level errors, e.g. "This field is required" (filtered by touched state)               |
+| `files`       | `FileEntry[]`             | Uploaded, uploading and failed files, in the order added                                    |
+| `canAddMore`  | `boolean`                 | False once the field holds `fileConfig.maxFiles` files                                      |
+| `addFiles`    | `(files: File[]) => void` | Check, then upload, the picked files                                                        |
+| `remove`      | `(key: string) => void`   | Remove a file; an uploaded file's ID leaves the answer (the file stays in storage)          |
+| `retry`       | `(key: string) => void`   | Check and upload a failed file again                                                        |
+
+`fileConfig` is required on file fields, with all three keys set and no defaults, so read it as is: `field.fileConfig?.accept.join(',')` is the value for `<input accept>`. (`Field` marks `fileConfig` optional only because other field types don't have one.) The schema's publish check guarantees it; if an unvalidated schema has none, every picked file becomes an error ("This field is not configured for file uploads").
+
+Each `FileEntry` has a stable `key` and a `status`. Narrow on `status` to reach the rest: `uploaded` entries have an `id`, `error` entries have an `error` message, and `uploading` and `error` entries have the file's `name` and `size`. An `uploading` entry also has `progress`, the fraction sent from 0 to 1, once your `uploadFile` reports it (see [Reporting progress](#reporting-progress)); until then it's absent, so show an indeterminate spinner. Saved IDs from the field's `defaultValue` (a reopened requirement) appear as `uploaded` entries with no `name` — show something like "Uploaded file".
+
+**What happens when the component calls `addFiles`:**
+
+1. Each file is checked against `fileConfig.accept` and `maxSize`, and the total against `maxFiles`. A file that fails becomes an `error` entry and is never uploaded.
+2. Each file that passes becomes an `uploading` entry and `uploadFile` is called for it. Progress it reports shows on the entry as `progress`.
+3. On success the entry becomes `uploaded` and its ID is added to the answer, in the order files were added. The answer is written against the latest form data, so edits made to other fields during the upload are kept.
+4. On failure the entry becomes `error` with the thrown message. `retry` uploads it again; `remove` drops it.
+
+While any file in the current step is uploading, Next is blocked — the same way it is while an async validator runs. For your own submit button (single-page forms, or the last step), use `onUploadStateChange`.
+
+#### Writing `uploadFile`
+
+Kota embed sessions call the upload endpoint directly with the session token:
+
+```ts
+import type { UploadFile } from '@kotaio/adaptive-form/react';
+
+export function createUploadFile(accessToken: string): UploadFile {
+  return async (file, { signal }) => {
+    const body = new FormData();
+    body.append('file', file);
+
+    const response = await fetch('https://api.kota.io/files', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` }, // ek_ session token
+      body,
+      signal,
+    });
+
+    if (!response.ok) {
+      const problem = await response.json().catch(() => null);
+      throw new Error(problem?.errors?.file?.[0] ?? 'Upload failed');
+    }
+
+    return response.json(); // { id: "file_…" }
+  };
+}
+```
+
+API partners keep their secret key on the server: the browser posts to the partner's backend, which forwards the file to `POST /files` with `Authorization: Bearer pk_…` and passes the status and body straight back. The client side is the same function pointed at your own route:
+
+```ts
+export const uploadFile: UploadFile = async (file, { signal }) => {
+  const body = new FormData();
+  body.append('file', file);
+
+  const response = await fetch('/api/files', { method: 'POST', body, signal });
+
+  if (!response.ok) {
+    const problem = await response.json().catch(() => null);
+    throw new Error(problem?.errors?.file?.[0] ?? 'Upload failed');
+  }
+
+  return response.json();
+};
+```
+
+#### Reporting progress
+
+`uploadFile` also receives `onProgress`. Call it with the fraction sent so far, from 0 to 1, and the file's `uploading` entry shows it as `progress`. It's optional: if you never call it, `progress` stays absent. Values are clamped to 0–1, and the form only re-renders when the whole percentage changes.
+
+`fetch` can't report upload progress, so use `XMLHttpRequest`:
+
+```ts
+export const uploadFile: UploadFile = (file, { signal, onProgress }) =>
+  new Promise((resolve, reject) => {
+    const body = new FormData();
+    body.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/files');
+    xhr.responseType = 'json';
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.response); // { id: "file_…" }
+      } else {
+        reject(new Error(xhr.response?.errors?.file?.[0] ?? 'Upload failed'));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Upload failed'));
+    xhr.onabort = () => reject(new DOMException('Upload aborted', 'AbortError'));
+    signal.addEventListener('abort', () => xhr.abort(), { once: true });
+    xhr.send(body);
+  });
+```
+
+When you upload through your own backend, this measures the browser-to-backend leg only, which is usually the slow one.
+
+The upload endpoint accepts files up to 10,000,000 bytes; make sure your backend allows request bodies that size. Use `https://test.api.kota.io/files` with a `pk_test_` key in sandbox.
+
+#### Example component
+
+```tsx
+import type { FieldFileProps } from '@kotaio/adaptive-form/react';
+
+function FileField({
+  field,
+  label,
+  description,
+  isRequired,
+  isVisible,
+  isReadOnly,
+  files,
+  addFiles,
+  remove,
+  retry,
+  canAddMore,
+  errors,
+}: FieldFileProps) {
+  if (!isVisible) return null;
+  const { fileConfig } = field;
+
+  return (
+    <div className="field">
+      <label>
+        {label}
+        {isRequired && <span className="required">*</span>}
+      </label>
+      {description && <p className="hint">{description}</p>}
+
+      {canAddMore && !isReadOnly && (
+        <input
+          type="file"
+          multiple
+          accept={fileConfig?.accept.join(',')}
+          onChange={(e) => addFiles([...(e.target.files ?? [])])}
+        />
+      )}
+      {fileConfig && (
+        <p className="hint">
+          Up to {fileConfig.maxSize / 1_000_000} MB per file, {fileConfig.maxFiles}{' '}
+          {fileConfig.maxFiles === 1 ? 'file' : 'files'}
+        </p>
+      )}
+
+      <ul>
+        {files.map((file) => (
+          <li key={file.key}>
+            <span>{file.name ?? 'Uploaded file'}</span>
+            {file.status === 'uploading' &&
+              (file.progress === undefined ? (
+                <Spinner />
+              ) : (
+                <progress max={1} value={file.progress} aria-label={`Uploading ${file.name}`} />
+              ))}
+            {file.status === 'error' && (
+              <>
+                <span className="error">{file.error}</span>
+                <button type="button" onClick={() => retry(file.key)}>
+                  Retry
+                </button>
+              </>
+            )}
+            {!isReadOnly && (
+              <button type="button" onClick={() => remove(file.key)}>
+                Remove
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {errors.map((error) => (
+        <p key={error} className="error">
+          {error}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+<AdaptiveForm
+  value={answers}
+  onChange={setAnswers}
+  components={{ ...components, file: (props) => <FileField {...props} /> }}
+  uploadFile={uploadFile}
+/>;
+```
+
+The answers object you submit then contains file IDs — e.g. `{ "company_registration_extract": ["file_5b1e…"] }` — and goes through your existing answers call unchanged. The pre-upload error messages are in English; write your own hint copy from `field.fileConfig` in whatever language you need.
+
 ### Custom render function
 
 For complete control over how each field renders, use the `renderField` prop. It receives:
@@ -317,18 +526,19 @@ For complete control over how each field renders, use the `renderField` prop. It
 | `onChange`      | `(value: FieldValue) => void` | Value change handler                                         |
 | `onBlur`        | `() => void`                  | Blur handler for touched tracking                            |
 | `components`    | `object \| undefined`         | The components map (for delegation)                          |
+| `file`          | `FieldFileProps \| undefined` | Upload props, set for `type: 'file'` fields only             |
 
 ```tsx
 <AdaptiveFormProvider requirements={requirements}>
   <AdaptiveForm
     defaultValue={{}}
     components={myComponents}
-    renderField={({ field, fieldState, displayErrors, onChange, onBlur }) => {
+    renderField={({ field, fieldState, displayErrors, onChange, onBlur, file }) => {
       if (!fieldState.isVisible) return null;
 
-      // Custom rendering for a specific field type
-      if (field.type === 'file') {
-        return <FileUploader field={field} onChange={onChange} errors={displayErrors} />;
+      // File fields get the same upload props a `components.file` renderer receives
+      if (file) {
+        return <FileUploader {...file} />;
       }
 
       // Return null to fall back to the components map
@@ -699,6 +909,8 @@ function StepFooter({ requirements, formData }) {
 | `value`                   | `FormData`                             | —               | Current data (controlled mode)                                                                |
 | `onChange`                | `(data: FormData) => void`             | —               | Change handler (required in controlled mode)                                                  |
 | `onValidationStateChange` | `(isValidating: boolean) => void`      | —               | Called when async validation state transitions                                                |
+| `uploadFile`              | `UploadFile`                           | —               | Uploads one file for a `file` field; resolves with `{ id }`                                   |
+| `onUploadStateChange`     | `(isUploading: boolean) => void`       | —               | Called when aggregate upload state transitions                                                |
 | `components`              | `Record<string, (props) => ReactNode>` | —               | Map of field type → render function                                                           |
 | `renderField`             | `(props) => ReactNode`                 | —               | Custom per-field render function                                                              |
 | `renderStepNavigation`    | `(props) => ReactNode`                 | —               | Custom step navigation UI                                                                     |
@@ -803,6 +1015,49 @@ Map field types to Vue components via the `components` prop. Interactive fields 
 
 `type: 'computed'` components receive `FieldComputedProps` (`field`, `value`, `isVisible`). `type: 'notice'` components receive `FieldNoticeProps` (`field`, `isVisible`, `variant`, `description`, optional `heading`) — same semantics as the React integration. A built-in accessible fallback renders when no `notice` component is supplied.
 
+`type: 'file'` components receive `FieldFileProps` as props — the same state as React (see [File fields](#file-fields--fieldfileprops)) — and ask for changes by emitting `addFiles`, `remove` and `retry` (`FieldFileEmits`), the same way input components emit `update:modelValue` and `blur`:
+
+```vue
+<script setup lang="ts">
+import type { FieldFileEmits, FieldFileProps } from '@kotaio/adaptive-form/vue';
+
+const props = defineProps<FieldFileProps>();
+const emit = defineEmits<FieldFileEmits>();
+</script>
+
+<template>
+  <div v-if="props.isVisible">
+    <label>{{ props.label }}</label>
+    <input
+      v-if="props.canAddMore && !props.isReadOnly"
+      type="file"
+      multiple
+      :accept="props.field.fileConfig?.accept.join(',')"
+      @change="emit('addFiles', [...(($event.target as HTMLInputElement).files ?? [])])"
+    />
+    <div v-for="file in props.files" :key="file.key">
+      {{ file.name ?? 'Uploaded file' }} · {{ file.status }}
+      <template v-if="file.status === 'error'">
+        {{ file.error }} <button type="button" @click="emit('retry', file.key)">Retry</button>
+      </template>
+      <button v-if="!props.isReadOnly" type="button" @click="emit('remove', file.key)">Remove</button>
+    </div>
+    <p v-for="error in props.errors" :key="error">{{ error }}</p>
+  </div>
+</template>
+```
+
+Pass the transport with `:upload-file`:
+
+```vue
+<AdaptiveForm
+  v-model="answers"
+  :components="{ text: TextInput, file: FileField }"
+  :upload-file="uploadFile"
+  @upload-state-change="isUploading = $event"
+/>
+```
+
 Define `components` outside setup or in a stable ref so Vue does not remount fields each render.
 
 ### Scoped slots (not render props)
@@ -815,7 +1070,7 @@ Vue does **not** expose React's `renderField` or `renderStepNavigation` props. U
 | `#step-navigation` | `renderStepNavigation` | Custom Previous/Next UI for multi-step flows |
 | default            | `children`             | Content after fields                         |
 
-The `#field` slot receives `FieldRenderProps`: `field`, `fieldState`, `displayErrors`, `isTouched`, `isValidating`, `asyncErrors`, `modelValue`, `onUpdate:modelValue`, `onBlur`, and the `components` map for delegation.
+The `#field` slot receives `FieldRenderProps`: `field`, `fieldState`, `displayErrors`, `isTouched`, `isValidating`, `asyncErrors`, `modelValue`, `onUpdate:modelValue`, `onBlur`, the `components` map for delegation, and — for `type: 'file'` fields only — `file`, the `FieldFileBindings`: the `FieldFileProps` plus `onAddFiles`, `onRemove` and `onRetry`, so `<FileField v-bind="file" />` wires a file component up.
 
 The `#step-navigation` slot receives the same payload as `useStepNavigation()` when `initialised: true` (`canGoPrevious`, `canGoNext`, `isStepValid`, `onPrevious`, `onNext`, step metadata, and `steps`).
 
@@ -877,7 +1132,8 @@ Safe for SSR and hydration when rendered with Vue's server renderer:
 
 - Form/schema: `AdaptiveFormData`, `AdaptiveFormRequirements`, `AdaptiveFormProviderProps`, `FieldId`
 - Component/slot: `AdaptiveFormComponents`, `AdaptiveFormProps`, `AdaptiveFormEmits`, `AdaptiveFormSlots`
-- Field renderers: `FieldInputProps`, `FieldInputEmits`, `FieldInputBindings`, `FieldComputedProps`, `FieldNoticeProps`, `FieldRenderProps`, `FieldOption`
+- Field renderers: `FieldInputProps`, `FieldInputEmits`, `FieldInputBindings`, `FieldComputedProps`, `FieldNoticeProps`, `FieldFileProps`, `FieldFileEmits`, `FieldFileBindings`, `FieldRenderProps`, `FieldOption`
+- File uploads: `UploadFile`, `FileEntry`
 - Navigation: `StepDetail`, `StepperInfo`, `StepNavigationProps`, `StepNavigationState`
 - Notice (engine): `NoticeField`, `NoticeVariant`
 - Async validation: `AsyncFieldState`, `AsyncValidationState`, `UseAsyncValidationOptions`, `UseAsyncValidationReturn`
@@ -917,19 +1173,20 @@ import type {
 
 ### AdaptiveForm props (Vue)
 
-| Prop                | Type                        | Default | Description                                              |
-| ------------------- | --------------------------- | ------- | -------------------------------------------------------- |
-| `modelValue`        | `FormData`                  | —       | Current data (`v-model`)                                 |
-| `defaultValue`      | `FormData`                  | schema  | Initial override when uncontrolled                       |
-| `components`        | `AdaptiveFormComponents`    | —       | Map of field type → Vue component                        |
-| `mapping`           | `FieldMapping`              | —       | Field ID remapping                                       |
-| `clearHiddenValues` | `boolean`                   | `false` | Clear values when fields become hidden                   |
-| `showAllSteps`      | `boolean`                   | `false` | Render all flow steps as sections                        |
-| `showAllErrors`     | `boolean`                   | `false` | Show validation errors before interaction                |
-| `groupClass`        | `string \| object \| array` | —       | Class for the inner field-group wrapper                  |
-| `defaultNavigation` | `boolean`                   | `true`  | Render built-in Previous/Next when no custom nav is used |
+| Prop                | Type                        | Default | Description                                                 |
+| ------------------- | --------------------------- | ------- | ----------------------------------------------------------- |
+| `modelValue`        | `FormData`                  | —       | Current data (`v-model`)                                    |
+| `defaultValue`      | `FormData`                  | schema  | Initial override when uncontrolled                          |
+| `components`        | `AdaptiveFormComponents`    | —       | Map of field type → Vue component                           |
+| `mapping`           | `FieldMapping`              | —       | Field ID remapping                                          |
+| `clearHiddenValues` | `boolean`                   | `false` | Clear values when fields become hidden                      |
+| `showAllSteps`      | `boolean`                   | `false` | Render all flow steps as sections                           |
+| `showAllErrors`     | `boolean`                   | `false` | Show validation errors before interaction                   |
+| `groupClass`        | `string \| object \| array` | —       | Class for the inner field-group wrapper                     |
+| `defaultNavigation` | `boolean`                   | `true`  | Render built-in Previous/Next when no custom nav is used    |
+| `uploadFile`        | `UploadFile`                | —       | Uploads one file for a `file` field; resolves with `{ id }` |
 
-**Emits:** `update:modelValue`, `validation-state-change`
+**Emits:** `update:modelValue`, `validation-state-change`, `upload-state-change`
 
 **Slots:** `field`, `step-navigation`, `default`
 
@@ -951,7 +1208,9 @@ These are features expressed in the schema that AdaptiveForm handles automatical
 
 **Exclusion rules** — Fields can be excluded from submission based on conditions, separate from visibility.
 
-**Custom validators** — Schemas can reference built-in validators (date checks, ID format validation, file constraints) with custom error messages.
+**Custom validators** — Schemas can reference built-in validators (date checks, ID format validation) with custom error messages.
+
+**File fields** — `fileConfig` sets accepted types, size limit and file count. Files are checked against it before upload, and the answer is an array of file IDs (see [File fields](#file-fields--fieldfileprops)).
 
 ## License
 

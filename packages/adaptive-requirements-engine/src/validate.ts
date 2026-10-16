@@ -5,6 +5,13 @@ import { NOTICE_VARIANTS } from './types';
 
 const NOTICE_VARIANT_SET = new Set<string>(NOTICE_VARIANTS);
 
+/** MIME types a file field may accept: the upload endpoint's allowlist. */
+const FILE_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
+const FILE_MIME_TYPE_SET = new Set(FILE_MIME_TYPES);
+/** Largest file the upload endpoint accepts, in bytes. */
+const FILE_MAX_SIZE = 10_000_000;
+const FILE_MAX_FILES = 10;
+
 /**
  * A single validation error with path and message
  */
@@ -287,6 +294,91 @@ function collectFieldRules(field: Record<string, unknown>, index: number): RuleE
   return entries;
 }
 
+/**
+ * Check `fileConfig` and file-field constraints for a single field.
+ *
+ * - `fileConfig` is required on `type: 'file'`, with `accept`, `maxSize` and `maxFiles` all set, and not allowed elsewhere
+ * - `accept` lists exact MIME types from `FILE_MIME_TYPES`
+ * - `maxSize` is an integer from 1 to `FILE_MAX_SIZE`; `maxFiles` from 1 to `FILE_MAX_FILES`
+ * - file fields carry no `fileConfig.multiple` and no `validation.rules`
+ */
+function validateFileField(field: Record<string, unknown>, index: number): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const prefix = `fields[${index}]`;
+  const fileConfig = field['fileConfig'];
+
+  if (field['type'] !== 'file') {
+    if (fileConfig !== undefined) {
+      errors.push({
+        path: `${prefix}.fileConfig`,
+        message: 'fileConfig is only allowed on file fields (type: "file")',
+      });
+    }
+    return errors;
+  }
+
+  const validation = field['validation'];
+  if (isObject(validation) && validation['rules'] !== undefined) {
+    errors.push({ path: `${prefix}.validation.rules`, message: 'File fields do not support validation rules' });
+  }
+
+  if (fileConfig === undefined) {
+    errors.push({
+      path: `${prefix}.fileConfig`,
+      message: 'File fields require fileConfig with accept, maxSize and maxFiles',
+    });
+    return errors;
+  }
+  if (!isObject(fileConfig)) {
+    errors.push({ path: `${prefix}.fileConfig`, message: 'Expected fileConfig to be an object' });
+    return errors;
+  }
+
+  const accept = fileConfig['accept'];
+  const allowed = FILE_MIME_TYPES.map((t) => `"${t}"`).join(', ');
+  if (!Array.isArray(accept) || accept.length === 0) {
+    errors.push({
+      path: `${prefix}.fileConfig.accept`,
+      message: `Expected accept to be a non-empty array of MIME types: ${allowed}`,
+    });
+  } else {
+    for (let j = 0; j < accept.length; j++) {
+      const type = accept[j] as unknown;
+      if (!isString(type) || !FILE_MIME_TYPE_SET.has(type)) {
+        errors.push({
+          path: `${prefix}.fileConfig.accept[${j}]`,
+          message: `Unsupported file type ${JSON.stringify(type)}. Must be one of: ${allowed}`,
+        });
+      }
+    }
+  }
+
+  const maxSize = fileConfig['maxSize'];
+  if (!(Number.isInteger(maxSize) && (maxSize as number) >= 1 && (maxSize as number) <= FILE_MAX_SIZE)) {
+    errors.push({
+      path: `${prefix}.fileConfig.maxSize`,
+      message: `Expected maxSize to be an integer from 1 to ${FILE_MAX_SIZE} (bytes)`,
+    });
+  }
+
+  const maxFiles = fileConfig['maxFiles'];
+  if (!(Number.isInteger(maxFiles) && (maxFiles as number) >= 1 && (maxFiles as number) <= FILE_MAX_FILES)) {
+    errors.push({
+      path: `${prefix}.fileConfig.maxFiles`,
+      message: `Expected maxFiles to be an integer from 1 to ${FILE_MAX_FILES}`,
+    });
+  }
+
+  if (fileConfig['multiple'] !== undefined) {
+    errors.push({
+      path: `${prefix}.fileConfig.multiple`,
+      message: 'fileConfig.multiple is no longer supported. Use maxFiles to allow more than one file.',
+    });
+  }
+
+  return errors;
+}
+
 // ── Main validation ─────────────────────────────────────────────────────
 
 /**
@@ -357,6 +449,9 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
           fieldValid = false;
         }
       }
+
+      // File fields: fileConfig shape and limits
+      errors.push(...validateFileField(field, i));
 
       // validation (optional)
       const validation = field['validation'];

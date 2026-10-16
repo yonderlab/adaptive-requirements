@@ -12,7 +12,7 @@ export type { StepDetail, StepNavigationProps, StepNavigationState, StepperInfo 
 // can flip `hasNavigationConsumer` before the browser ever paints the form's
 // default Previous/Next buttons. Falls back to useEffect on the server, where
 // useLayoutEffect would emit a dev warning and there is no paint to race.
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+export const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 export type FieldId = string;
 
