@@ -339,7 +339,7 @@ While any file in the current step is uploading, Next is blocked — the same wa
 
 #### Writing `uploadFile`
 
-Kota embed sessions call the upload endpoint directly with the session token:
+Kota embed sessions call the upload endpoint directly with the session token. The upload names a `purpose`, and file fields only accept files uploaded as `requirement_document`:
 
 ```ts
 import type { UploadFile } from '@kotaio/adaptive-form/react';
@@ -347,6 +347,7 @@ import type { UploadFile } from '@kotaio/adaptive-form/react';
 export function createUploadFile(accessToken: string): UploadFile {
   return async (file, { signal }) => {
     const body = new FormData();
+    body.append('purpose', 'requirement_document');
     body.append('file', file);
 
     const response = await fetch('https://api.kota.io/files', {
@@ -366,7 +367,7 @@ export function createUploadFile(accessToken: string): UploadFile {
 }
 ```
 
-API partners keep their secret key on the server: the browser posts to the partner's backend, which forwards the file to `POST /files` with `Authorization: Bearer pk_…` and passes the status and body straight back. The client side is the same function pointed at your own route:
+API partners keep their secret key on the server: the browser posts to the partner's backend, which forwards the file to `POST /files` with `purpose` set to `requirement_document` and `Authorization: Bearer pk_…`, and passes the status and body straight back. The client side is the same function pointed at your own route:
 
 ```ts
 export const uploadFile: UploadFile = async (file, { signal }) => {
