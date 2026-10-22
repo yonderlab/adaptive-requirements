@@ -113,6 +113,12 @@ interface AsyncValidatorRef {
 - `checkFieldAsync()` — runs `checkField()` first, short-circuits if field not visible/excluded/empty/has sync errors, then runs async validators and merges errors
 - `createAdapter()` returns `checkFieldAsync()` and `hasAsyncValidators` boolean when async validators are configured
 
+## File Field Convention
+
+- `type: 'file'` — answer is `string[]` of file IDs from the upload endpoint, never file bytes or `"name|size"` strings. `checkField` enforces array shape, non-empty string IDs (any format), no duplicates, and `fileConfig.maxFiles`. `accept` / `maxSize` are not checkable from IDs and are left to the renderer and the server.
+- `fileConfig` is required on file fields with `accept`, `maxSize` and `maxFiles` all set — there are no defaults, so readers use `field.fileConfig` as is. If an unvalidated schema lacks it, `checkField` fails any non-empty answer with "This field is not configured for file uploads".
+- `validateRequirementsObject` rejects a file field without a complete `fileConfig`, `fileConfig` on non-file fields, `accept` entries outside the upload allowlist (`FILE_MIME_TYPES`), `maxSize` outside 1–`FILE_MAX_SIZE`, `maxFiles` outside 1–`FILE_MAX_FILES`, `fileConfig.multiple`, and `validation.rules` on file fields. These constants live in `validate.ts` and are not exported: adding an accepted type is an engine release plus an AR upgrade, with no adaptive-form change.
+
 ## Display-Only Field Type Convention
 
 The engine treats `field.type` as an opaque string for input fields, but enforces structure for two display-only conventions:

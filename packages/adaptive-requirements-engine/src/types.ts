@@ -136,17 +136,21 @@ export interface OptionsSource {
 }
 
 /**
- * File field configuration for accepted types, size limits, and multi-file support
+ * File field configuration: accepted types, size limit, and file count.
+ * Required on `type: 'file'` fields, with every key set; there are no defaults.
+ *
+ * A file field's answer is an array of file IDs returned by the upload
+ * endpoint. The engine checks the answer's shape and `maxFiles`; `accept` and
+ * `maxSize` describe the files themselves and are checked by the renderer
+ * before upload and by the server on submit.
  */
 export interface FileConfig {
-  /** Accepted file types (e.g., '.pdf', 'image/*') */
-  accept?: string[];
-  /** Maximum file size in bytes */
-  maxSize?: number;
-  /** Whether multiple files can be selected */
-  multiple?: boolean;
-  /** Maximum number of files (only relevant when multiple is true) */
-  maxFiles?: number;
+  /** Accepted MIME types, exact match (e.g. `application/pdf`). The publish check limits these to the upload endpoint's allowlist. */
+  accept: readonly string[];
+  /** Maximum size per file in bytes. */
+  maxSize: number;
+  /** Maximum number of files. */
+  maxFiles: number;
 }
 
 /**
@@ -206,7 +210,7 @@ export interface Field<TFieldId extends string = string> {
   defaultValue?: FieldValue;
   /** Whether the field is read-only */
   readOnly?: boolean;
-  /** File field configuration (accepted types, size limits, multi-file) */
+  /** File field configuration (accepted types, size limit, file count). Required on `type: 'file'`, not allowed elsewhere. */
   fileConfig?: FileConfig;
 }
 

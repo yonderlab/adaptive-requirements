@@ -769,6 +769,116 @@ describe('notice field variant requirement', () => {
   });
 });
 
+const fileConfig = (overrides: Record<string, unknown> = {}) => ({
+  accept: ['application/pdf', 'image/png', 'image/jpeg'],
+  maxSize: 5_000_000,
+  maxFiles: 2,
+  ...overrides,
+});
+
+const docField = (overrides: Record<string, unknown> = {}) => ({
+  fields: [{ id: 'doc', type: 'file', fileConfig: fileConfig(overrides) }],
+});
+
+describe('file field fileConfig validation', () => {
+  const errorPaths = (input: unknown) => {
+    const result = validateRequirementsObject(input);
+    return result.success ? [] : result.errors.map((e) => e.path);
+  };
+
+  it('accepts a file field with a full fileConfig', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        {
+          id: 'signatory_identity_document',
+          type: 'file',
+          label: "Signatory's ID",
+          fileConfig: fileConfig(),
+          validation: { required: true },
+        },
+      ],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('rejects a file field without fileConfig', () => {
+    expect(errorPaths({ fields: [{ id: 'proof_of_address', type: 'file' }] })).toStrictEqual(['fields[0].fileConfig']);
+  });
+
+  it.each(['accept', 'maxSize', 'maxFiles'])('rejects a fileConfig without %s', (key) => {
+    expect(errorPaths(docField({ [key]: undefined }))).toStrictEqual([`fields[0].fileConfig.${key}`]);
+  });
+
+  it('accepts the boundary values for maxSize and maxFiles', () => {
+    const result = validateRequirementsObject({
+      fields: [
+        { id: 'a', type: 'file', fileConfig: fileConfig({ maxSize: 1, maxFiles: 1 }) },
+        { id: 'b', type: 'file', fileConfig: fileConfig({ maxSize: 10_000_000, maxFiles: 10 }) },
+      ],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('rejects fileConfig on a non-file field', () => {
+    expect(errorPaths({ fields: [{ id: 'name', type: 'text', fileConfig: fileConfig() }] })).toStrictEqual([
+      'fields[0].fileConfig',
+    ]);
+  });
+
+  it('rejects a non-object fileConfig', () => {
+    expect(errorPaths({ fields: [{ id: 'doc', type: 'file', fileConfig: ['application/pdf'] }] })).toStrictEqual([
+      'fields[0].fileConfig',
+    ]);
+  });
+
+  it.each([['.pdf'], ['image/*'], ['application/msword'], ['APPLICATION/PDF'], [42]])(
+    'rejects accept entry %j',
+    (entry) => {
+      expect(errorPaths(docField({ accept: ['image/png', entry] }))).toStrictEqual(['fields[0].fileConfig.accept[1]']);
+    },
+  );
+
+  it.each([[[]], ['application/pdf']])('rejects accept value %j', (accept) => {
+    expect(errorPaths(docField({ accept }))).toStrictEqual(['fields[0].fileConfig.accept']);
+  });
+
+  it.each([[0], [10_000_001], [1.5], ['5000000'], [-1]])('rejects maxSize %j', (maxSize) => {
+    expect(errorPaths(docField({ maxSize }))).toStrictEqual(['fields[0].fileConfig.maxSize']);
+  });
+
+  it.each([[0], [11], [2.5], ['2']])('rejects maxFiles %j', (maxFiles) => {
+    expect(errorPaths(docField({ maxFiles }))).toStrictEqual(['fields[0].fileConfig.maxFiles']);
+  });
+
+  it('rejects the removed multiple key', () => {
+    expect(errorPaths(docField({ multiple: true }))).toStrictEqual(['fields[0].fileConfig.multiple']);
+  });
+
+  it('rejects validation.rules on a file field', () => {
+    expect(
+      errorPaths({
+        fields: [
+          {
+            id: 'doc',
+            type: 'file',
+            fileConfig: fileConfig(),
+            validation: { required: true, rules: [{ rule: { '!!': [{ var: 'doc' }] }, message: 'Required' }] },
+          },
+        ],
+      }),
+    ).toStrictEqual(['fields[0].validation.rules']);
+  });
+
+  it('collects every fileConfig error on a field', () => {
+    expect(errorPaths(docField({ accept: ['.pdf'], maxSize: 0, maxFiles: 20, multiple: true }))).toStrictEqual([
+      'fields[0].fileConfig.accept[0]',
+      'fields[0].fileConfig.maxSize',
+      'fields[0].fileConfig.maxFiles',
+      'fields[0].fileConfig.multiple',
+    ]);
+  });
+});
+
 describe(validateDatasetItems, () => {
   it('accepts valid dataset items', () => {
     const result = validateDatasetItems([

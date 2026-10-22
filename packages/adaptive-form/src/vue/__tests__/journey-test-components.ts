@@ -1,5 +1,11 @@
 /* eslint-disable import/no-relative-parent-imports */
-import type { AdaptiveFormComponents, FieldComputedProps, FieldInputEmits, FieldInputProps } from '../types';
+import type {
+  AdaptiveFormComponents,
+  FieldComputedProps,
+  FieldFileProps,
+  FieldInputEmits,
+  FieldInputProps,
+} from '../types';
 import type { FormData, RequirementsObject } from '@kotaio/adaptive-requirements-engine';
 import type { PropType } from 'vue';
 
@@ -182,6 +188,31 @@ export const TestComputed = defineComponent({
   },
 });
 
+export const TestFile = defineComponent({
+  name: 'TestFile',
+  props: {
+    field: { type: Object as PropType<FieldFileProps['field']>, required: true },
+    files: { type: Array as PropType<FieldFileProps['files']>, default: () => [] },
+    isVisible: { type: Boolean as PropType<FieldFileProps['isVisible']>, default: true },
+  },
+  inheritAttrs: false,
+  setup(props) {
+    return () => {
+      if (!props.isVisible) {
+        return null;
+      }
+      const fieldId = props.field.id;
+      return h('div', { 'data-testid': `field-${fieldId}` }, [
+        h(
+          'span',
+          { 'data-testid': `value-${fieldId}` },
+          props.files.map((file) => (file.status === 'uploaded' ? file.id : '')).join(','),
+        ),
+      ]);
+    };
+  },
+});
+
 export const journeyTestComponents = {
   text: TestInput,
   number: TestInput,
@@ -193,7 +224,7 @@ export const journeyTestComponents = {
   checkbox: TestCheckbox,
   radio: TestRadio,
   computed: TestComputed,
-  file: TestInput,
+  file: TestFile,
 } as AdaptiveFormComponents;
 
 export function renderControlledForm(options: {
