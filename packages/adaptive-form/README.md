@@ -419,7 +419,7 @@ export const uploadFile: UploadFile = (file, { signal, onProgress }) =>
 
 When you upload through your own backend, this measures the browser-to-backend leg only, which is usually the slow one.
 
-The upload endpoint accepts files up to 10,000,000 bytes; make sure your backend allows request bodies that size. Use `https://test.api.kota.io/files` with a `pk_test_` key in sandbox.
+How large a file can be is set by its field's `fileConfig.maxSize`, and the form refuses anything larger before calling `uploadFile`. If you upload through your own backend, make sure it accepts files up to the largest `maxSize` in the schemas you use. If it has a stricter limit, refuse larger files there with a `400` and a message under `errors.file`, the same shape as Kota's errors, so the examples above show it on the file. Use `https://test.api.kota.io/files` with a `pk_test_` key in sandbox.
 
 #### Example component
 
