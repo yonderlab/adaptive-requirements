@@ -52,7 +52,9 @@ jobs:
         run: pnpm changeset status --since=origin/main
 
   preview:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # Not on the changesets release PR: it only bumps versions, and pkg.pr.new's check fails
+    # on that PR because GitHub Actions opened it.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != 'changeset-release/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions: {}
