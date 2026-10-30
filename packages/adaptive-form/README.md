@@ -542,8 +542,9 @@ For complete control over how each field renders, use the `renderField` prop. It
         return <FileUploader {...file} />;
       }
 
-      // Return null to fall back to the components map
-      return null;
+      // renderField replaces the components map entirely: whatever it returns is
+      // rendered, and null renders nothing. Delegate to your own components here.
+      return <DefaultField field={field} fieldState={fieldState} onChange={onChange} onBlur={onBlur} />;
     }}
   />
 </AdaptiveFormProvider>

@@ -54,6 +54,10 @@ export {
 export type { RuleContext, AsyncValidatorFn, EngineOptions } from './engine';
 export { isReservedOperationName } from './operations';
 
+// Platform prefill
+export { preparePlatformPrefill, reapplyLockedValues } from './platform-prefill';
+export type { PlatformPrefillMode, PlatformPrefillRejection, PlatformPrefillResult } from './platform-prefill';
+
 // Validate
 export { validateRequirementsObject, validateDatasetItems } from './validate';
 export type { ValidationError, ValidationResult } from './validate';
