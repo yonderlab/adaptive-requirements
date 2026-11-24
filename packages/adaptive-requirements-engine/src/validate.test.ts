@@ -879,6 +879,36 @@ describe('file field fileConfig validation', () => {
   });
 });
 
+describe('phone field phoneConfig validation', () => {
+  const errorPaths = (input: unknown) => {
+    const result = validateRequirementsObject(input);
+    return result.success ? [] : result.errors.map((e) => e.path);
+  };
+
+  it('accepts a phone field limited to some countries', () => {
+    const result = validateRequirementsObject({
+      fields: [{ id: 'phone', type: 'phone', phoneConfig: { countries: ['IE', 'GB'], defaultCountry: 'IE' } }],
+    });
+    expect(result.success).toBeTruthy();
+  });
+
+  it('rejects an unknown country, a default outside the list, and phoneConfig on another field type', () => {
+    expect(
+      errorPaths({
+        fields: [
+          { id: 'a', type: 'phone', phoneConfig: { countries: ['IE', 'XX'] } },
+          { id: 'b', type: 'phone', phoneConfig: { countries: ['IE'], defaultCountry: 'GB' } },
+          { id: 'c', type: 'text', phoneConfig: { countries: ['IE'] } },
+        ],
+      }),
+    ).toStrictEqual([
+      'fields[0].phoneConfig.countries[1]',
+      'fields[1].phoneConfig.defaultCountry',
+      'fields[2].phoneConfig',
+    ]);
+  });
+});
+
 describe(validateDatasetItems, () => {
   it('accepts valid dataset items', () => {
     const result = validateDatasetItems([

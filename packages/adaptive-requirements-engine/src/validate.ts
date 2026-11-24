@@ -1,5 +1,7 @@
 import type { DatasetItem, RequirementsObject } from './types';
 
+import { isSupportedCountry } from 'libphonenumber-js/min';
+
 import { isReservedOperationName } from './operations';
 import { NOTICE_VARIANTS } from './types';
 
@@ -295,6 +297,64 @@ function collectFieldRules(field: Record<string, unknown>, index: number): RuleE
 }
 
 /**
+ * Check `phoneConfig` for a single field.
+ *
+ * - `phoneConfig` is optional and only allowed on `type: 'phone'`
+ * - `countries`, when set, is a non-empty array of supported ISO 3166-1 alpha-2 codes
+ * - `defaultCountry`, when set, is a supported code, and one of `countries` when both are set
+ */
+function validatePhoneField(field: Record<string, unknown>, index: number): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const prefix = `fields[${index}].phoneConfig`;
+  const phoneConfig = field['phoneConfig'];
+
+  if (phoneConfig === undefined) {
+    return errors;
+  }
+  if (field['type'] !== 'phone') {
+    errors.push({ path: prefix, message: 'phoneConfig is only allowed on phone fields (type: "phone")' });
+    return errors;
+  }
+  if (!isObject(phoneConfig)) {
+    errors.push({ path: prefix, message: 'Expected phoneConfig to be an object' });
+    return errors;
+  }
+
+  const countries = phoneConfig['countries'];
+  if (countries !== undefined) {
+    if (!Array.isArray(countries) || countries.length === 0) {
+      errors.push({
+        path: `${prefix}.countries`,
+        message: 'Expected countries to be a non-empty array of country codes',
+      });
+    } else {
+      for (const [j, code] of (countries as unknown[]).entries()) {
+        if (!isString(code) || !isSupportedCountry(code)) {
+          errors.push({
+            path: `${prefix}.countries[${j}]`,
+            message: `Unknown country code ${JSON.stringify(code)}. Use an ISO 3166-1 alpha-2 code such as "IE".`,
+          });
+        }
+      }
+    }
+  }
+
+  const defaultCountry = phoneConfig['defaultCountry'];
+  if (defaultCountry !== undefined) {
+    if (!isString(defaultCountry) || !isSupportedCountry(defaultCountry)) {
+      errors.push({
+        path: `${prefix}.defaultCountry`,
+        message: `Unknown country code ${JSON.stringify(defaultCountry)}. Use an ISO 3166-1 alpha-2 code such as "IE".`,
+      });
+    } else if (Array.isArray(countries) && !countries.includes(defaultCountry)) {
+      errors.push({ path: `${prefix}.defaultCountry`, message: 'defaultCountry must be one of countries' });
+    }
+  }
+
+  return errors;
+}
+
+/**
  * Check `fileConfig` and file-field constraints for a single field.
  *
  * - `fileConfig` is required on `type: 'file'`, with `accept`, `maxSize` and `maxFiles` all set, and not allowed elsewhere
@@ -452,6 +512,9 @@ export function validateRequirementsObject(input: unknown): ValidationResult<Req
 
       // File fields: fileConfig shape and limits
       errors.push(...validateFileField(field, i));
+
+      // Phone fields: phoneConfig countries
+      errors.push(...validatePhoneField(field, i));
 
       // validation (optional)
       const validation = field['validation'];

@@ -13,6 +13,7 @@ export type {
   FieldValidation,
   OptionsSource,
   FileConfig,
+  PhoneConfig,
   Field,
   NoticeField,
   NoticeVariant,
