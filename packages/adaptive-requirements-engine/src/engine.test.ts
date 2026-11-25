@@ -21,6 +21,10 @@ import {
 const multipleOfForTest = (value: unknown, divisor: unknown) =>
   typeof value === 'number' && typeof divisor === 'number' ? value % divisor === 0 : false;
 
+const phoneWithCountries = (countries: string[]): RequirementsObject => ({
+  fields: [{ id: 'phone', type: 'phone', label: 'Phone', phoneConfig: { countries } }],
+});
+
 describe(runRule, () => {
   it('should return primitive values as-is', () => {
     expect(runRule('hello', {})).toBe('hello');
@@ -501,8 +505,17 @@ describe(checkField, () => {
     it('accepts a number from an allowed country and rejects one from elsewhere', () => {
       expect(checkField(requirementsWithPhone, 'phone', { phone: '+447700900123' }).errors).toStrictEqual([]);
       expect(checkField(requirementsWithPhone, 'phone', { phone: '+34612345678' }).errors).toStrictEqual([
-        'Enter a phone number from one of the allowed countries',
+        'Enter a phone number from one of these countries: Ireland, United Kingdom',
       ]);
+    });
+
+    it('names a single allowed country, and falls back to a generic message for long lists', () => {
+      expect(checkField(phoneWithCountries(['IE']), 'phone', { phone: '+34612345678' }).errors).toStrictEqual([
+        'Enter a phone number from Ireland',
+      ]);
+      expect(
+        checkField(phoneWithCountries(['IE', 'GB', 'FR', 'DE']), 'phone', { phone: '+34612345678' }).errors,
+      ).toStrictEqual(['Enter a phone number from one of the allowed countries']);
     });
   });
 

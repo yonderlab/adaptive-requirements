@@ -300,7 +300,29 @@ export function runValidationRules(
 
 const FILE_NOT_CONFIGURED_MESSAGE = 'This field is not configured for file uploads';
 
-const PHONE_COUNTRY_MESSAGE = 'Enter a phone number from one of the allowed countries';
+/* Longer lists get the generic message: a sentence naming every EU country helps no one */
+const MAX_NAMED_PHONE_COUNTRIES = 3;
+
+/* Engine messages are English; region names come from the runtime's Intl data, so no table to maintain */
+const regionNames = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'code' });
+
+/** @internal */
+function phoneCountryMessage(countries: readonly string[]): string {
+  if (countries.length > MAX_NAMED_PHONE_COUNTRIES) {
+    return 'Enter a phone number from one of the allowed countries';
+  }
+  const names = countries.map((code) => {
+    try {
+      return regionNames.of(code) ?? code;
+    } catch {
+      // An unvalidated schema can carry a malformed code; show it as written
+      return code;
+    }
+  });
+  return names.length === 1
+    ? `Enter a phone number from ${names[0]}`
+    : `Enter a phone number from one of these countries: ${names.join(', ')}`;
+}
 
 /** @internal */
 /* Phone answer validation — when `countries` is set, an E.164 answer must belong to one of them */
@@ -313,7 +335,7 @@ function validatePhoneCountry(value: FieldValue, countries: readonly string[] | 
   if (country === undefined) {
     return null;
   }
-  return countries.includes(country) ? null : PHONE_COUNTRY_MESSAGE;
+  return countries.includes(country) ? null : phoneCountryMessage(countries);
 }
 
 /** @internal */
