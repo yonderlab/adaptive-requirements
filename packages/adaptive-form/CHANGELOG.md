@@ -1,5 +1,12 @@
 # @kotaio/adaptive-form
 
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`02ac04c`](https://github.com/yonderlab/adaptive-requirements/commit/02ac04c14b311ea09e5117e8a346d9849bfbff11)]:
+  - @kotaio/adaptive-requirements-engine@4.1.0
+
 ## 3.0.0
 
 ### Major Changes
