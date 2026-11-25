@@ -18,7 +18,7 @@ import type { CountryCode } from 'libphonenumber-js/min';
 
 import { electronicFormatIBAN, isValidIBAN } from 'ibantools';
 import jsonLogic from 'json-logic-js';
-import { isSupportedCountry, isValidPhoneNumber } from 'libphonenumber-js/min';
+import { isSupportedCountry, isValidPhoneNumber, parsePhoneNumberFromString } from 'libphonenumber-js/min';
 
 import { isReservedOperationName } from './operations';
 
@@ -300,6 +300,22 @@ export function runValidationRules(
 
 const FILE_NOT_CONFIGURED_MESSAGE = 'This field is not configured for file uploads';
 
+const PHONE_COUNTRY_MESSAGE = 'Enter a phone number from one of the allowed countries';
+
+/** @internal */
+/* Phone answer validation — when `countries` is set, an E.164 answer must belong to one of them */
+function validatePhoneCountry(value: FieldValue, countries: readonly string[] | undefined): string | null {
+  if (!countries || countries.length === 0 || typeof value !== 'string') {
+    return null;
+  }
+  const country = parsePhoneNumberFromString(value)?.country;
+  // A number we can't place is left to `phone_valid`; only a number placed elsewhere is rejected here
+  if (country === undefined) {
+    return null;
+  }
+  return countries.includes(country) ? null : PHONE_COUNTRY_MESSAGE;
+}
+
 /** @internal */
 /* File answer validation — a file field's answer is an array of unique, non-empty file IDs, at most `maxFiles` long */
 function validateFileAnswer(value: FieldValue, maxFiles: number | undefined): string | null {
@@ -566,6 +582,14 @@ export function checkField<TFieldId extends string = string>(
         const fileError = validateFileAnswer(fieldValue, field.fileConfig?.maxFiles);
         if (fileError) {
           errors.push(fileError);
+        }
+      }
+
+      // Phone fields: the number must come from one of phoneConfig.countries
+      if (field.type === 'phone') {
+        const countryError = validatePhoneCountry(fieldValue, field.phoneConfig?.countries);
+        if (countryError) {
+          errors.push(countryError);
         }
       }
 

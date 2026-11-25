@@ -493,6 +493,19 @@ describe(checkField, () => {
     });
   });
 
+  describe('phone fields with phoneConfig.countries', () => {
+    const requirementsWithPhone: RequirementsObject = {
+      fields: [{ id: 'phone', type: 'phone', label: 'Phone', phoneConfig: { countries: ['IE', 'GB'] } }],
+    };
+
+    it('accepts a number from an allowed country and rejects one from elsewhere', () => {
+      expect(checkField(requirementsWithPhone, 'phone', { phone: '+447700900123' }).errors).toStrictEqual([]);
+      expect(checkField(requirementsWithPhone, 'phone', { phone: '+34612345678' }).errors).toStrictEqual([
+        'Enter a phone number from one of the allowed countries',
+      ]);
+    });
+  });
+
   describe('hidden type', () => {
     const requirementsWithHidden: RequirementsObject = {
       fields: [

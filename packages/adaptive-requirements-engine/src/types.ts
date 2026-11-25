@@ -154,6 +154,21 @@ export interface FileConfig {
 }
 
 /**
+ * Phone field configuration. Optional, and allowed only on `type: 'phone'` fields.
+ *
+ * A phone field's answer is a number in E.164 form (`+353871234567`). The
+ * renderer offers `countries` in its country picker and starts an empty field
+ * on `defaultCountry`; the engine rejects an answer from a country outside
+ * `countries`.
+ */
+export interface PhoneConfig {
+  /** ISO 3166-1 alpha-2 codes the number may come from (e.g. `['IE', 'GB']`). Absent means any country. */
+  countries?: readonly string[];
+  /** ISO 3166-1 alpha-2 code the renderer starts an empty field on. Must be in `countries` when both are set. */
+  defaultCountry?: string;
+}
+
+/**
  * Severity variants for `notice` fields. Drives both the renderer's visual
  * treatment (info / warning / danger) and the accessible role chosen by the
  * fallback (`alert` for danger, `status` for info / warning).
@@ -212,6 +227,8 @@ export interface Field<TFieldId extends string = string> {
   readOnly?: boolean;
   /** File field configuration (accepted types, size limit, file count). Required on `type: 'file'`, not allowed elsewhere. */
   fileConfig?: FileConfig;
+  /** Phone field configuration (allowed countries, default country). Only allowed on `type: 'phone'`. */
+  phoneConfig?: PhoneConfig;
 }
 
 /**
