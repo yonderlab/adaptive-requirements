@@ -1,5 +1,11 @@
 # @kotaio/adaptive-requirements-engine
 
+## 4.1.0
+
+### Minor Changes
+
+- [#87](https://github.com/yonderlab/adaptive-requirements/pull/87) [`02ac04c`](https://github.com/yonderlab/adaptive-requirements/commit/02ac04c14b311ea09e5117e8a346d9849bfbff11) Thanks [@jbyrnekota](https://github.com/jbyrnekota)! - Phone fields can carry an optional `phoneConfig` with `countries` (the ISO 3166-1 alpha-2 codes a number may come from) and `defaultCountry` (the country a renderer starts an empty field on). Publish validation rejects unknown codes, a `defaultCountry` outside `countries`, and `phoneConfig` on any other field type. `checkField` rejects an E.164 answer from a country outside `countries` with "Enter a phone number from one of the allowed countries".
+
 ## 4.0.0
 
 ### Major Changes
